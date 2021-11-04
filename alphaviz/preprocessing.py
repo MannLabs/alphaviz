@@ -1,0 +1,242 @@
+#!python
+"""
+This module provides functions that are helping to preprocess the data.
+"""
+
+import os
+import re
+import logging
+import pandas as pd
+import numpy as np
+
+
+def extract_analysis_unique_proteins(
+    filepath: str
+)-> list:
+    """Extract unique "Protein names" from the specified MaxQuant output file.
+
+    Parameters
+    ----------
+    filepath : str
+        Full path to the file.
+
+    Returns
+    -------
+    list
+        A list of unique protein names from the specified file.
+
+    """
+    if filepath.endswith('.txt'):
+        sep = '\t'
+
+    with open(filepath) as filelines:
+        i = 0
+        filename_col_index = int()
+        filename_data = []
+
+        for line in filelines:
+            line = line.split(sep)
+            if i == 0:
+                filename_col_index = line.index('Protein names')
+            else:
+                filename_data.append(line[filename_col_index])
+            i += 1
+
+        unique_proteins = set(filename_data)
+
+    sorted_unique_proteins = sorted(list(unique_proteins))
+    return sorted_unique_proteins
+
+# not used
+# def preprocess_ckg_output(
+#     proteins_string: str
+# ):
+#     """
+#     This function converts the string of proteins copied from the CKG into
+#     a list of leading proteins.
+#     """
+#     proteins_ckg = []
+#     if not (';' in proteins_string and '~' in proteins_string):
+#         raise ValueError # Good practice to give a descriptive string why this error is raised
+#     for protein in proteins_string.split(';'):
+#         leading_protein = protein.split('~')[-1]
+#         proteins_ckg.append(leading_protein.strip())
+#     return proteins_ckg # Is the ValueError necessary? In principle an empty list sounds valid and the error should be thrown elsewhere?
+
+
+def filter_df(
+    df: pd.DataFrame,
+    pattern: str,
+    column: str
+)-> pd.DataFrame:
+    """Filter the data frame based on the pattern (any value) in the specified column.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The original data frame.
+    pattern : str
+        The string to be used to filter of the data frame column.
+    column : str
+        The column to be used to filter.
+
+    Returns
+    -------
+    pd.DataFrame
+        The filtered data frame.
+
+    """
+    if not pattern:
+        return df
+    return df[df[column].str.contains(pattern)]
+
+
+def natural_sort(
+    line: str,
+    reverse: bool = False
+)-> str:
+    """Sort the string natural to humans, e.g. 4,1,6,11 will be sorted as 1,4,6,11 and not like 1,11,4,6.
+
+    Parameters
+    ----------
+    line : str
+        The string to be sorted.
+    reverse : bool
+        Whether to apply the reverse option or not. Defaults: False.
+
+    Returns
+    -------
+    str
+        A naturally sorted string.
+
+    """
+    def convert(value):
+        if value.isdigit():
+            return int(value)
+        return value.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    return sorted(line, key=alphanum_key, reverse=reverse)
+
+
+def extract_aa_seq(
+    protein_ids: str,
+    fasta, # pyteomics.fasta.IndexedUniProt object
+)-> str:
+    """Extract the leading razor protein sequence for the list of
+    proteinIDs of the protein group from the pyteomics.fasta.IndexedUniProt object.
+
+    Parameters
+    ----------
+    protein_ids : str
+        String containing the proteinIDs of all protein isoforms.
+    fasta : pyteomics.fasta.IndexedUniProt object
+        The pyteomics.fasta.IndexedUniProt object.
+
+    Returns
+    -------
+    str
+        Protein sequence for the leading razor protein, e.g. from the list of proteinIDs 'Q15149;Q15149-7;Q15149-9;Q15149-5' the AA sequence for protein Q15149 will be returned.
+
+    """
+    for id in sorted(protein_ids.split(';'), reverse=True):
+        try:
+            protein_seq = fasta.get_by_id(id).sequence
+            return protein_seq
+        except KeyError:
+            logging.info(f"The provided protein ID {id} is missing in the fasta file.")
+
+
+def extract_msms_data(
+    msms: pd.DataFrame,
+    selected_msms_scan: int,
+    raw_data, # AlphaTims TimsTOF object,
+    precursor_id: int
+)-> pd.DataFrame:
+    """Extract MS2 data as a data frame for the specified MSMS scan number and precursor ID from the 'msms.txt' MQ output file and raw file.
+
+    Parameters
+    ----------
+    msms : pd.DataFrame
+        Pre-loaded 'msms.txt' MQ output file.
+    selected_msms_scan : int
+        MSMS scan number.
+    raw_data : AlphaTims TimsTOF object
+        AlphaTims TimsTOF object.
+    precursor_id : int
+        The identifier of the precursor.
+
+    Returns
+    -------
+    pd.DataFrame
+        For the specified MSMS scan and precursor ID, the extracted data frame contains the following columns:
+            - 'mz_values'
+            - 'intensity_values'
+            - 'ions'
+            - 'wrong_dev_value': whether the mass_deviation specified in the MQ table was incorrect.
+
+    """
+    msms_filtered = msms[msms['Scan number'] == selected_msms_scan]
+    msms_filtered_df = pd.DataFrame(
+        {
+            'ions': msms_filtered.Matches.values[0].split(';'),
+            'mz': msms_filtered.Masses.values[0].split(';'),
+            'mass_dev_Da': msms_filtered['Mass deviations [Da]'].values[0].split(';'),
+            'mass_dev_ppm': msms_filtered['Mass deviations [ppm]'].values[0].split(';')
+        }
+    )
+    for col in ['mz', 'mass_dev_Da', 'mass_dev_ppm']:
+        msms_filtered_df[col] = msms_filtered_df[col].astype(float)
+
+    data = raw_data[:, :, precursor_id].loc[:, ['mz_values', 'intensity_values']] # can be slightly faster by only retrieving the indices and converting directly to mz values and intensities
+    data['ions'] = '-'
+    data['wrong_dev_value'] = False
+
+    for row in msms_filtered_df.itertuples(): # inefficient implementation. Sorting both arrays by mz should allow you to do it much faster.
+        slice_data = (data.mz_values > row.mz - row.mass_dev_Da)
+        slice_data &= (data.mz_values < row.mz + row.mass_dev_Da)
+        if len(slice_data) == 0:
+            data.loc[np.isclose(data.mz_values, row.mz, atol=1e-03), ['ions', 'wrong_dev_value']] = row.ions, True
+        else:
+            data.loc[slice_data, 'ions'] = row.ions
+
+    data.drop_duplicates('mz_values', inplace=True)
+    data.sort_values(['ions', 'intensity_values'], ascending=True, inplace=True)
+    data = pd.merge(data, msms_filtered_df, on='ions', how='left')
+
+    return data.drop('mz', axis=1)
+
+
+def extract_identified_ions(
+    values: list,
+    sequence: str,
+    ion_type: str
+)-> list:
+    """For the specified peptide sequence extract all identified in the experiment ions and based on the specified ion_type return a list of booleans containing information for the b-ions whether the peptide is breaking after aligned amino acid or for the y-ion whether is breaking before aligned amino acid.
+
+    E.g. for the peptide 'NTINHN' having the unique ion values ['b2-H2O', 'b2', 'b3', 'b5-NH3'] it will return the following list of booleans: [False,True,True,False,True,False].
+
+    Parameters
+    ----------
+    values : list
+        The list of all unique identified ions for the peptide in the experiment.
+    sequence : str
+        Peptide sequence.
+    ion : str
+        Ion type, e.g. 'b' or 'y'. Other ion types are not implemented.
+
+    Returns
+    -------
+    list
+        List of peptide length of booleans with True for the presenting ion and False for a missing one.
+
+    """
+    ions=[False] * (len(sequence))
+    all_ions = list(set([ion.split('-')[0] for ion in set(values) if ion_type in ion]))
+    for each in all_ions:
+        if ion_type == 'b':
+            ions[int(each.replace(ion_type, '')) - 1] = True
+        elif ion_type == 'y':
+            ions[-int(each.replace(ion_type, ''))] = True
+        else:
+            raise NotImplementedError(f"The specified ion type {ion_type} is not implemented in the current version.")
+    return ions
