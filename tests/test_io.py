@@ -10,7 +10,9 @@ mq_evidence_file = "test_data/evidence.txt" # update this file
 
 
 def test_read_file():
+    import os
     mq_columns = ['Protein names', 'Raw file']
+    print(os.getcwd())
     data = alphaviz.io.read_file(mq_evidence_file, mq_columns)
 
     assert data.shape == (16242, 2), \
