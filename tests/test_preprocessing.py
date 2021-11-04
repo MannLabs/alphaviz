@@ -8,7 +8,7 @@ import alphaviz.preprocessing
 
 
 def test_extract_analysis_unique_proteins():
-    mq_analysis_file = "test_data/evidence.txt"
+    mq_analysis_file = "../test_data/evidence.txt"
     proteins = alphaviz.preprocessing.extract_analysis_unique_proteins(mq_analysis_file)
 
     assert len(proteins) == 6, \
