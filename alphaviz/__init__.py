@@ -34,7 +34,7 @@ __classifiers__ = [
         "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 __console_scripts__ = [
-    "alphaviz=alphaviz.gui:run",
+    "alphaviz=alphaviz.cli:run",
 ]
 __urls__ = {
     "Mann Labs at MPIB": "https://www.biochem.mpg.de/mann",
