@@ -6,7 +6,7 @@ This module provides pytest tests for the functions from io.py file
 import alphaviz.io
 
 # test dataset
-mq_evidence_file = "./test_data/evidence.txt" # update this file
+mq_evidence_file = "test_data/evidence.txt" # update this file
 
 
 def test_read_file():
