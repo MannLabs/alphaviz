@@ -344,3 +344,30 @@ def upload_fasta_file(
     import pyteomics.fasta
     fasta = pyteomics.fasta.IndexedUniProt(filepath)
     return fasta
+
+
+def load_diann_stats_file(
+    filepath: str,
+    experiment: str
+):
+    """Load the DIANN output .stats.tsv file.
+
+    Parameters
+    ----------
+    filepath : str
+        Full path to the .stats.tsv file.
+    experiment : str
+        The name of the experiment.
+
+    Returns
+    -------
+    pd.DataFrame
+        The output data frame contains summary information about the whole experiment.
+    """
+    diann_overview = pd.read_csv(filepath, sep='\t')
+    diann_overview = diann_overview[diann_overview['File.Name'].str.contains(experiment)]
+    diann_overview = diann_overview[diann_overview.columns[1:]].T
+    diann_overview.reset_index(inplace=True)
+    diann_overview.rename(columns={'index': 'parameters', 0: 'values'}, inplace=True)
+    diann_overview['values'] = diann_overview['values'].apply(lambda x: '%.2E' % x if x>100000 else '%.2f' % x)
+    return diann_overview
