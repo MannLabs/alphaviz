@@ -371,3 +371,74 @@ def load_diann_stats_file(
     diann_overview.rename(columns={'index': 'parameters', 0: 'values'}, inplace=True)
     diann_overview['values'] = diann_overview['values'].apply(lambda x: '%.2E' % x if x>100000 else '%.2f' % x)
     return diann_overview
+
+
+def extract_protein_info(
+    fasta: dict,
+    protein_ids: str
+):
+    """Short summary.
+
+    Parameters
+    ----------
+    fasta : pyteomics.fasta.IndexedUniProt object
+        The Pyteomics object contains information about all proteins from the .fasta file.
+    protein_ids : str
+        The list of the protein IDs separated by comma.
+
+    Returns
+    -------
+    type
+        Description of returned object.
+
+    """
+    protein_names = []
+    protein_seq_lens = []
+    for protein_id in protein_ids.split():
+        try:
+            protein_names.append(fasta.get_by_id(protein_id).description['name'])
+        except KeyError:
+            logging.info(f"The protein id {protein_id} is not found in the fasta file.")
+        try:
+            protein_seq_lens.append(str(len(fasta.get_by_id(protein_id).sequence)))
+        except KeyError:
+            logging.info(f"The sequence length for the protein {protein_id} is not found in the fasta file.")
+    return ','.join(protein_names), ','.join(protein_seq_lens)
+
+
+def load_diann_proteins(
+    diann_df: pd.DataFrame
+):
+    """Extract information about genes, proteins and protein groups from the loaded main DIANN output .tsv file.
+
+    Parameters
+    ----------
+    diann_df : pd.DataFrame
+        The original data frame after loading the main .tsv DIANN output file and filter by the experiment name.
+
+    Returns
+    -------
+    pd.DataFrame
+        The output data frame contains information about genes, proteins and proteins groups.
+    """
+    columns = [col for col in diann_df.columns if 'PG' in col or 'Protein' in col or 'Genes' in col]
+    cols_to_remove = ['Protein.Group', 'Protein.Ids', 'Protein.Names']
+    for col in cols_to_remove:
+        columns.remove(col)
+    proteins = diann_df.groupby(columns).agg({
+        'Protein.Ids': lambda x: ','.join(set(x)),
+        'MS2.Scan': lambda x: len(set(x)),
+        'Stripped.Sequence': lambda x: len(set(x))
+    }).reset_index()
+    proteins.rename(columns={
+        'MS2.Scan': '# MS/MS',
+        'Stripped.Sequence': '(EXP) # peptides',
+        'Genes': 'Gene names'
+    }, inplace=True)
+    proteins['# proteins'] = proteins['Protein.Ids'].apply(lambda x: len(x.split(',')))
+    proteins['Protein names'], proteins['Sequence lengths'] = zip(
+        *proteins['Protein.Ids'].apply(lambda x: extract_protein_info(fasta, x)))
+    first_columns = ['Protein.Ids', 'Protein names', 'Gene names', '# proteins', '(EXP) # peptides',
+                     '# MS/MS', 'Sequence lengths']
+    proteins = proteins[first_columns + sorted(list(set(proteins.columns).difference(first_columns)))]
+    return proteins
