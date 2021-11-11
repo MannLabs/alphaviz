@@ -5,6 +5,7 @@ This module provides functions to read MQ/DiaNN/AlphaPept output files and other
 
 import logging
 import os
+import re
 import pandas as pd
 
 
@@ -442,3 +443,37 @@ def load_diann_proteins(
                      '# MS/MS', 'Sequence lengths']
     proteins = proteins[first_columns + sorted(list(set(proteins.columns).difference(first_columns)))]
     return proteins
+
+def load_diann_peptides(
+    diann_df: pd.DataFrame
+):
+    """Extract information about peptides from the loaded main DIANN output .tsv file.
+
+    Parameters
+    ----------
+    diann_df : pd.DataFrame
+        The original data frame after loading the main .tsv DIANN output file and filter by the experiment name.
+
+    Returns
+    -------
+    pd.DataFrame
+        The output data frame contains information about peptides.
+    """
+    import alphaviz.preprocessing
+
+    peptides = diann_df.copy()
+    columns = [col for col in a.columns if not 'PG' in col and not 'Protein' in col and not 'Genes' in col and not 'GG' in col]
+    columns.extend(['Genes'])
+
+    peptides = diann_df[columns[2:]].copy()
+    peptides.rename(columns={
+        'MS2.Scan': 'MS/MS scan number',
+        'Genes': 'Gene names',
+        'Precursor.Charge': 'Charge'
+    }, inplace=True)
+    peptides['Length'] = peptides['Stripped.Sequence'].str.len()
+
+    peptides['Modified.Sequence'] = peptides['Modified.Sequence'].apply(alphaviz.preprocessing.convert_diann_mq_mod)
+    first_columns = ['Modified.Sequence', 'Length', 'RT', 'Predicted.RT', 'Charge', 'IM', 'Predicted.IM']
+    peptides = peptides[first_columns + sorted(list(set(peptides.columns).difference(first_columns)))]
+    return peptides

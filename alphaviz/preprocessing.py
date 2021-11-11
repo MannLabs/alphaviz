@@ -240,3 +240,88 @@ def extract_identified_ions(
         else:
             raise NotImplementedError(f"The specified ion type {ion_type} is not implemented in the current version.")
     return ions
+
+def convert_diann_mq_mod(
+    sequence:str
+) -> str:
+    # this function is taken from the AlphaMap package and modified
+    """Convert DIA-NN style modifications into MaxQuant style modifications.
+
+    Args:
+        sequence (str): The peptide sequence with modification in an AlphaPept style.
+
+    Returns:
+        str: The peptide sequence with modification in a similar to DIA-NN style.
+    """
+
+    modif_convers_dict = {
+        '(UniMod:1)': '[Acetyl ({})]',
+        '(UniMod:2)': '[Amidated ({})]',
+        '(UniMod:4)': '[Carbamidomethyl ({})]',
+        '(UniMod:5)': '[Carbamyl ({})]',
+        '(UniMod:7)': '[Deamidation ({})]',
+        '(UniMod:21)': '[Phospho ({})]',
+        '(UniMod:23)': '[Dehydrated ({})]',
+        '(UniMod:26)': '[Pyro-carbamidomethyl ({})]',
+        '(UniMod:27)': '[Glu->pyro-Glu]',
+        '(UniMod:28)': '[Gln->pyro-Glu]',
+        '(UniMod:30)': '[Cation:Na ({})]',
+        '(UniMod:34)': '[Methyl ({})]',
+        '(UniMod:35)': '[Oxidation ({})]',
+        '(UniMod:36)': '[Dimethyl ({})]',
+        '(UniMod:37)': '[Trimethyl ({})]',
+        '(UniMod:40)': '[Sulfo ({})]',
+        '(UniMod:55)': '[Cys-Cys]',
+        '(UniMod:121)': '[GlyGly ({})]',
+        '(UniMod:254)': '[Delta:H(2)C(2) ({})]',
+        '(UniMod:312)': '[Cysteinyl]',
+        '(UniMod:345)': '[Trioxidation ({})]',
+        '(UniMod:408)': '[Hydroxyproline]',
+        '(UniMod:425)': '[Dioxidation ({})]',
+        '(UniMod:526)': '[Dethiomethyl ({})]',
+        '(UniMod:877)': '[QQTGG ({})]',
+    }
+    mods = re.findall('\(UniMod:\d+\)', sequence)
+    if mods:
+        for mod in mods:
+            posit = re.search('\(UniMod:\d+\)', sequence)
+            i = posit.start()
+
+            if i == 0:
+                add_aa = 'N-term'
+            elif posit.end() == len(sequence):
+                add_aa = 'C-term'
+            else:
+                add_aa = sequence[i-1]
+
+            if mod == '(UniMod:7)':
+                if add_aa in 'NQ':
+                    add_aa = 'NQ'
+            elif mod == '(UniMod:21)':
+                if add_aa in 'STY':
+                    add_aa = 'STY'
+            elif mod == '(UniMod:23)':
+                if add_aa in 'ST':
+                    add_aa = 'ST'
+            elif mod == '(UniMod:30)':
+                if add_aa in 'DE':
+                    add_aa = 'DE'
+            elif mod == '(UniMod:34)':
+                if add_aa in 'KR':
+                    add_aa = 'KR'
+            elif mod == '(UniMod:36)':
+                if add_aa in 'KR':
+                    add_aa = 'KR'
+            elif mod == '(UniMod:40)':
+                if add_aa in 'STY':
+                    add_aa = 'STY'
+            elif mod == '(UniMod:425)':
+                if add_aa in 'MW':
+                    add_aa = 'MW'
+
+            if mod in modif_convers_dict.keys():
+                sequence = sequence.replace(mod, modif_convers_dict.get(mod).format(add_aa), 1)
+            else:
+                logging.info(f"This modification {mod} can't be converted.")
+
+    return sequence
