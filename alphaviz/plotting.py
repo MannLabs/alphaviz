@@ -891,3 +891,92 @@ def plot_peptide_distr(
         width = 600,
     )
     return fig
+
+
+def plot_elution_profile_heatmap(
+    timstof_data,
+    peptide_info: dict,
+    mass_dict: dict,
+    mz_tol: int = 50,
+    rt_tol: int = 30,
+    im_tol: int = 0.05,
+    title: str = "",
+    n_cols: int = 5,
+    width: int = 180,
+    height: int = 180,
+):
+    """Plot an elution profile for the specified precursor and all his identified fragments as heatmaps in the
+    retention time/ion mobility dimensions.
+
+    Parameters
+    ----------
+    timstof_data : alphatims.bruker.TimsTOF
+        An alphatims.bruker.TimsTOF data object.
+    peptide_info : dict
+        Peptide information including sequence, fragments' patterns, rt, mz and im values.
+    mass_dict : dict
+        The basic mass dictionaty with the masses of all amino acids and modifications.
+    mz_tol: float
+        The mz tolerance value. Default: 50 ppm.
+    rt_tol: float
+        The rt tolerance value. Default: 30 ppm.
+    im_tol: float
+        The im tolerance value. Default: 0.05 ppm.
+    title : str
+        The title of the plot. Default: "".
+    n_cols: int
+        The number of the heatmaps plotted per row. Default: 5.
+    width : int
+        The width of the plot. Default: 180.
+    height : int
+        The height of the plot. Default: 180.
+
+    Returns
+    -------
+    a Bokeh heatmap plots
+        The elution profile heatmap plots in retention time and ion mobility dimensions
+        for the specified peptide and all his fragments.
+    """
+    import alphaviz.utils
+    # predict the theoretical fragments using the Alphapept get_fragmass() function.
+    frag_masses, frag_type = alphaviz.utils.get_fragmass(
+        parsed_pep=parse(peptide_info['sequence']),
+        mass_dict=mass_dict
+    )
+    peptide_info['fragments'] = {
+        (f"b{key}" if key>0 else f"y{-key}"):value for key,value in zip(frag_type, frag_masses)
+    }
+
+    # slice the data using the rt_tol, im_tol and mz_tol values
+    rt_slice = slice(peptide_info['rt'] - rt_tol, peptide_info['rt'] + rt_tol)
+    im_slice = slice(peptide_info['im'] - im_tol, peptide_info['im'] + im_tol)
+    prec_mz_slice = slice(peptide_info['mz'] / (1 + mz_tol / 10**6), peptide_info['mz'] * (1 + mz_tol / 10**6))
+
+    # create an elution profile for the precursor
+    precursor_indices = timstof_data[
+        rt_slice,
+        im_slice,
+        0,
+        prec_mz_slice,
+        'raw'
+    ]
+
+    common_plot = plot_heatmap(
+        timstof_data.as_dataframe(precursor_indices), title='precursor', width=width, height=height
+    )
+
+    # create elution profiles for all fragments
+    for frag, frag_mz in peptide_info['fragments'].items():
+        fragment_data_indices = timstof_data[
+            rt_slice,
+            im_slice,
+            prec_mz_slice,
+            slice(frag_mz / (1 + mz_tol / 10**6), frag_mz * (1 + mz_tol / 10**6)),
+            'raw'
+        ]
+        if len(fragment_data_indices) > 0:
+            common_plot += plot_heatmap(
+                timstof_data.as_dataframe(fragment_data_indices), title=frag, width=width, height=height
+            )
+
+    return common_plot.cols(n_cols)
