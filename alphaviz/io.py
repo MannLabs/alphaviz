@@ -477,3 +477,34 @@ def load_diann_peptides(
     first_columns = ['Modified.Sequence', 'Length', 'RT', 'Predicted.RT', 'Charge', 'IM', 'Predicted.IM']
     peptides = peptides[first_columns + sorted(list(set(peptides.columns).difference(first_columns)))]
     return peptides
+
+def upload_diann_files(
+    path_diann_output_folder: str,
+    experiment: str
+):
+    """Load two files from the DiaNN output folder and returns the data frames containing information about proteins, peptides, and summary information about the whole experiment.
+
+    Parameters
+    ----------
+    path_diann_output_folder : str
+        Path to the DIANN output folder with all output files needed.
+    experiment : str
+        The name of the experiment.
+
+    Returns
+    -------
+    list of pd.DataFrames
+        The function returns three pandas data frame with the extracted information about proteins, peptides, and summary information about the whole experiment.
+    """
+    diann_output_file, diann_stats_file = sorted(alphaviz.io.get_file_names_from_directory(
+        path_diann_output_folder, 'tsv'), key=len)[:2]
+
+    diann_df = pd.read_csv(os.path.join(path_diann_output_folder, diann_output_file), sep='\t')
+    diann_df = diann_df[diann_df.Run == experiment]
+
+    diann_proteins = load_diann_proteins(diann_df)
+    diann_peptides = load_diann_peptides(diann_df)
+
+    diann_overview = load_diann_stats_file(os.path.join(path_diann_output_folder, diann_stats_file), experiment)
+
+    return diann_proteins, diann_peptides, diann_overview
