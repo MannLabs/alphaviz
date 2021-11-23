@@ -460,19 +460,21 @@ def load_diann_peptides(
         The output data frame contains information about peptides.
     """
     import alphaviz.preprocessing
-
     peptides = diann_df.copy()
-    columns = [col for col in a.columns if not 'PG' in col and not 'Protein' in col and not 'Genes' in col and not 'GG' in col]
+    columns = [col for col in peptides.columns if not 'PG' in col and not 'Protein' in col and not 'Genes' in col and not 'GG' in col]
     columns.extend(['Genes'])
 
     peptides = diann_df[columns[2:]].copy()
+    peptides['Length'] = peptides['Stripped.Sequence'].str.len()
+
     peptides.rename(columns={
         'MS2.Scan': 'MS/MS scan number',
         'Genes': 'Gene names',
-        'Precursor.Charge': 'Charge'
+        'Precursor.Charge': 'Charge',
+        'Stripped.Sequence': 'Sequence'
     }, inplace=True)
-    peptides['Length'] = peptides['Stripped.Sequence'].str.len()
 
+    peptides['Sequence_AP_mod'] = peptides['Modified.Sequence'].apply(alphaviz.preprocessing.convert_diann_ap_mod)
     peptides['Modified.Sequence'] = peptides['Modified.Sequence'].apply(alphaviz.preprocessing.convert_diann_mq_mod)
     first_columns = ['Modified.Sequence', 'Length', 'RT', 'Predicted.RT', 'Charge', 'IM', 'Predicted.IM']
     peptides = peptides[first_columns + sorted(list(set(peptides.columns).difference(first_columns)))]
