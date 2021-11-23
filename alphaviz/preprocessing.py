@@ -325,3 +325,42 @@ def convert_diann_mq_mod(
                 logging.info(f"This modification {mod} can't be converted.")
 
     return sequence
+
+def convert_diann_ap_mod(
+    sequence:str
+) -> str:
+    # this function is copied from the AlphaMap package
+    """Convert DIA-NN style modifications into MaxQuant style modifications.
+
+    Args:
+        sequence (str): The peptide sequence with modification in an AlphaPept style.
+
+    Returns:
+        str: The peptide sequence with modification in a similar to DIA-NN style.
+    """
+
+    modif_convers_dict = {
+        '(UniMod:1)': 'a', #'[Acetyl ({})]'
+        '(UniMod:2)': 'am', #'[Amidated ({})]'
+        '(UniMod:4)': 'c', #'[Carbamidomethyl ({})]'
+        '(UniMod:7)': 'deam', #'[Deamidation ({})]'
+        '(UniMod:21)': 'p', #'[Phospho ({})]'
+        '(UniMod:27)': 'pg', #'[Glu->pyro-Glu]'
+        '(UniMod:28)': 'pg', #'[Gln->pyro-Glu]'
+        '(UniMod:35)': 'ox', #'[Oxidation ({})]'
+    }
+    mods = re.findall('\(UniMod:\d+\)', sequence)
+
+    if mods:
+        for mod in mods:
+            posit = re.search('\(UniMod:\d+\)', sequence)
+            i = posit.start()
+            if i != 0:
+                i -= 1
+            if mod in modif_convers_dict.keys():
+                sequence = sequence.replace(mod, '', 1)
+                sequence = sequence[:i] + modif_convers_dict[mod] + sequence[i:]
+            else:
+                logging.info(f"This modification {mod} can't be converted.")
+
+    return sequence
