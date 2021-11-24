@@ -7,9 +7,9 @@ import pytest
 import alphaviz.preprocessing as preproc
 
 
-def test_extract_analysis_unique_proteins():
+def test_get_mq_unique_proteins():
     mq_analysis_file = "../test_data/evidence.txt"
-    proteins = preproc.extract_analysis_unique_proteins(mq_analysis_file)
+    proteins = preproc.get_mq_unique_proteins(mq_analysis_file)
 
     assert len(proteins) == 6, \
         "The number of extracted proteins is wrong."
@@ -35,12 +35,12 @@ def test_extract_analysis_unique_proteins():
 #         alphaviz.preprocessing.preprocess_ckg_output(ckg_output_string_wrong)
 
 
-def test_extract_identified_ions():
+def test_get_identified_ions():
     peptide = 'NTINHN'
     all_ions = ['', 'b2-H2O', '', '', 'b2', 'b3', '', 'b5-NH3', '', '', '', '', 'y1-NH3', 'y1', 'y4-H2O', 'y4']
-    assert [False,True,True,False,True,False] == preproc.extract_identified_ions(all_ions, peptide, 'b'), \
+    assert [False,True,True,False,True,False] == preproc.get_identified_ions(all_ions, peptide, 'b'), \
     "The extraction of identified b-ions doesn't work"
-    assert [False,False,True,False,False,True] == preproc.extract_identified_ions(all_ions, peptide, 'y'), \
+    assert [False,False,True,False,False,True] == preproc.get_identified_ions(all_ions, peptide, 'y'), \
     "The extraction of identified y-ions doesn't work"
 
 def test_convert_diann_mq_mod():

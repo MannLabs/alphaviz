@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 
 
-def extract_analysis_unique_proteins(
+def get_mq_unique_proteins(
     filepath: str
 )-> list:
     """Extract unique "Protein names" from the specified MaxQuant output file.
@@ -91,7 +91,7 @@ def filter_df(
     return df[df[column].str.contains(pattern)]
 
 
-def natural_sort(
+def sort_naturally(
     line: str,
     reverse: bool = False
 )-> str:
@@ -118,7 +118,7 @@ def natural_sort(
     return sorted(line, key=alphanum_key, reverse=reverse)
 
 
-def extract_aa_seq(
+def get_aa_seq(
     protein_ids: str,
     fasta, # pyteomics.fasta.IndexedUniProt object
 )-> str:
@@ -146,7 +146,7 @@ def extract_aa_seq(
             logging.info(f"The provided protein ID {id} is missing in the fasta file.")
 
 
-def extract_msms_data(
+def get_mq_ms2_scan_data(
     msms: pd.DataFrame,
     selected_msms_scan: int,
     raw_data, # AlphaTims TimsTOF object,
@@ -206,7 +206,7 @@ def extract_msms_data(
     return data.drop('mz', axis=1)
 
 
-def extract_identified_ions(
+def get_identified_ions(
     values: list,
     sequence: str,
     ion_type: str
@@ -245,13 +245,13 @@ def convert_diann_mq_mod(
     sequence:str
 ) -> str:
     # this function is taken from the AlphaMap package and modified
-    """Convert DIA-NN style modifications into MaxQuant style modifications.
+    """Convert DIA-NN style modifications to MaxQuant style modifications.
 
     Args:
-        sequence (str): The peptide sequence with modification in an AlphaPept style.
+        sequence (str): A peptide sequence with a DIA-NN style modification.
 
     Returns:
-        str: The peptide sequence with modification in a similar to DIA-NN style.
+        str: A peptide sequence with MaxQuant style modification.
     """
 
     modif_convers_dict = {
@@ -329,16 +329,14 @@ def convert_diann_mq_mod(
 def convert_diann_ap_mod(
     sequence:str
 ) -> str:
-    # this function is copied from the AlphaMap package
-    """Convert DIA-NN style modifications into MaxQuant style modifications.
+    """Convert DIA-NN style modifications to AlphaPept style modifications.
 
     Args:
-        sequence (str): The peptide sequence with modification in an AlphaPept style.
+        sequence (str): A peptide sequence with a DIA-NN style modification.
 
     Returns:
-        str: The peptide sequence with modification in a similar to DIA-NN style.
+        str: A peptide sequence with AlphaPept style modification.
     """
-
     modif_convers_dict = {
         '(UniMod:1)': 'a', #'[Acetyl ({})]'
         '(UniMod:2)': 'am', #'[Amidated ({})]'
@@ -364,3 +362,35 @@ def convert_diann_ap_mod(
                 logging.info(f"This modification {mod} can't be converted.")
 
     return sequence
+
+def get_protein_info(
+    fasta: dict,
+    protein_ids: str
+):
+    """Get the name and the length of the protein(s) from the fasta file specifying the protein id(s).
+
+    Parameters
+    ----------
+    fasta : pyteomics.fasta.IndexedUniProt object
+        The Pyteomics object contains information about all proteins from the .fasta file.
+    protein_ids : str
+        The list of the protein IDs separated by comma.
+
+    Returns
+    -------
+    tuple of strings
+        The name and the length of the specified protein(s).
+
+    """
+    protein_names = []
+    protein_seq_lens = []
+    for protein_id in protein_ids.split():
+        try:
+            protein_names.append(fasta.get_by_id(protein_id).description['name'])
+        except KeyError:
+            logging.info(f"The protein id {protein_id} is not found in the fasta file.")
+        try:
+            protein_seq_lens.append(str(len(fasta.get_by_id(protein_id).sequence)))
+        except KeyError:
+            logging.info(f"The sequence length for the protein {protein_id} is not found in the fasta file.")
+    return ','.join(protein_names), ','.join(protein_seq_lens)

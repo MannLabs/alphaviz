@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import pandas as pd
+import alphaviz.preprocessing
 
 
 def read_file(
@@ -52,11 +53,11 @@ def read_file(
     return data
 
 
-def upload_evidence_file(
+def read_mq_evidence(
     filepath: str,
     experiment: str
 )-> pd.DataFrame:
-    """Load some columns from the output file evidence.txt of MaxQuant software.
+    """Read some columns from the output file evidence.txt of MaxQuant software.
 
     Parameters
     ----------
@@ -135,11 +136,11 @@ def upload_evidence_file(
     return data_raw_file
 
 
-def upload_protein_groups_file(
+def read_mq_protein_groups(
     filepath: str,
     experiment: str
 )-> pd.DataFrame:
-    """Load some columns from the output file proteinGroups.txt of MaxQuant software.
+    """Read some columns from the output file proteinGroups.txt of MaxQuant software.
 
     Parameters
     ----------
@@ -196,10 +197,10 @@ def upload_protein_groups_file(
     return data_common
 
 
-def upload_all_peptides_file(
+def read_mq_all_peptides(
     filepath:str
 )-> pd.DataFrame:
-    """Load some columns from the output file allPeptides.txt of MaxQuant software.
+    """Read some columns from the output file allPeptides.txt of MaxQuant software.
 
     Parameters
     ----------
@@ -227,10 +228,10 @@ def upload_all_peptides_file(
     return data_common
 
 
-def upload_msms_file(
+def read_mq_msms(
     filepath: str
 )-> pd.DataFrame:
-    """Load some columns from the output file msms.txt of MaxQuant software.
+    """Read some columns from the output file msms.txt of MaxQuant software.
 
     Parameters
     ----------
@@ -260,12 +261,12 @@ def upload_msms_file(
     return data_common
 
 
-def upload_mq_files(
+def read_mq_output(
     necessary_files: list,
     path_mq_output_folder: str,
     experiment: str
 ):
-    """Load all specified files from the MQ output folder and returns the data frames for each of the files.
+    """Read all specified files from the MQ output folder and returns the data frames for each of the files.
 
     Parameters
     ----------
@@ -282,10 +283,10 @@ def upload_mq_files(
         For each of the specified MQ output files, the function returns a pandas data frame with the extracted information.
     """
     file_func_dict = {
-        'allPeptides': upload_all_peptides_file,
-        'msms': upload_msms_file,
-        'evidence': upload_evidence_file,
-        'proteinGroups': upload_protein_groups_file
+        'allPeptides': read_mq_all_peptides,
+        'msms': read_mq_msms,
+        'evidence': read_mq_evidence,
+        'proteinGroups': read_mq_protein_groups
     }
     for file in necessary_files:
         file_path = os.path.join(
@@ -305,7 +306,7 @@ def upload_mq_files(
         yield df
 
 
-def get_file_names_from_directory(
+def get_filenames_from_directory(
     directory: str,
     extensions_list: list
 )-> list:
@@ -327,10 +328,10 @@ def get_file_names_from_directory(
     return file_names
 
 
-def upload_fasta_file(
+def read_fasta(
     filepath: str
 )-> dict:
-    """Load the fasta file using the pyteomics package.
+    """Read the fasta file using the pyteomics package.
 
     Parameters
     ----------
@@ -347,11 +348,11 @@ def upload_fasta_file(
     return fasta
 
 
-def load_diann_stats_file(
+def read_diann_stats(
     filepath: str,
     experiment: str
 ):
-    """Load the DIANN output .stats.tsv file.
+    """Read the DIANN output .stats.tsv file.
 
     Parameters
     ----------
@@ -374,40 +375,7 @@ def load_diann_stats_file(
     return diann_overview
 
 
-def extract_protein_info(
-    fasta: dict,
-    protein_ids: str
-):
-    """Short summary.
-
-    Parameters
-    ----------
-    fasta : pyteomics.fasta.IndexedUniProt object
-        The Pyteomics object contains information about all proteins from the .fasta file.
-    protein_ids : str
-        The list of the protein IDs separated by comma.
-
-    Returns
-    -------
-    type
-        Description of returned object.
-
-    """
-    protein_names = []
-    protein_seq_lens = []
-    for protein_id in protein_ids.split():
-        try:
-            protein_names.append(fasta.get_by_id(protein_id).description['name'])
-        except KeyError:
-            logging.info(f"The protein id {protein_id} is not found in the fasta file.")
-        try:
-            protein_seq_lens.append(str(len(fasta.get_by_id(protein_id).sequence)))
-        except KeyError:
-            logging.info(f"The sequence length for the protein {protein_id} is not found in the fasta file.")
-    return ','.join(protein_names), ','.join(protein_seq_lens)
-
-
-def load_diann_proteins(
+def create_diann_proteins_table(
     diann_df: pd.DataFrame
 ):
     """Extract information about genes, proteins and protein groups from the loaded main DIANN output .tsv file.
@@ -438,13 +406,13 @@ def load_diann_proteins(
     }, inplace=True)
     proteins['# proteins'] = proteins['Protein.Ids'].apply(lambda x: len(x.split(',')))
     proteins['Protein names'], proteins['Sequence lengths'] = zip(
-        *proteins['Protein.Ids'].apply(lambda x: extract_protein_info(fasta, x)))
+        *proteins['Protein.Ids'].apply(lambda x: import alphaviz.preprocessing.get_protein_info(fasta, x)))
     first_columns = ['Protein.Ids', 'Protein names', 'Gene names', '# proteins', '(EXP) # peptides',
                      '# MS/MS', 'Sequence lengths']
     proteins = proteins[first_columns + sorted(list(set(proteins.columns).difference(first_columns)))]
     return proteins
 
-def load_diann_peptides(
+def create_diann_peptides_table(
     diann_df: pd.DataFrame
 ):
     """Extract information about peptides from the loaded main DIANN output .tsv file.
@@ -459,7 +427,6 @@ def load_diann_peptides(
     pd.DataFrame
         The output data frame contains information about peptides.
     """
-    import alphaviz.preprocessing
     peptides = diann_df.copy()
     columns = [col for col in peptides.columns if not 'PG' in col and not 'Protein' in col and not 'Genes' in col and not 'GG' in col]
     columns.extend(['Genes'])
@@ -480,7 +447,7 @@ def load_diann_peptides(
     peptides = peptides[first_columns + sorted(list(set(peptides.columns).difference(first_columns)))]
     return peptides
 
-def upload_diann_files(
+def read_diann_output(
     path_diann_output_folder: str,
     experiment: str
 ):
@@ -498,15 +465,15 @@ def upload_diann_files(
     list of pd.DataFrames
         The function returns three pandas data frame with the extracted information about proteins, peptides, and summary information about the whole experiment.
     """
-    diann_output_file, diann_stats_file = sorted(alphaviz.io.get_file_names_from_directory(
+    diann_output_file, diann_stats_file = sorted(get_filenames_from_directory(
         path_diann_output_folder, 'tsv'), key=len)[:2]
 
     diann_df = pd.read_csv(os.path.join(path_diann_output_folder, diann_output_file), sep='\t')
     diann_df = diann_df[diann_df.Run == experiment]
 
-    diann_proteins = load_diann_proteins(diann_df)
-    diann_peptides = load_diann_peptides(diann_df)
+    diann_proteins = create_diann_proteins_table(diann_df)
+    diann_peptides = create_diann_peptides_table(diann_df)
 
-    diann_overview = load_diann_stats_file(os.path.join(path_diann_output_folder, diann_stats_file), experiment)
+    diann_overview = read_diann_stats(os.path.join(path_diann_output_folder, diann_stats_file), experiment)
 
     return diann_proteins, diann_peptides, diann_overview

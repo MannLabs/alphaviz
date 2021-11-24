@@ -601,8 +601,8 @@ def plot_mass_spectra(
 
     fig_common.update_yaxes(title_text="Error, ppm", row=4, col=1)
 
-    bions = alphaviz.preprocessing.extract_identified_ions(data.ions, sequence, 'b')
-    yions = alphaviz.preprocessing.extract_identified_ions(data.ions, sequence, 'y')
+    bions = alphaviz.preprocessing.get_identified_ions(data.ions, sequence, 'b')
+    yions = alphaviz.preprocessing.get_identified_ions(data.ions, sequence, 'y')
 
     sl = len(sequence)
     distance = (data.mz_values.max() - data.mz_values.min()) / sl

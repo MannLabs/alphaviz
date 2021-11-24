@@ -134,7 +134,7 @@ class HeaderWidget(object):
             align='end'
         )
 
-    def create(self):
+    def create_layout(self):
         self.layout = pn.Row(
             self.mpi_biochem_logo,
             self.mpi_logo,
@@ -147,7 +147,7 @@ class HeaderWidget(object):
 
 
 class MainWidget(object):
-    """This class creates a layout for the main part of the dashboard with the description of the tool and a button to download the manual for the project's GUI.
+    """This class create a layout for the main part of the dashboard with the description of the tool and a button to download the manual for the project's GUI.
 
     Parameters
     ----------
@@ -188,7 +188,7 @@ class MainWidget(object):
             margin=(0, 20, 0, 0)
         )
 
-    def create(self):
+    def create_layout(self):
         self.layout = pn.Row(
             self.project_description,
             pn.layout.HSpacer(width=500),
@@ -270,7 +270,7 @@ class DataImportWidget(BaseWidget):
             margin=(30, 15, 5, 15),
         )
 
-    def create(self):
+    def create_layout(self):
         self.layout = pn.Card(
             pn.Row(
                 pn.Column(
@@ -310,14 +310,14 @@ class DataImportWidget(BaseWidget):
             'value'
         )
         self.upload_button.param.watch(
-            self.upload_data,
+            self.load_data,
             'clicks'
         )
 
         return self.layout
 
     def update_file_names(self, *args):
-        self.ms_file_name.options = alphaviz.io.get_file_names_from_directory(
+        self.ms_file_name.options = alphaviz.io.get_filenames_from_directory(
             self.path_raw_folder.value,
             ['d', 'hdf']
         )
@@ -334,7 +334,7 @@ class DataImportWidget(BaseWidget):
                 elif filename == 'evidence.txt':
                     self.path_output_folder.value = dirpath
 
-    def upload_data(self, *args):
+    def load_data(self, *args):
         alphatims.utils.set_progress_callback(self.upload_progress)
         self.upload_progress.value = 0
         self.raw_data = alphatims.bruker.TimsTOF(
@@ -356,14 +356,14 @@ class DataImportWidget(BaseWidget):
         self.layout[0][2][1] = self.upload_progress
 
         # read all necessary MQ files
-        self.all_peptides, self.msms, self.evidence, self.protein_groups = alphaviz.io.upload_mq_files(
+        self.all_peptides, self.msms, self.evidence, self.protein_groups = alphaviz.io.read_mq_output(
             ['allPeptides', 'msms', 'evidence', 'proteinGroups'],
             self.path_output_folder.value,
             self.ms_file_name.value.split('.')[0]
         )
 
         # read a fasta file
-        self.fasta = alphaviz.io.upload_fasta_file(
+        self.fasta = alphaviz.io.read_fasta(
             self.path_fasta_file.value
         )
 
@@ -445,7 +445,7 @@ class HeatmapOptionsWidget(object):
             margin=(20, 20, 20, 10),
         )
 
-    def create(self, *args):
+    def create_layout(self, *args):
         layout = pn.Card(
             # self.plot1_title,
             pn.Row(
@@ -493,7 +493,7 @@ class XicOptionsWidget(object):
             width=100
         )
 
-    def create(self, *args):
+    def create_layout(self, *args):
         layout = pn.Card(
             pn.Row(
                 self.xic_tolerance,
@@ -518,7 +518,7 @@ class TabsWidget(object):
         self.data = data
         self.options = options
 
-    def create(
+    def create_layout(
         self,
         tab_list=None
     ):
@@ -535,11 +535,11 @@ class TabsWidget(object):
             self.layout += self.tabs
             self.layout[0] = (
                 'Main View',
-                MainTab(self.data, self.options).create()
+                MainTab(self.data, self.options).create_layout()
             )
             self.layout[1] = (
                 'Quality Control',
-                QCTab(self.data, self.options).create()
+                QCTab(self.data, self.options).create_layout()
             )
             self.active = 0
             self.data.layout.collapsed = True
@@ -681,7 +681,7 @@ class MainTab(object):
         )
         self.layout = None
 
-    def create(self):
+    def create_layout(self):
         self.update_gene_name_filter()
 
         dependances = {
@@ -797,7 +797,7 @@ class MainTab(object):
             # self.peptides_table.selectable='checkbox'
             self.gene_name = self.proteins_table.selected_dataframe['Gene names'].values[0]
             curr_protein_ids = self.proteins_table.selected_dataframe['Protein IDs'].values[0]
-            self.protein_seq = alphaviz.preprocessing.extract_aa_seq(
+            self.protein_seq = alphaviz.preprocessing.get_aa_seq(
                 curr_protein_ids,
                 self.data.fasta,
             )
@@ -951,7 +951,7 @@ class MainTab(object):
                 precursor_color=self.heatmap_precursor_color.value,
             )
 
-            data_ions = alphaviz.preprocessing.extract_msms_data(
+            data_ions = alphaviz.preprocessing.get_mq_ms2_scan_data(
                 self.data.msms,
                 self.scan_number[0],
                 self.data.raw_data,
@@ -1037,7 +1037,7 @@ class QCTab(object):
         self.data = data
         self.layout_qc = None
 
-    def create(self):
+    def create_layout(self):
         uncalb_mass_dens_plot = alphaviz.plotting.plot_mass_error(
             self.data.evidence,
             'm/z',
@@ -1108,7 +1108,7 @@ class GUI(object):
             github_url
         )
         self.layout = pn.Column(
-            self.header.create(),
+            self.header.create_layout(),
             sizing_mode='stretch_width',
             min_width=1270
         )
@@ -1180,14 +1180,14 @@ class AlphaVizGUI(GUI):
 
         self.data = DataImportWidget()
         self.options = OptionsWidget(self.data)
-        self.options.add_option(HeatmapOptionsWidget().create())
-        self.options.add_option(XicOptionsWidget().create())
+        self.options.add_option(HeatmapOptionsWidget().create_layout())
+        self.options.add_option(XicOptionsWidget().create_layout())
         self.tabs = TabsWidget(self.data, self.options)
         self.layout += [
-            self.main_widget.create(),
-            self.data.create(),
+            self.main_widget.create_layout(),
+            self.data.create_layout(),
             self.options.get_layout(),
-            self.tabs.create(
+            self.tabs.create_layout(
                 [
                     ('Main View', pn.panel("Blank")),
                     ('Quality Control', pn.panel("Blank")),
