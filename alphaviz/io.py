@@ -271,7 +271,7 @@ def read_mq_output(
     Parameters
     ----------
     necessary_files : list
-        A list of strings containing the names of the MQ output files without extensions, e.g. ['allPeptides', 'msms'].
+        A list of strings containing the names of the MQ output files with extensions, e.g. ['allPeptides.txt', 'msms.txt'].
     path_mq_output_folder : str
         Path to the MaxQuant output folder with all output files needed.
     experiment : str
@@ -283,17 +283,17 @@ def read_mq_output(
         For each of the specified MQ output files, the function returns a pandas data frame with the extracted information.
     """
     file_func_dict = {
-        'allPeptides': read_mq_all_peptides,
-        'msms': read_mq_msms,
-        'evidence': read_mq_evidence,
-        'proteinGroups': read_mq_protein_groups
+        'allPeptides.txt': read_mq_all_peptides,
+        'msms.txt': read_mq_msms,
+        'evidence.txt': read_mq_evidence,
+        'proteinGroups.txt': read_mq_protein_groups
     }
     for file in necessary_files:
         file_path = os.path.join(
             path_mq_output_folder,
-            f'{file}.txt'
+            file
         )
-        if file in ['allPeptides', 'msms']:
+        if file in ['allPeptides.txt', 'msms.txt']:
             df = file_func_dict[file](
                 file_path
             )
@@ -302,7 +302,7 @@ def read_mq_output(
                 file_path,
                 experiment
             )
-        logging.info(f"MaxQuant output {file}.txt file is uploaded.")
+        logging.info(f"MaxQuant output {file} file is uploaded.")
         yield df
 
 
@@ -376,7 +376,8 @@ def read_diann_stats(
 
 
 def create_diann_proteins_table(
-    diann_df: pd.DataFrame
+    diann_df: pd.DataFrame,
+    fasta: object
 ):
     """Extract information about genes, proteins and protein groups from the loaded main DIANN output .tsv file.
 
@@ -384,6 +385,8 @@ def create_diann_proteins_table(
     ----------
     diann_df : pd.DataFrame
         The original data frame after loading the main .tsv DIANN output file and filter by the experiment name.
+    fasta : pyteomics.fasta.IndexedUniProt
+        The object containing information about all proteins from the fasta file.
 
     Returns
     -------
@@ -406,7 +409,7 @@ def create_diann_proteins_table(
     }, inplace=True)
     proteins['# proteins'] = proteins['Protein.Ids'].apply(lambda x: len(x.split(',')))
     proteins['Protein names'], proteins['Sequence lengths'] = zip(
-        *proteins['Protein.Ids'].apply(lambda x: import alphaviz.preprocessing.get_protein_info(fasta, x)))
+        *proteins['Protein.Ids'].apply(lambda x: alphaviz.preprocessing.get_protein_info(fasta, x)))
     first_columns = ['Protein.Ids', 'Protein names', 'Gene names', '# proteins', '(EXP) # peptides',
                      '# MS/MS', 'Sequence lengths']
     proteins = proteins[first_columns + sorted(list(set(proteins.columns).difference(first_columns)))]
@@ -449,7 +452,8 @@ def create_diann_peptides_table(
 
 def read_diann_output(
     path_diann_output_folder: str,
-    experiment: str
+    experiment: str,
+    fasta: object
 ):
     """Load two files from the DiaNN output folder and returns the data frames containing information about proteins, peptides, and summary information about the whole experiment.
 
@@ -459,6 +463,8 @@ def read_diann_output(
         Path to the DIANN output folder with all output files needed.
     experiment : str
         The name of the experiment.
+    fasta : pyteomics.fasta.IndexedUniProt
+        The object containing information about all proteins from the fasta file.
 
     Returns
     -------
@@ -471,7 +477,7 @@ def read_diann_output(
     diann_df = pd.read_csv(os.path.join(path_diann_output_folder, diann_output_file), sep='\t')
     diann_df = diann_df[diann_df.Run == experiment]
 
-    diann_proteins = create_diann_proteins_table(diann_df)
+    diann_proteins = create_diann_proteins_table(diann_df, fasta)
     diann_peptides = create_diann_peptides_table(diann_df)
 
     diann_overview = read_diann_stats(os.path.join(path_diann_output_folder, diann_stats_file), experiment)

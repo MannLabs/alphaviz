@@ -14,6 +14,7 @@ def check_analysis_file(file):
 
 
 # This code was taken from the AlphaPept Python package (https://github.com/MannLabs/alphapept/blob/master/nbs/03_fasta.ipynb)
+import numba
 from numba import types
 from numba.typed import Dict, List
 from numba import njit, jit
@@ -183,9 +184,6 @@ def get_frag_dict(parsed_pep:list, mass_dict:dict)->dict:
 
     return frag_dict
 
-
-M_PROTON = mass_dict['Proton']
-
 @njit
 def calculate_mass(mono_mz:float, charge:int) -> float:
     """Calculate the precursor mass from mono mz and charge.
@@ -195,6 +193,7 @@ def calculate_mass(mono_mz:float, charge:int) -> float:
     Returns:
         float: precursor mass.
     """
+    M_PROTON = 1.00727646687
     prec_mass = mono_mz * abs(charge) - charge * M_PROTON
 
     return prec_mass
@@ -208,6 +207,7 @@ def calculate_mz(prec_mass:float, charge:int) -> float:
     Returns:
         float: mono m/z.
     """
+    M_PROTON = 1.00727646687
     mono_mz = prec_mass / abs(charge) + M_PROTON
 
     return mono_mz

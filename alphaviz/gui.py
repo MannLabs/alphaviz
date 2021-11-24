@@ -355,17 +355,39 @@ class DataImportWidget(BaseWidget):
         )
         self.layout[0][2][1] = self.upload_progress
 
-        # read all necessary MQ files
-        self.all_peptides, self.msms, self.evidence, self.protein_groups = alphaviz.io.read_mq_output(
-            ['allPeptides', 'msms', 'evidence', 'proteinGroups'],
-            self.path_output_folder.value,
-            self.ms_file_name.value.split('.')[0]
-        )
-
         # read a fasta file
         self.fasta = alphaviz.io.read_fasta(
             self.path_fasta_file.value
         )
+
+        # read analysis output files (MQ, DIA-NN, etc.)
+        ## check all files in the analysis output folder
+        files = alphaviz.io.get_filenames_from_directory(
+            directory=self.path_output_folder.value,
+            extensions_list=['txt', 'tsv', 'csv']
+        )
+
+        mq_files = ['allPeptides.txt', 'msms.txt', 'evidence.txt', 'proteinGroups.txt']
+        if any(file in files for file in mq_files):
+            print('Reading the MaxQuant output files...')
+            if all(file in files for file in mq_files):
+                self.all_peptides, self.msms, self.evidence, self.protein_groups = alphaviz.io.read_mq_output(
+                    ['allPeptides', 'msms', 'evidence', 'proteinGroups'],
+                    self.path_output_folder.value,
+                    self.ms_file_name.value.split('.')[0]
+                )
+            else:
+                raise FileNotFoundError('The MQ output files necessary for the visualization are not found.')
+        else:
+            print('Reading the DIA-NN output files...')
+            try:
+                self.proteins, self.peptides, self.statist = alphaviz.io.read_diann_output(
+                    self.path_output_folder.value,
+                    self.ms_file_name.value.split('.')[0],
+                    self.fasta
+                )
+            except:
+                raise FileNotFoundError('The DIA-NN output files necessary for the visualization are not found.')
 
         self.trigger_dependancy()
         self.upload_progress.active = False
