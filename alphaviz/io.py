@@ -405,13 +405,13 @@ def create_diann_proteins_table(
     proteins.rename(columns={
         'MS2.Scan': '# MS/MS',
         'Stripped.Sequence': '(EXP) # peptides',
-        'Genes': 'Gene names'
+        'Genes': 'Gene names',
+        'Protein.Ids': 'Protein IDs'
     }, inplace=True)
-    proteins['# proteins'] = proteins['Protein.Ids'].apply(lambda x: len(x.split(',')))
+    proteins['# proteins'] = proteins['Protein IDs'].apply(lambda x: len(x.split(',')))
     proteins['Protein names'], proteins['Sequence lengths'] = zip(
-        *proteins['Protein.Ids'].apply(lambda x: alphaviz.preprocessing.get_protein_info(fasta, x)))
-    first_columns = ['Protein.Ids', 'Protein names', 'Gene names', '# proteins', '(EXP) # peptides',
-                     '# MS/MS', 'Sequence lengths']
+        *proteins['Protein IDs'].apply(lambda x: alphaviz.preprocessing.get_protein_info(fasta, x)))
+    first_columns = ['Protein IDs', 'Protein names', 'Gene names', '# proteins', '(EXP) # peptides', '# MS/MS', 'Sequence lengths']
     proteins = proteins[first_columns + sorted(list(set(proteins.columns).difference(first_columns)))]
     return proteins
 
