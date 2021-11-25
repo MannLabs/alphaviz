@@ -88,8 +88,11 @@ def filter_df(
     """
     if not pattern:
         return df
-    return df[df[column].str.contains(pattern)]
-
+    try:
+        output = df[df[column].str.contains(pattern)]
+    except ValueError:
+        output = df[df[column] == pattern]
+    return output
 
 def sort_naturally(
     line: str,
