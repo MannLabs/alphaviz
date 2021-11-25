@@ -980,3 +980,186 @@ def plot_elution_profile_heatmap(
             )
 
     return common_plot.cols(n_cols)
+
+def plot_elution_line(
+    timstof_data,
+    selected_indices: np.ndarray,
+    label: str,
+    remove_zeros: bool = False,
+    trim: bool = True,
+):
+    """Plot an XIC as a lineplot.
+
+    Parameters
+    ----------
+    timstof_data : alphatims.bruker.TimsTOF
+        An alphatims.bruker.TimsTOF data object.
+    selected_indices : np.ndarray
+        The raw indices that are selected for this plot.
+    label : str
+        The label for the line plot.
+    remove_zeros : bool
+        If True, zeros are removed. Default: False.
+    trim : bool
+        If True, zeros on the left and right are trimmed. Default: True.
+
+    Returns
+    -------
+    a Plotly line plot
+        The XIC line plot.
+    """
+    axis_dict = {
+        "rt": "RT, min",
+        "intensity": "Intensity",
+    }
+    x_axis_label = axis_dict["rt"]
+    y_axis_label = axis_dict["intensity"]
+    labels = {
+        'RT, min': "rt_values",
+    }
+    x_dimension = labels[x_axis_label]
+    intensities = timstof_data.bin_intensities(selected_indices, [x_dimension])
+    x_ticks = timstof_data.rt_values / 60
+
+    non_zeros = np.flatnonzero(intensities)
+    if len(non_zeros) == 0:
+        x_ticks = np.empty(0, dtype=x_ticks.dtype)
+        intensities = np.empty(0, dtype=intensities.dtype)
+    else:
+        if remove_zeros:
+            x_ticks = x_ticks[non_zeros]
+            intensities = intensities[non_zeros]
+        elif trim:
+            start = max(0, non_zeros[0] - 1)
+            end = non_zeros[-1] + 2
+            x_ticks = x_ticks[start: end]
+            intensities = intensities[start: end]
+
+    trace = go.Scatter(
+        x=x_ticks,
+        y=intensities,
+        mode='lines',
+        text = [f'{x_axis_label}'.format(i + 1) for i in range(len(x_ticks))],
+        hovertemplate='<b>%{text}:</b> %{x};<br><b>Intensity:</b> %{y}.',
+        name=label
+    )
+    return trace
+
+def plot_elution_profile(
+    raw_data,
+    peptide_info: dict,
+    mass_dict: dict,
+    mz_tol: float = 50,
+    rt_tol: float = 30,
+    im_tol: float = 0.05,
+    title: str = "",
+    # width: int = 900,
+    height: int = 400
+):
+    """Plot an elution profile plot for the specified precursor and all his identified fragments.
+
+    Parameters
+    ----------
+    raw_data : alphatims.bruker.TimsTOF
+        An alphatims.bruker.TimsTOF data object.
+    peptide_info : dict
+        Peptide information including sequence, fragments' patterns, rt, mz and im values.
+    mass_dict : dict
+        The basic mass dictionaty with the masses of all amino acids and modifications.
+    mz_tol: float
+        The mz tolerance value. Default: 50 ppm.
+    rt_tol: float
+        The rt tolerance value. Default: 30 ppm.
+    im_tol: float
+        The im tolerance value. Default: 0.05 ppm.
+    title : str
+        The title of the plot.
+    # width : int
+    #     The width of the plot. Default: 900.
+    # height : int
+    #     The height of the plot. Default: 400.
+
+    Returns
+    -------
+    a Plotly line plot
+        The elution profile plot in retention time dimension for the specified peptide and all his fragments.
+    """
+    import alphaviz.utils
+
+    x_axis_label = "rt"
+    y_axis_label = "intensity"
+
+    # predict the theoretical fragments using the Alphapept get_fragmass() function.
+    frag_masses, frag_type = alphaviz.utils.get_fragmass(
+        parsed_pep=alphaviz.utils.parse(peptide_info['sequence']),
+        mass_dict=mass_dict
+    )
+    peptide_info['fragments'] = {
+        (f"b{key}" if key>0 else f"y{-key}"):value for key,value in zip(frag_type, frag_masses)
+    }
+
+    # slice the data using the rt_tol, im_tol and mz_tol values
+    rt_slice = slice(peptide_info['rt'] - rt_tol, peptide_info['rt'] + rt_tol)
+    im_slice = slice(peptide_info['im'] - im_tol, peptide_info['im'] + im_tol)
+    prec_mz_slice = slice(peptide_info['mz'] / (1 + mz_tol / 10**6), peptide_info['mz'] * (1 + mz_tol / 10**6))
+
+    # create an elution profile for the precursor
+    precursor_indices = raw_data[
+        rt_slice,
+        im_slice,
+        0,
+        prec_mz_slice,
+        'raw'
+    ]
+    fig = go.Figure()
+    fig.add_trace(
+        plot_elution_line(raw_data, precursor_indices, remove_zeros=True, label='precursor')
+    )
+
+    # create elution profiles for all fragments
+    for frag, frag_mz in peptide_info['fragments'].items():
+        fragment_data_indices = raw_data[
+            rt_slice,
+            im_slice,
+            prec_mz_slice,
+            slice(frag_mz / (1 + mz_tol / 10**6), frag_mz * (1 + mz_tol / 10**6)),
+            'raw'
+        ]
+        if len(fragment_data_indices) > 0:
+            fig.add_trace(
+                plot_elution_line(raw_data, fragment_data_indices, remove_zeros=True, label=frag)
+            )
+
+    fig.update_layout(
+        title=dict(
+            text=title,
+            font=dict(
+                size=16,
+            ),
+            x=0.5,
+            xanchor='center',
+            yanchor='top'
+        ),
+        xaxis=dict(
+            title=x_axis_label,
+            titlefont_size=14,
+            tickmode = 'auto',
+            tickfont_size=14,
+        ),
+        yaxis=dict(
+            title=y_axis_label
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.6,
+            xanchor="right",
+            x=0.95
+        ),
+        template = "plotly_white",
+        # width=width,
+        height=height,
+        hovermode="x unified",
+        showlegend=True
+    )
+    return fig
