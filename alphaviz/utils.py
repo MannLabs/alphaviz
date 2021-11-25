@@ -36,6 +36,7 @@ def get_mass_dict(modfile:str="data/modifications.tsv", aasfile: str="data/amino
         FileNotFoundError: If files are not found.
     """
     import pandas as pd
+    import os
 
     mods = pd.read_csv(modfile, delimiter="\t")
     aas = pd.read_csv(aasfile, delimiter="\t")
@@ -211,3 +212,11 @@ def calculate_mz(prec_mass:float, charge:int) -> float:
     mono_mz = prec_mass / abs(charge) + M_PROTON
 
     return mono_mz
+
+def get_mz(
+    sequence: str,
+    charge: int
+):
+    mz = calculate_mz(
+        alphaviz.utils.get_precmass(
+            alphaviz.utils.parse(peptide['sequence']), mass_dict), charge=peptide['charge'])
