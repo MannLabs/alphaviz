@@ -208,14 +208,18 @@ class DataImportWidget(BaseWidget):
     def __init__(self):
         super().__init__(name="Data")
         self.raw_data = None
-        self.evidence = None
-        self.all_peptides = None
-        self.msms = None
-        self.protein_groups = None
+        self.mq_evidence = None
+        self.mq_all_peptides = None
+        self.mq_msms = None
+        self.mq_protein_groups = None
+        self.diann_proteins = None
+        self.diann_peptides = None
+        self.diann_statist = None
         self.fasta = None
         self.layout = None
         self.settings = {
             'path_evidence_file': str(),
+            'analysis_software': str()
         }
         self.path_raw_folder = pn.widgets.TextInput(
             name='Specify a folder with Bruker raw files:',
@@ -371,21 +375,23 @@ class DataImportWidget(BaseWidget):
         if any(file in files for file in mq_files):
             print('Reading the MaxQuant output files...')
             if all(file in files for file in mq_files):
-                self.all_peptides, self.msms, self.evidence, self.protein_groups = alphaviz.io.read_mq_output(
-                    ['allPeptides', 'msms', 'evidence', 'proteinGroups'],
+                self.mq_all_peptides, self.mq_msms, self.mq_evidence, self.mq_protein_groups = alphaviz.io.read_mq_output(
+                    mq_files,
                     self.path_output_folder.value,
                     self.ms_file_name.value.split('.')[0]
                 )
+                self.settings['analysis_software'] = 'maxquant'
             else:
                 raise FileNotFoundError('The MQ output files necessary for the visualization are not found.')
         else:
             print('Reading the DIA-NN output files...')
             try:
-                self.proteins, self.peptides, self.statist = alphaviz.io.read_diann_output(
+                self.diann_proteins, self.diann_peptides, self.diann_statist = alphaviz.io.read_diann_output(
                     self.path_output_folder.value,
                     self.ms_file_name.value.split('.')[0],
                     self.fasta
                 )
+                self.settings['analysis_software'] = 'diann'
             except:
                 raise FileNotFoundError('The DIA-NN output files necessary for the visualization are not found.')
 
@@ -548,7 +554,7 @@ class TabsWidget(object):
         return self.data.depends(self.return_layout)
 
     def return_layout(self, *args):
-        if self.data.evidence is not None and self.data.raw_data is not None:
+        if (self.data.mq_evidence is not None or self.data.diann_proteins is not None) and self.data.raw_data is not None:
             self.layout = pn.Tabs(
                 tabs_location='above',
                 margin=(30, 10, 5, 8),
@@ -573,6 +579,7 @@ class MainTab(object):
     def __init__(self, data, options):
         self.name = "Main View"
         self.data = data
+        self.analysis_software = self.data.settings.get('analysis_software')
         # self.options = options
         self.heatmap_x_axis = options.layout[0][0][0]
         self.heatmap_y_axis = options.layout[0][0][1]
@@ -587,7 +594,7 @@ class MainTab(object):
         self.gene_name = str()
         self.ms1_ms2_frames = dict()
         self.proteins_table = pn.widgets.Tabulator(
-            self.data.protein_groups,
+            # self.data.mq_protein_groups,
             layout='fit_data_table',
             name='Proteins table',
             pagination='remote',
@@ -596,21 +603,21 @@ class MainTab(object):
             height=250,
             show_index=False,
             selectable='checkbox',
-            formatters={
-                '(EXP) Seq coverage, %': {
-                    'type': 'progress',
-                    'max': 100,
-                    'legend': True
-                },
-                'Protein names': {
-                    'type': "textarea"
-                },
-            },
-            widths={
-                'Protein IDs': 230,
-                'Protein names': 350,
-                'Sequence lengths': 150,
-            },
+            # formatters={
+            #     '(EXP) Seq coverage, %': {
+            #         'type': 'progress',
+            #         'max': 100,
+            #         'legend': True
+            #     },
+            #     'Protein names': {
+            #         'type': "textarea"
+            #     },
+            # },
+            # widths={
+            #     'Protein IDs': 230,
+            #     'Protein names': 350,
+            #     'Sequence lengths': 150,
+            # },
             sizing_mode='stretch_width',
             align='center',
             margin=(0, 5, 10, 5)
@@ -637,8 +644,9 @@ class MainTab(object):
             accept='.txt',
             margin=(22, 5, 0, 5),
         )
+
         self.peptides_table = pn.widgets.Tabulator(
-            self.data.evidence.loc[:, :'Andromeda score'],
+            # self.data.mq_evidence.loc[:, :'Andromeda score'],
             layout='fit_data_table',
             pagination='remote',
             page_size=8,
@@ -646,28 +654,28 @@ class MainTab(object):
             height=300,
             show_index=False,
             selectable='checkbox',
-            formatters={
-                'Acetylation (N-term)': {
-                    'type': 'tickCross',
-                    'allowTruthy': True
-                },
-                'Oxidation (M)': {
-                    'type': 'tickCross',
-                    'allowTruthy': True
-                },
-                'Mass': NumberFormatter(format='0,0.000'),
-                'm/z': NumberFormatter(format='0,0.000'),
-                '1/K0': NumberFormatter(format='0,0.000'),
-                'Intensity': NumberFormatter(format='0,0'),
-                'MS/MS scan number': NumberFormatter(format='0,0'),
-                'Andromeda score':  NumberFormatter(format='0,0.0'),
-            },
-            widths={
-                'Sequence': 220,
-                'Proteins': 200,
-                'MS/MS scan number': 100,
-                'Oxidation (M)': 130,
-            },
+            # formatters={
+            #     'Acetylation (N-term)': {
+            #         'type': 'tickCross',
+            #         'allowTruthy': True
+            #     },
+            #     'Oxidation (M)': {
+            #         'type': 'tickCross',
+            #         'allowTruthy': True
+            #     },
+            #     'Mass': NumberFormatter(format='0,0.000'),
+            #     'm/z': NumberFormatter(format='0,0.000'),
+            #     '1/K0': NumberFormatter(format='0,0.000'),
+            #     'Intensity': NumberFormatter(format='0,0'),
+            #     'MS/MS scan number': NumberFormatter(format='0,0'),
+            #     'Andromeda score':  NumberFormatter(format='0,0.0'),
+            # },
+            # widths={
+            #     'Sequence': 220,
+            #     'Proteins': 200,
+            #     'MS/MS scan number': 100,
+            #     'Oxidation (M)': 130,
+            # },
             sizing_mode='stretch_width',
             align='center',
             margin=(0, 5, 10, 5)
@@ -704,6 +712,7 @@ class MainTab(object):
         self.layout = None
 
     def create_layout(self):
+        print('inside create_layout start')
         self.update_gene_name_filter()
 
         dependances = {
@@ -730,6 +739,68 @@ class MainTab(object):
                 dependances[k][0],
                 dependances[k][1]
             )
+
+        self.dictionary = {
+            'maxquant': {
+                'peptides_table': {
+        #             'value': self.data.mq_evidence.loc[:, :'Andromeda score'],
+                    'formatters': {
+                        'Acetylation (N-term)': {
+                            'type': 'tickCross',
+                            'allowTruthy': True
+                        },
+                        'Oxidation (M)': {
+                            'type': 'tickCross',
+                            'allowTruthy': True
+                        },
+        #                 'Mass': NumberFormatter(format='0,0.000'),
+        #                 'm/z': NumberFormatter(format='0,0.000'),
+        #                 '1/K0': NumberFormatter(format='0,0.000'),
+        #                 'Intensity': NumberFormatter(format='0,0'),
+        #                 'MS/MS scan number': NumberFormatter(format='0,0'),
+        #                 'Andromeda score':  NumberFormatter(format='0,0.0'),
+                    },
+                    'widths': {
+                        'Sequence': 220,
+                        'Proteins': 200,
+                        'MS/MS scan number': 100,
+                        'Oxidation (M)': 130,
+                    },
+                },
+                'proteins_table': {
+                    # 'value': 'self.data.mq_protein_groups',
+                    'formatters': {
+                        '(EXP) Seq coverage, %': {
+                            'type': 'progress',
+                            'max': 100,
+                            'legend': True
+                        },
+                        'Protein names': {
+                            'type': "textarea"
+                        },
+                    },
+                    'widths': {
+                        'Protein IDs': 230,
+                        'Protein names': 350,
+                        'Sequence lengths': 150,
+                    },
+                }
+            },
+            'diann': {
+                'peptides_table': {},
+                'proteins_table': {}
+            }
+        }
+        if self.analysis_software == 'maxquant':
+            self.proteins_table.value = self.data.mq_protein_groups
+            self.proteins_table.formatters = self.dictionary[self.analysis_software]['proteins_table']['formatters']
+            self.proteins_table.widths = self.dictionary[self.analysis_software]['proteins_table']['widths']
+            self.peptides_table.value = self.data.mq_evidence.loc[:, :'Andromeda score']
+            self.peptides_table.formatters = self.dictionary[self.analysis_software]['peptides_table']['formatters']
+            self.peptides_table.widths = self.dictionary[self.analysis_software]['peptides_table']['widths']
+        elif self.analysis_software == 'diann':
+            self.proteins_table.value = self.data.diann_proteins
+            self.peptides_table.value = self.data.diann_peptides
 
         # plots
         self.chromatograms_plot = alphaviz.plotting.plot_chrom(
@@ -778,15 +849,22 @@ class MainTab(object):
             margin=(20, 10, 5, 10),
             sizing_mode='stretch_width',
         )
+        print('inside create_layout end')
         return self.layout
 
     def update_gene_name_filter(self):
-        self.gene_name_filter.options = self.data.protein_groups['Gene names'].str.split(';').explode().unique().tolist()
+        if self.analysis_software == 'maxquant':
+            self.gene_name_filter.options = self.data.mq_protein_groups['Gene names'].str.split(';').explode().unique().tolist()
+        elif self.analysis_software == 'diann':
+            self.gene_name_filter.options = self.data.diann_proteins['Gene names'].str.split(';').explode().unique().tolist()
 
     def reset_protein_table(self, *args):
         self.proteins_table.loading = True
         self.gene_name_filter.value = ''
-        self.proteins_table.value = self.data.protein_groups
+        if self.analysis_software == 'maxquant':
+            self.proteins_table.value = self.data.mq_protein_groups
+        elif self.analysis_software == 'diann':
+            self.proteins_table.value = self.data.diann_proteins
         self.protein_list.value = b''
         self.proteins_table.selection = []
         self.proteins_table.loading = False
@@ -796,20 +874,34 @@ class MainTab(object):
         predefined_list = []
         for line in StringIO(str(self.protein_list.value, "utf-8")).readlines():
             predefined_list.append(line.strip().upper())
-        self.proteins_table.value = alphaviz.preprocessing.filter_df(
-            self.data.protein_groups,
-            pattern='|'.join(predefined_list),
-            column='Gene names',
-        )
+        if self.analysis_software == 'maxquant':
+            self.proteins_table.value = alphaviz.preprocessing.filter_df(
+                self.data.mq_protein_groups,
+                pattern='|'.join(predefined_list),
+                column='Gene names',
+            )
+        elif self.analysis_software == 'diann':
+            self.proteins_table.value = alphaviz.preprocessing.filter_df(
+                self.data.diann_proteins,
+                pattern='|'.join(predefined_list),
+                column='Gene names',
+            )
         self.proteins_table.loading = False
 
     def run_after_gene_filter(self, *args):
         self.proteins_table.loading = True
-        self.proteins_table.value = alphaviz.preprocessing.filter_df(
-            self.data.protein_groups,
-            pattern=self.gene_name_filter.value,
-            column='Gene names',
-        )
+        if self.analysis_software == 'maxquant':
+            self.proteins_table.value = alphaviz.preprocessing.filter_df(
+                self.data.mq_protein_groups,
+                pattern=self.gene_name_filter.value,
+                column='Gene names',
+            )
+        elif self.analysis_software == 'diann':
+            self.proteins_table.value = alphaviz.preprocessing.filter_df(
+                self.data.diann_proteins,
+                pattern=self.gene_name_filter.value,
+                column='Gene names',
+            )
         self.proteins_table.loading = False
 
     def run_after_protein_selection(self, *args):
@@ -823,17 +915,27 @@ class MainTab(object):
                 curr_protein_ids,
                 self.data.fasta,
             )
-            self.peptides_table.value = alphaviz.preprocessing.filter_df(
-                self.data.evidence.loc[:, :'Andromeda score'],
-                pattern=self.proteins_table.selected_dataframe['Gene names'].values[0],
-                column='Gene names',
-            )
+            if self.analysis_software == 'maxquant':
+                self.peptides_table.value = alphaviz.preprocessing.filter_df(
+                    self.data.mq_evidence.loc[:, :'Andromeda score'],
+                    pattern=self.proteins_table.selected_dataframe['Gene names'].values[0],
+                    column='Gene names',
+                )
+            elif self.analysis_software == 'diann':
+                self.peptides_table.value = alphaviz.preprocessing.filter_df(
+                    self.data.diann_peptides,
+                    pattern=self.proteins_table.selected_dataframe['Gene names'].values[0],
+                    column='Gene names',
+                )
             self.peptides_table.selection = list(range(len(self.peptides_table.value)))
             self.peptides_table.loading = False
         else:
             self.peptides_table.loading = True
             # self.peptides_table.selectable=False
-            self.peptides_table.value = self.data.evidence.loc[:, :'Andromeda score']
+            if self.analysis_software == 'maxquant':
+                self.peptides_table.value = self.data.mq_evidence.loc[:, :'Andromeda score']
+            elif self.analysis_software == 'diann':
+                self.peptides_table.value = self.data.diann_peptides
             self.peptides_table.selection = []
             self.layout[5] = None
             self.layout[7:] = [
@@ -868,7 +970,7 @@ class MainTab(object):
 
             if self.peptides_table.selected_dataframe.shape[0] == 1 and 'dda' in self.data.raw_data.acquisition_mode:
                 self.scan_number = [int(scan) for scan in self.peptides_table.selected_dataframe['MS/MS scan number'].tolist()]
-                pasef_ids = [int(pasef_id) for pasef_id in self.data.all_peptides[self.data.all_peptides['MS/MS scan number'].isin(self.scan_number)]['Pasef MS/MS IDs'].values[0]]
+                pasef_ids = [int(pasef_id) for pasef_id in self.data.mq_all_peptides[self.data.mq_all_peptides['MS/MS scan number'].isin(self.scan_number)]['Pasef MS/MS IDs'].values[0]]
                 precursors = self.data.raw_data.fragment_frames[self.data.raw_data.fragment_frames.index.isin(pasef_ids)]
                 self.merged_precursor_data = pd.merge(
                     precursors, self.data.raw_data.precursors[self.data.raw_data.precursors.Id.isin(precursors.Precursor.values)],
@@ -974,7 +1076,7 @@ class MainTab(object):
             )
 
             data_ions = alphaviz.preprocessing.get_mq_ms2_scan_data(
-                self.data.msms,
+                self.data.mq_msms,
                 self.scan_number[0],
                 self.data.raw_data,
                 self.ms1_ms2_frames[self.current_frame][1]
@@ -1058,58 +1160,61 @@ class QCTab(object):
         self.name = "Quality Control"
         self.data = data
         self.layout_qc = None
+        self.analysis_software = self.data.settings.get('analysis_software')
 
     def create_layout(self):
-        uncalb_mass_dens_plot = alphaviz.plotting.plot_mass_error(
-            self.data.evidence,
-            'm/z',
-            'Uncalibrated mass error [ppm]',
-            'Uncalibrated mass density plot'
-        )
-        calb_mass_dens_plot = alphaviz.plotting.plot_mass_error(
-            self.data.evidence,
-            'm/z',
-            'Mass error [ppm]',
-            'Calibrated mass density plot'
-        )
-        peptide_mz_distr = alphaviz.plotting.plot_peptide_distr(
-            self.data.evidence,
-            'm/z',
-            'Peptide m/z distribution'
-        )
-        peptide_length_distr = alphaviz.plotting.plot_peptide_distr(
-            self.data.evidence,
-            'Length',
-            'Peptide length distribution'
-        )
-        self.layout_qc = pn.Column(
-            pn.panel(
-                f"## Quality control of the entire sample",
-                align='center',
-                margin=(15, 10, -5, 10)
-            ),
-            pn.Row(
-                pn.Pane(
-                    uncalb_mass_dens_plot,
-                    config=update_config('Uncalibrated mass density plot'),
+        if self.analysis_software == 'maxquant':
+            uncalb_mass_dens_plot = alphaviz.plotting.plot_mass_error(
+                self.data.mq_evidence,
+                'm/z',
+                'Uncalibrated mass error [ppm]',
+                'Uncalibrated mass density plot'
+            )
+            calb_mass_dens_plot = alphaviz.plotting.plot_mass_error(
+                self.data.mq_evidence,
+                'm/z',
+                'Mass error [ppm]',
+                'Calibrated mass density plot'
+            )
+            peptide_mz_distr = alphaviz.plotting.plot_peptide_distr(
+                self.data.mq_evidence,
+                'm/z',
+                'Peptide m/z distribution'
+            )
+            peptide_length_distr = alphaviz.plotting.plot_peptide_distr(
+                self.data.mq_evidence,
+                'Length',
+                'Peptide length distribution'
+            )
+
+            self.layout_qc = pn.Column(
+                pn.panel(
+                    f"## Quality control of the entire sample",
+                    align='center',
+                    margin=(15, 10, -5, 10)
                 ),
-                pn.Pane(
-                    calb_mass_dens_plot,
-                    config=update_config('Calibrated mass density plot'),
+                pn.Row(
+                    pn.Pane(
+                        uncalb_mass_dens_plot,
+                        config=update_config('Uncalibrated mass density plot'),
+                    ),
+                    pn.Pane(
+                        calb_mass_dens_plot,
+                        config=update_config('Calibrated mass density plot'),
+                    ),
+                    align='center'
                 ),
-                align='center'
-            ),
-            pn.Row(
-                peptide_mz_distr,
-                peptide_length_distr,
+                pn.Row(
+                    peptide_mz_distr,
+                    peptide_length_distr,
+                    align='center',
+                    # margin=(0, 0, 0, 50)
+                ),
+                margin=(0, 10, 5, 10),
+                sizing_mode='stretch_width',
                 align='center',
-                # margin=(0, 0, 0, 50)
-            ),
-            margin=(0, 10, 5, 10),
-            sizing_mode='stretch_width',
-            align='center',
-        )
-        return self.layout_qc
+            )
+            return self.layout_qc
 
 
 class GUI(object):
