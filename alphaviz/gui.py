@@ -34,6 +34,7 @@ def get_css_style(
 
 def init_panel():
     pn.extension(raw_css=[get_css_style()])
+    hv.extension('bokeh')
     pn.extension('plotly')
     pn.extension('tabulator')
 
@@ -375,7 +376,7 @@ class DataImportWidget(BaseWidget):
         if any(file in files for file in mq_files):
             print('Reading the MaxQuant output files...')
             if all(file in files for file in mq_files):
-                self.mq_all_peptides, self.mq_msms, self.mq_evidence, self.mq_protein_groups = alphaviz.io.read_mq_output(
+                self.mq_all_peptides, self.mq_msms, self.mq_evidence, self.mq_protein_groups = alphaviz.io.import_mq_output(
                     mq_files,
                     self.path_output_folder.value,
                     self.ms_file_name.value.split('.')[0]
@@ -386,7 +387,7 @@ class DataImportWidget(BaseWidget):
         else:
             print('Reading the DIA-NN output files...')
             try:
-                self.diann_proteins, self.diann_peptides, self.diann_statist = alphaviz.io.read_diann_output(
+                self.diann_proteins, self.diann_peptides, self.diann_statist = alphaviz.io.import_diann_output(
                     self.path_output_folder.value,
                     self.ms_file_name.value.split('.')[0],
                     self.fasta
@@ -731,18 +732,18 @@ class MainTab(object):
             self.gene_name_filter: [self.run_after_gene_filter, 'value'],
             self.proteins_table: [self.run_after_protein_selection, 'selection'],
             self.peptides_table: [self.run_after_peptide_selection, 'selection'],
-            self.heatmap_x_axis: [self.visualize_heatmap_spectrum, 'value'],
-            self.heatmap_y_axis: [self.visualize_heatmap_spectrum, 'value'],
-            self.heatmap_colormap: [self.visualize_heatmap_spectrum, 'value'],
-            self.heatmap_background_color: [self.visualize_heatmap_spectrum, 'value'],
-            self.heatmap_precursor_size: [self.visualize_heatmap_spectrum, 'value'],
-            self.heatmap_precursor_color: [self.visualize_heatmap_spectrum, 'value'],
-            self.previous_frame: [self.visualize_previous_frame, 'clicks'],
-            self.next_frame: [self.visualize_next_frame, 'clicks'],
-            self.plot_overlapped_frames: [self.visualize_overlapped_frames, 'value'],
-            self.xic_tol: [self.visualize_line_spectra_plots, 'value'],
-            self.xic_tol_units: [self.visualize_line_spectra_plots, 'value'],
-            self.x_axis_label: [self.visualize_line_spectra_plots, 'value'],
+            self.heatmap_x_axis: [self.display_heatmap_spectrum, 'value'],
+            self.heatmap_y_axis: [self.display_heatmap_spectrum, 'value'],
+            self.heatmap_colormap: [self.display_heatmap_spectrum, 'value'],
+            self.heatmap_background_color: [self.display_heatmap_spectrum, 'value'],
+            self.heatmap_precursor_size: [self.display_heatmap_spectrum, 'value'],
+            self.heatmap_precursor_color: [self.display_heatmap_spectrum, 'value'],
+            self.previous_frame: [self.display_previous_frame, 'clicks'],
+            self.next_frame: [self.display_next_frame, 'clicks'],
+            self.plot_overlapped_frames: [self.display_overlapped_frames, 'value'],
+            self.xic_tol: [self.display_line_spectra_plots, 'value'],
+            self.xic_tol_units: [self.display_line_spectra_plots, 'value'],
+            self.x_axis_label: [self.display_line_spectra_plots, 'value'],
         }
         for k in dependances.keys():
             k.param.watch(
@@ -991,8 +992,8 @@ class MainTab(object):
                     self.merged_precursor_data['Frame_Prec'] = list(zip(self.merged_precursor_data.Frame, self.merged_precursor_data.Precursor))
                     self.ms1_ms2_frames = dict(zip(self.merged_precursor_data.Parent, self.merged_precursor_data.Frame_Prec))
                     self.current_frame = list(self.ms1_ms2_frames.keys())[0]
-                    self.visualize_line_spectra_plots()
-                    self.visualize_heatmap_spectrum()
+                    self.display_line_spectra_plots()
+                    self.display_heatmap_spectrum()
                 else:
                     self.ms2_frame = self.data.raw_data.fragment_frames[self.data.raw_data.fragment_frames.index.isin(self.scan_number)].Frame.values[0]
                     self.ms1_frame = self.data.raw_data.frames[(self.data.raw_data.frames.MsMsType == 0) & (self.data.raw_data.frames.Id < self.ms2_frame)].iloc[-1, 0]
@@ -1003,13 +1004,6 @@ class MainTab(object):
                         "im": self.peptides_table.selected_dataframe['IM'].values[0],
                         "rt": self.peptides_table.selected_dataframe['RT'].values[0] * 60
                     }
-                    print(self.peptide)
-                    print(alphaviz.utils.parse(self.peptide['sequence']))
-                    print(self.mass_dict)
-                    print(alphaviz.utils.get_precmass(
-                        alphaviz.utils.parse(self.peptide['sequence']),
-                        self.mass_dict
-                    ))
                     self.peptide['mz'] = alphaviz.utils.calculate_mz(
                         prec_mass=alphaviz.utils.get_precmass(
                             alphaviz.utils.parse(self.peptide['sequence']),
@@ -1017,8 +1011,8 @@ class MainTab(object):
                         ),
                         charge=self.peptide['charge']
                     )
-                    print(self.peptide)
-                    self.visualize_elution_profile_plots()
+                    self.display_elution_profile_plots()
+                    self.display_heatmap_spectrum()
             else:
                 self.layout[7:] = [
                     None, # peptide description
@@ -1035,60 +1029,60 @@ class MainTab(object):
                     None, #Overlap frames button
                 ]
 
-    def visualize_line_spectra_plots(self, *args):
-        xic_tol_value = self.xic_tol.value
-        prec_mono_mz = self.merged_precursor_data.MonoisotopicMz.median()
-        if self.xic_tol_units.value == 'ppm':
-            prec_mono_low_mz = prec_mono_mz / (1 + xic_tol_value / 10**6)
-            prec_mono_high_mz = prec_mono_mz * (1 + xic_tol_value / 10**6)
-        else:
-            prec_mono_low_mz = prec_mono_mz - xic_tol_value
-            prec_mono_high_mz = prec_mono_mz + xic_tol_value
-        if self.x_axis_label.value == 'rt':
-            one_over_k0 = float(self.peptides_table.selected_dataframe['1/K0'].values[0])
-            one_over_k0_low, one_over_k0_high = one_over_k0 - self.xic_im_tol.value, one_over_k0 + self.xic_im_tol.value
-            precursor_indices = self.data.raw_data[
-                :,
-                one_over_k0_low : one_over_k0_high,
-                :,
-                prec_mono_low_mz : prec_mono_high_mz,
-                'raw'
-            ]
-        else:
-            precursor_indices = self.data.raw_data[
-                :,
-                :,
-                :,
-                prec_mono_low_mz : prec_mono_high_mz,
-                'raw'
-            ]
-        self.layout[7] = pn.panel(
-            f"## The selected peptide: m/z: {round(float(self.peptides_table.selected_dataframe['m/z'].values[0]), 3)}, charge: {float(self.peptides_table.selected_dataframe['Charge'].values[0])}, 1/K0: {round(float(self.peptides_table.selected_dataframe['1/K0'].values[0]), 3)}, andromeda score: {round(float(self.peptides_table.selected_dataframe['Andromeda score'].values[0]), 1)}.",
-            css_classes=['main-part'],
-            sizing_mode='stretch_width',
-            align='center',
-            margin=(0, 10, 0, -10)
-        )
+    def display_line_spectra_plots(self, *args):
+        if self.analysis_software == 'maxquant':
+            xic_tol_value = self.xic_tol.value
+            prec_mono_mz = self.merged_precursor_data.MonoisotopicMz.median()
+            if self.xic_tol_units.value == 'ppm':
+                prec_mono_low_mz = prec_mono_mz / (1 + xic_tol_value / 10**6)
+                prec_mono_high_mz = prec_mono_mz * (1 + xic_tol_value / 10**6)
+            else:
+                prec_mono_low_mz = prec_mono_mz - xic_tol_value
+                prec_mono_high_mz = prec_mono_mz + xic_tol_value
+            if self.x_axis_label.value == 'rt':
+                one_over_k0 = float(self.peptides_table.selected_dataframe['1/K0'].values[0])
+                one_over_k0_low, one_over_k0_high = one_over_k0 - self.xic_im_tol.value, one_over_k0 + self.xic_im_tol.value
+                precursor_indices = self.data.raw_data[
+                    :,
+                    one_over_k0_low : one_over_k0_high,
+                    :,
+                    prec_mono_low_mz : prec_mono_high_mz,
+                    'raw'
+                ]
+            else:
+                precursor_indices = self.data.raw_data[
+                    :,
+                    :,
+                    :,
+                    prec_mono_low_mz : prec_mono_high_mz,
+                    'raw'
+                ]
+            self.layout[7] = pn.panel(
+                f"## The selected peptide: m/z: {round(float(self.peptides_table.selected_dataframe['m/z'].values[0]), 3)}, charge: {float(self.peptides_table.selected_dataframe['Charge'].values[0])}, 1/K0: {round(float(self.peptides_table.selected_dataframe['1/K0'].values[0]), 3)}, andromeda score: {round(float(self.peptides_table.selected_dataframe['Andromeda score'].values[0]), 1)}.",
+                css_classes=['main-part'],
+                sizing_mode='stretch_width',
+                align='center',
+                margin=(0, 10, 0, -10)
+            )
 
-        self.layout[8] = pn.Row(
-            self.x_axis_label,
-            pn.Pane(
-                alphaviz.plotting.plot_line(
-                    self.data.raw_data,
-                    precursor_indices,
-                    self.x_axis_label.value,
+            self.layout[8] = pn.Row(
+                self.x_axis_label,
+                pn.Pane(
+                    alphaviz.plotting.plot_line(
+                        self.data.raw_data,
+                        precursor_indices,
+                        self.x_axis_label.value,
+                    ),
+                    sizing_mode='stretch_width',
+                    config=update_config('Extracted Ion Chromatogram'),
                 ),
                 sizing_mode='stretch_width',
-                config=update_config('Extracted Ion Chromatogram'),
-            ),
-            sizing_mode='stretch_width',
-            margin=(5, 10, 0, 10)
-        )
+                margin=(5, 10, 0, 10)
+            )
+        else:
+            self.display_elution_profile_plots()
 
-    def visualize_elution_profile_plots(self, *args):
-        # xic_tol_value = self.xic_tol.value
-        # prec_mono_mz = self.merged_precursor_data.MonoisotopicMz.median()
-        # if self.xic_tol_units.value == 'ppm':
+    def display_elution_profile_plots(self, *args):
         self.layout[7] = pn.panel(
             f"## The selected peptide: m/z: {round(self.peptide['mz'], 3)}, charge: {self.peptide['charge']}, 1/K0: {round(self.peptide['im'], 3)}, Quantity.Quality score: {round(float(self.peptides_table.selected_dataframe['Quantity.Quality'].values[0]), 2)}.",
             css_classes=['main-part'],
@@ -1096,24 +1090,43 @@ class MainTab(object):
             align='center',
             margin=(0, 10, 0, -10)
         )
-
-        self.layout[8] = pn.Row(
-            self.x_axis_label,
-            pn.Pane(
-                alphaviz.plotting.plot_elution_profile(
-                    self.data.raw_data,
-                    self.peptide,
-                    self.mass_dict,
-                    title=f"Precursor/fragments elution profile of {self.peptides_table.selected_dataframe['Modified.Sequence'].values[0]} in RT dimension ({self.peptide['rt'] / 60: .2f} min)"
+        if self.x_axis_label.value == 'rt':
+            self.layout[8] = pn.Row(
+                self.x_axis_label,
+                pn.Pane(
+                    alphaviz.plotting.plot_elution_profile(
+                        self.data.raw_data,
+                        self.peptide,
+                        self.mass_dict,
+                        title=f"Precursor/fragments elution profile of {self.peptides_table.selected_dataframe['Modified.Sequence'].values[0]} in RT dimension ({self.peptide['rt'] / 60: .2f} min)"
+                    ),
+                    sizing_mode='stretch_width',
+                    config=update_config('Precursor/fragments elution profile plot'),
                 ),
                 sizing_mode='stretch_width',
-                config=update_config('Precursor/fragments elution profile plot'),
-            ),
-            sizing_mode='stretch_width',
-            margin=(5, 10, 0, 10)
-        )
+                margin=(5, 10, 0, 10)
+            )
+        else:
+            self.layout[8] = pn.Row(
+                self.x_axis_label,
+                pn.Pane(
+                    alphaviz.plotting.plot_elution_profile_heatmap(
+                        self.data.raw_data,
+                        self.peptide,
+                        self.mass_dict,
+                        n_cols=8,
+                        width=180,
+                        height=180
+                        # title=f"Precursor/fragments elution profile of {self.peptides_table.selected_dataframe['Modified.Sequence'].values[0]} in RT dimension ({self.peptide['rt'] / 60: .2f} min)"
+                    ),
+                    sizing_mode='stretch_width',
+                    config=update_config('Precursor/fragments elution profile plot'),
+                ),
+                sizing_mode='stretch_width',
+                margin=(5, 10, 0, 10)
+            )
 
-    def visualize_heatmap_spectrum(self, *args):
+    def display_heatmap_spectrum(self, *args):
         if self.ms1_ms2_frames or self.ms1_frame:
             if self.analysis_software == 'maxquant':
                 ms1_frame = self.current_frame
@@ -1137,6 +1150,9 @@ class MainTab(object):
                 background_color=self.heatmap_background_color.value,
                 precursor_size=self.heatmap_precursor_size.value,
                 precursor_color=self.heatmap_precursor_color.value,
+                width=450,
+                height=450,
+                shared_axes=True
             )
             self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
                 self.data.raw_data[ms2_frame],
@@ -1149,18 +1165,23 @@ class MainTab(object):
                 background_color=self.heatmap_background_color.value,
                 precursor_size=self.heatmap_precursor_size.value,
                 precursor_color=self.heatmap_precursor_color.value,
+                width=450,
+                height=450,
+                shared_axes=True
             )
 
             self.layout[10][0] = pn.Pane(
                 self.heatmap_ms1_plot,
                 margin=(15, 0, 0, 0),
-                # sizing_mode='stretch_width'
+                sizing_mode='stretch_width'
             )
             self.layout[10][1] = pn.Pane(
                 self.heatmap_ms2_plot,
                 margin=(15, 0, 0, 0),
-                # sizing_mode='stretch_width'
+                sizing_mode='stretch_width'
             )
+            print('layout should be updated')
+            print(self.layout)
             if self.analysis_software == 'maxquant':
                 data_ions = alphaviz.preprocessing.get_mq_ms2_scan_data(
                     self.data.mq_msms,
@@ -1184,25 +1205,25 @@ class MainTab(object):
                 )
                 self.layout[11] = self.plot_overlapped_frames
 
-    def visualize_previous_frame(self, *args):
+    def display_previous_frame(self, *args):
         self.plot_overlapped_frames.value = False
         current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
         if current_frame_index == 0:
             self.current_frame = list(self.ms1_ms2_frames.keys())[-1]
         else:
             self.current_frame = list(self.ms1_ms2_frames.keys())[current_frame_index - 1]
-        self.visualize_heatmap_spectrum()
+        self.display_heatmap_spectrum()
 
-    def visualize_next_frame(self, *args):
+    def display_next_frame(self, *args):
         self.plot_overlapped_frames.value = False
         current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
         if current_frame_index == len(self.ms1_ms2_frames.keys())-1:
             self.current_frame = list(self.ms1_ms2_frames.keys())[0]
         else:
             self.current_frame = list(self.ms1_ms2_frames.keys())[current_frame_index + 1]
-        self.visualize_heatmap_spectrum()
+        self.display_heatmap_spectrum()
 
-    def visualize_overlapped_frames(self, *args):
+    def display_overlapped_frames(self, *args):
         if self.plot_overlapped_frames.value == True:
             self.heatmap_ms1_plot = alphaviz.plotting.plot_heatmap(
                 self.data.raw_data[list(self.ms1_ms2_frames.keys())],
@@ -1227,7 +1248,7 @@ class MainTab(object):
             self.layout[10][0] = self.heatmap_ms1_plot
             self.layout[10][1] = self.heatmap_ms2_plot
         else:
-            self.visualize_heatmap_spectrum()
+            self.display_heatmap_spectrum()
 
 
 class QCTab(object):

@@ -15,6 +15,7 @@ from holoviews.operation.datashader import dynspread, rasterize, shade
 from bokeh.models import BoxZoomTool, WheelZoomTool, ResetTool, SaveTool
 
 import alphaviz.preprocessing
+import alphaviz.utils
 
 
 def plot_sequence_coverage(
@@ -188,13 +189,13 @@ def plot_chrom(
 
 def plot_heatmap(
     df: pd.DataFrame,
-    mz: float,
-    im: float,
-    x_axis_label: str,
-    y_axis_label: str,
+    x_axis_label: str = "RT, min",
+    y_axis_label: str = "Inversed IM, V·s·cm\u207B\u00B2",
     z_axis_label: str = "Intensity",
+    mz: float = 0.0,
+    im: float = 0.0,
     title: str = "",
-    width: int = 450,
+    # width: int = 450,
     height: int = 450,
     background_color: str = "black",
     precursor_color: str = 'green',
@@ -245,8 +246,8 @@ def plot_heatmap(
         A scatter plot projected on the 2 dimensions with markered position of the precursor.
 
     """
-    hv.extension('bokeh')
     labels = {
+        'RT, min': "rt_values",
         'm/z, Th': "mz_values",
         'Inversed IM, V·s·cm\u207B\u00B2': "mobility_values",
         'Intensity': "intensity_values",
@@ -260,7 +261,7 @@ def plot_heatmap(
     #     plot.handles['layout']['yaxis']['gridcolor'] = background_color
 
     opts_ms1 = dict(
-        width=width,
+        # width=width,
         height=height,
         title=title,
         xlabel=x_axis_label,
@@ -280,7 +281,7 @@ def plot_heatmap(
     )
     agg = rasterize(
         dmap,
-        width=width,
+        # width=width,
         height=height,
         aggregator='sum'
     )
@@ -291,14 +292,15 @@ def plot_heatmap(
         )
     ).opts(plot=opts_ms1)
 
-    precursor = hv.Points((mz, im)).opts(
-        marker='x',
-        size=precursor_size,
-        color=precursor_color,
-        # axiswise=True,
-    )
-    return fig * precursor
-
+    if mz and im:
+        precursor = hv.Points((mz, im)).opts(
+            marker='x',
+            size=precursor_size,
+            color=precursor_color,
+            # axiswise=True,
+        )
+        return fig * precursor
+    return fig
 
 def _change_plot(plot, element):
     plot.state.toolbar.logo = None
@@ -893,6 +895,92 @@ def plot_peptide_distr(
     return fig
 
 
+def plot_elution_heatmap(
+    df: pd.DataFrame,
+    title: str = "",
+    width: int = 250,
+    height: int = 250,
+    background_color: str = "black",
+    colormap: str = "fire",
+    **kwargs
+):
+    """Create a heatmap showing a correlation of retention time  and ion mobility with color coding for signal intensity.
+
+    Parameters
+    ----------
+    df : pandas Dataframe
+        A dataframe obtained by slicing an alphatims.bruker.TimsTOF object.
+    title: str
+        The title of the plot. Default: "".
+    width : int
+        The width of the plot. Default: 250.
+    height : int
+        The height of the plot. Default: 250.
+    background_color : str
+        The background color of the plot. Default: "black".
+    colormap : str
+        The name of the colormap in Plotly. Default: "fire".
+
+    Returns
+    -------
+    a Plotly scatter plot
+        The scatter plot showing the correlation of retention time  and ion mobility with color coding for signal intensity.
+    """
+    labels = {
+        'RT, min': "rt_values",
+        'Inversed IM, V·s·cm\u207B\u00B2': "mobility_values",
+        'Intensity': "intensity_values",
+    }
+    x_axis_label = "RT, min"
+    y_axis_label = "Inversed IM, V·s·cm\u207B\u00B2"
+    z_axis_label = "Intensity"
+
+    x_dimension = labels[x_axis_label]
+    y_dimension = labels[y_axis_label]
+    z_dimension = labels[z_axis_label]
+
+    df["rt_values"] /= 60
+
+#     def hook(plot, element):
+#         plot.handles['layout']['xaxis']['gridcolor'] = background_color
+#         plot.handles['layout']['yaxis']['gridcolor'] = background_color
+#         plot.handles['layout']['xaxis']['titlefont'] = dict(size=6)
+#         plot.handles['layout']['yaxis']['titlefont'] = dict(size=6)
+#         plot.handles['layout']['xaxis']['tickfont'] = dict(size=6)
+#         plot.handles['layout']['yaxis']['tickfont'] = dict(size=6)
+
+    opts_ms1=dict(
+        width=width,
+        height=height,
+        title=title,
+        xlabel=x_axis_label,
+        ylabel=y_axis_label,
+        bgcolor=background_color,
+#         hooks=[hook],
+        **kwargs
+    )
+    dmap = hv.DynamicMap(
+        hv.Points(
+            df,
+            [x_dimension, y_dimension],
+            z_dimension
+        )
+    )
+    agg = rasterize(
+        dmap,
+        width=width,
+        height=height,
+        aggregator='sum'
+    )
+    fig = dynspread(
+        shade(
+            agg,
+            cmap=colormap
+        )
+    ).opts(plot=opts_ms1)
+
+    return fig
+
 def plot_elution_profile_heatmap(
     timstof_data,
     peptide_info: dict,
@@ -902,8 +990,9 @@ def plot_elution_profile_heatmap(
     im_tol: int = 0.05,
     title: str = "",
     n_cols: int = 5,
-    width: int = 180,
-    height: int = 180,
+    # width: int = 180,
+    height: int = 400,
+    **kwargs
 ):
     """Plot an elution profile for the specified precursor and all his identified fragments as heatmaps in the
     retention time/ion mobility dimensions.
@@ -926,8 +1015,8 @@ def plot_elution_profile_heatmap(
         The title of the plot. Default: "".
     n_cols: int
         The number of the heatmaps plotted per row. Default: 5.
-    width : int
-        The width of the plot. Default: 180.
+    # width : int
+    #     The width of the plot. Default: 180.
     height : int
         The height of the plot. Default: 180.
 
@@ -937,10 +1026,9 @@ def plot_elution_profile_heatmap(
         The elution profile heatmap plots in retention time and ion mobility dimensions
         for the specified peptide and all his fragments.
     """
-    import alphaviz.utils
     # predict the theoretical fragments using the Alphapept get_fragmass() function.
     frag_masses, frag_type = alphaviz.utils.get_fragmass(
-        parsed_pep=parse(peptide_info['sequence']),
+        parsed_pep=alphaviz.utils.parse(peptide_info['sequence']),
         mass_dict=mass_dict
     )
     peptide_info['fragments'] = {
@@ -961,8 +1049,15 @@ def plot_elution_profile_heatmap(
         'raw'
     ]
 
-    common_plot = plot_heatmap(
-        timstof_data.as_dataframe(precursor_indices), title='precursor', width=width, height=height
+    common_plot = plot_elution_heatmap(
+        timstof_data.as_dataframe(precursor_indices),
+        title='precursor',
+        # width=width,
+        height=height,
+        # ylim=(im_slice.start, im_slice.stop),
+        # y_axis_label="RT, min",
+        # x_axis_label="Inversed IM, V·s·cm\u207B\u00B2",
+        **kwargs
     )
 
     # create elution profiles for all fragments
@@ -975,8 +1070,15 @@ def plot_elution_profile_heatmap(
             'raw'
         ]
         if len(fragment_data_indices) > 0:
-            common_plot += plot_heatmap(
-                timstof_data.as_dataframe(fragment_data_indices), title=frag, width=width, height=height
+            common_plot += plot_elution_heatmap(
+                timstof_data.as_dataframe(fragment_data_indices),
+                title=frag,
+                # width=width,
+                height=height,
+                # y_axis_label="RT, min",
+                # x_axis_label="Inversed IM, V·s·cm\u207B\u00B2",
+                # ylim=(im_slice.start, im_slice.stop),
+                **kwargs
             )
 
     return common_plot.cols(n_cols)

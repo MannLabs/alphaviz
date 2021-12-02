@@ -65,11 +65,7 @@ def get_mass_dict(modfile:str="data/modifications.tsv", aasfile: str="data/amino
             mass_dict[identifier] = float(mass) + mass_dict[aar]
 
     # Manually add other masses
-    mass_dict[
-        "Electron"
-    ] = (
-        0.000548579909070
-    )  # electron mass, half a millimass error if not taken into account
+    mass_dict["Electron"] = (0.000548579909070)  # electron mass, half a millimass error if not taken into account
     mass_dict["Proton"] = 1.00727646687  # proton mass
     mass_dict["Hydrogen"] = 1.00782503223  # hydrogen mass
     mass_dict["C13"] = 13.003354835  # C13 mass
@@ -212,11 +208,3 @@ def calculate_mz(prec_mass:float, charge:int) -> float:
     mono_mz = prec_mass / abs(charge) + M_PROTON
 
     return mono_mz
-
-def get_mz(
-    sequence: str,
-    charge: int
-):
-    mz = calculate_mz(
-        alphaviz.utils.get_precmass(
-            alphaviz.utils.parse(peptide['sequence']), mass_dict), charge=peptide['charge'])

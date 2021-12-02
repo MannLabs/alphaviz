@@ -113,11 +113,11 @@ def sort_naturally(
         A naturally sorted string.
 
     """
-    def convert(value):
+    def _convert(value):
         if value.isdigit():
             return int(value)
         return value.lower()
-    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    alphanum_key = lambda key: [_convert(c) for c in re.split('([0-9]+)', key)]
     return sorted(line, key=alphanum_key, reverse=reverse)
 
 

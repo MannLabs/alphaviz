@@ -22,9 +22,9 @@ def test_read_file():
         "The data of the extracted column are wrong."
 
 
-# def test_read_mq_evidence():
+# def test_import_mq_evidence():
 #     raw_file_name = 'raw_0'
-#     data = alphaviz.io.read_mq_evidence(mq_evidence_file, raw_file_name)
+#     data = alphaviz.io.import_mq_evidence(mq_evidence_file, raw_file_name)
 #
 #     assert data.shape == (58, 10), \
 #         "A number of extracted rows/columns is wrong."

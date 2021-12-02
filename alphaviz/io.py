@@ -53,7 +53,7 @@ def read_file(
     return data
 
 
-def read_mq_evidence(
+def import_mq_evidence(
     filepath: str,
     experiment: str
 )-> pd.DataFrame:
@@ -136,7 +136,7 @@ def read_mq_evidence(
     return data_raw_file
 
 
-def read_mq_protein_groups(
+def import_mq_protein_groups(
     filepath: str,
     experiment: str
 )-> pd.DataFrame:
@@ -197,7 +197,7 @@ def read_mq_protein_groups(
     return data_common
 
 
-def read_mq_all_peptides(
+def import_mq_all_peptides(
     filepath:str
 )-> pd.DataFrame:
     """Read some columns from the output file allPeptides.txt of MaxQuant software.
@@ -228,7 +228,7 @@ def read_mq_all_peptides(
     return data_common
 
 
-def read_mq_msms(
+def import_mq_msms(
     filepath: str
 )-> pd.DataFrame:
     """Read some columns from the output file msms.txt of MaxQuant software.
@@ -261,7 +261,7 @@ def read_mq_msms(
     return data_common
 
 
-def read_mq_output(
+def import_mq_output(
     necessary_files: list,
     path_mq_output_folder: str,
     experiment: str
@@ -283,10 +283,10 @@ def read_mq_output(
         For each of the specified MQ output files, the function returns a pandas data frame with the extracted information.
     """
     file_func_dict = {
-        'allPeptides.txt': read_mq_all_peptides,
-        'msms.txt': read_mq_msms,
-        'evidence.txt': read_mq_evidence,
-        'proteinGroups.txt': read_mq_protein_groups
+        'allPeptides.txt': import_mq_all_peptides,
+        'msms.txt': import_mq_msms,
+        'evidence.txt': import_mq_evidence,
+        'proteinGroups.txt': import_mq_protein_groups
     }
     for file in necessary_files:
         file_path = os.path.join(
@@ -348,7 +348,7 @@ def read_fasta(
     return fasta
 
 
-def read_diann_stats(
+def import_diann_stats(
     filepath: str,
     experiment: str
 ):
@@ -450,7 +450,7 @@ def create_diann_peptides_table(
     peptides = peptides[first_columns + sorted(list(set(peptides.columns).difference(first_columns)))]
     return peptides
 
-def read_diann_output(
+def import_diann_output(
     path_diann_output_folder: str,
     experiment: str,
     fasta: object
@@ -480,6 +480,6 @@ def read_diann_output(
     diann_proteins = create_diann_proteins_table(diann_df, fasta)
     diann_peptides = create_diann_peptides_table(diann_df)
 
-    diann_overview = read_diann_stats(os.path.join(path_diann_output_folder, diann_stats_file), experiment)
+    diann_overview = import_diann_stats(os.path.join(path_diann_output_folder, diann_stats_file), experiment)
 
     return diann_proteins, diann_peptides, diann_overview
