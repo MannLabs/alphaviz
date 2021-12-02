@@ -1312,7 +1312,41 @@ class QCTab(object):
                 align='center',
             )
             return self.layout_qc
+        else:
+            # peptide_mz_distr = alphaviz.plotting.plot_peptide_distr(
+            #     self.data.mq_evidence,
+            #     'm/z',
+            #     'Peptide m/z distribution'
+            # )
+            peptide_charge_distr = alphaviz.plotting.plot_peptide_distr(
+                self.data.diann_peptides,
+                'Charge',
+                'Peptide charge distribution'
+            )
+            peptide_length_distr = alphaviz.plotting.plot_peptide_distr(
+                self.data.diann_peptides,
+                'Length',
+                'Peptide length distribution'
+            )
 
+            self.layout_qc = pn.Column(
+                pn.panel(
+                    f"## Quality control of the entire sample",
+                    align='center',
+                    margin=(15, 10, -5, 10)
+                ),
+                pn.Row(
+                    # peptide_mz_distr,
+                    peptide_charge_distr,
+                    peptide_length_distr,
+                    align='center',
+                    # margin=(0, 0, 0, 50)
+                ),
+                margin=(0, 10, 5, 10),
+                sizing_mode='stretch_width',
+                align='center',
+            )
+            return self.layout_qc
 
 class GUI(object):
     # TODO: move to alphabase and docstring
