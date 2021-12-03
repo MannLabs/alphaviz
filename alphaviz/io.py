@@ -368,10 +368,10 @@ def import_diann_stats(
     """
     diann_overview = pd.read_csv(filepath, sep='\t')
     diann_overview = diann_overview[diann_overview['File.Name'].str.contains(experiment)]
-    diann_overview = diann_overview[diann_overview.columns[1:]].T
-    diann_overview.reset_index(inplace=True)
-    diann_overview.columns = ['index', 'values']
-    diann_overview['values'] = diann_overview['values'].apply(lambda x: '%.2E' % x if x>100000 else '%.2f' % x)
+    diann_overview = diann_overview[diann_overview.columns[1:]]#.T
+    # diann_overview.reset_index(inplace=True)
+    # diann_overview.columns = ['index', 'values']
+    # diann_overview['values'] = diann_overview['values'].apply(lambda x: '%.2E' % x if x>100000 else '%.2f' % x)
     return diann_overview
 
 
