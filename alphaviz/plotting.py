@@ -1265,3 +1265,72 @@ def plot_elution_profile(
         showlegend=True
     )
     return fig
+
+
+def plot_pept_per_protein_barplot(
+    df: pd.DataFrame,
+    x_axis_label: str,
+    plot_title: str
+)-> go.Figure:
+    """Create a barplot for the number of peptides identified per protein.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The data frame containing the data.
+    x_axis_label : str
+        The label of the x-axis containing information about the number of identified peptides per protein.
+    plot_title : str
+        The title of the plot.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure object
+        A distribution barplot.
+
+    """
+    df['pept_per_prot'] = df[x_axis_label].apply(lambda x: str(x) if x <5 else '>5')
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Bar(
+            x=df.pept_per_prot.value_counts().sort_index().index,
+            y=df.pept_per_prot.value_counts().sort_index().values,
+            marker=dict(
+                color='rgb(198,219,239)'
+            ),
+            text=[f'{each:.2f}' for each in df.pept_per_prot.value_counts(normalize=True).sort_index().values],
+            textfont={
+                'size':8,
+                'color':'green'
+            },
+        )
+    )
+
+    fig.update_layout(
+        title=dict(
+            text=plot_title,
+            font=dict(
+                size=16,
+            ),
+            x=0.5,
+            xanchor='center',
+            yanchor='top'
+        ),
+        xaxis = dict(
+            zeroline = True,
+            showgrid = True,
+            title="Number of peptide",
+
+        ),
+        yaxis = dict(
+            zeroline = True,
+            showgrid = True,
+            title='Count',
+        ),
+        template = "plotly_white",
+        height = 400,
+        width = 400,
+    )
+    return fig
