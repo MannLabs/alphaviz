@@ -614,6 +614,12 @@ class MainTab(object):
             height=250,
             show_index=False,
             selectable='checkbox',
+            formatters={
+                "Protein IDs": {
+                    'type': 'link',
+                    'urlPrefix':"https://www.uniprot.org/uniprot/",
+                }
+            },
             # formatters={
             #     '(EXP) Seq coverage, %': {
             #         'type': 'progress',
