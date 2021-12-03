@@ -1313,11 +1313,11 @@ class QCTab(object):
             )
             return self.layout_qc
         else:
-            # peptide_mz_distr = alphaviz.plotting.plot_peptide_distr(
-            #     self.data.mq_evidence,
-            #     'm/z',
-            #     'Peptide m/z distribution'
-            # )
+            peptide_per_protein_distr = alphaviz.plotting.plot_pept_per_protein_barplot(
+                self.data.diann_proteins,
+                '(EXP) # peptides',
+                'Peptides per protein',
+            )
             peptide_charge_distr = alphaviz.plotting.plot_peptide_distr(
                 self.data.diann_peptides,
                 'Charge',
@@ -1333,10 +1333,20 @@ class QCTab(object):
                 pn.panel(
                     f"## Quality control of the entire sample",
                     align='center',
-                    margin=(15, 10, -5, 10)
+                    margin=(0, 10, -5, 10)
+                ),
+                pn.widgets.Tabulator(
+                    self.data.diann_statist,
+                    sizing_mode='stretch_width',
+                    layout='fit_data_table',
+                    name='Overview table',
+                    page_size=1,
+                    disabled=True,
+                    height=100,
+                    show_index=False,
                 ),
                 pn.Row(
-                    # peptide_mz_distr,
+                    peptide_per_protein_distr,
                     peptide_charge_distr,
                     peptide_length_distr,
                     align='center',
