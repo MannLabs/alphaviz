@@ -616,8 +616,8 @@ class MainTab(object):
             page_size=5,
             disabled=True,
             height=250,
-            show_index=False,
-            selectable='checkbox',
+            show_index=True,
+            selectable=1,
             formatters={
                 "Protein IDs": {
                     'type': 'link',
@@ -641,6 +641,7 @@ class MainTab(object):
             # },
             sizing_mode='stretch_width',
             align='center',
+            text_align='center',
             margin=(0, 5, 10, 5)
         )
         self.gene_name_filter = pn.widgets.AutocompleteInput(
@@ -674,7 +675,7 @@ class MainTab(object):
             disabled=True,
             height=300,
             show_index=False,
-            selectable='checkbox',
+            selectable=1,
             # formatters={
             #     'Acetylation (N-term)': {
             #         'type': 'tickCross',
@@ -699,6 +700,7 @@ class MainTab(object):
             # },
             sizing_mode='stretch_width',
             align='center',
+            text_align='center',
             margin=(0, 5, 10, 5)
         )
         self.protein_coverage_plot = None
@@ -930,8 +932,11 @@ class MainTab(object):
             self.peptides_table.loading = True
             # self.peptides_table.selectable=True
             # self.peptides_table.selectable='checkbox'
-            self.gene_name = self.proteins_table.selected_dataframe['Gene names'].values[0]
-            curr_protein_ids = self.proteins_table.selected_dataframe['Protein IDs'].values[0]
+            # print(self.proteins_table.selected_dataframe)
+            # print(self.proteins_table.selection)
+            # print(self.proteins_table.value.loc[self.proteins_table.selection[0], 'Gene names'])
+            self.gene_name = self.proteins_table.value.loc[self.proteins_table.selection[0], 'Gene names']
+            curr_protein_ids = self.proteins_table.value.loc[self.proteins_table.selection[0], 'Protein IDs']
             self.protein_seq = alphaviz.preprocessing.get_aa_seq(
                 curr_protein_ids,
                 self.data.fasta,
@@ -939,13 +944,13 @@ class MainTab(object):
             if self.analysis_software == 'maxquant':
                 self.peptides_table.value = alphaviz.preprocessing.filter_df(
                     self.data.mq_evidence.loc[:, :'Andromeda score'],
-                    pattern=self.proteins_table.selected_dataframe['Gene names'].values[0],
+                    pattern=self.gene_name,
                     column='Gene names',
                 )
             elif self.analysis_software == 'diann':
                 self.peptides_table.value = alphaviz.preprocessing.filter_df(
                     self.data.diann_peptides,
-                    pattern=self.proteins_table.selected_dataframe['Gene names'].values[0],
+                    pattern=self.gene_name,
                     column='Gene names',
                 )
             self.peptides_table.selection = list(range(len(self.peptides_table.value)))
