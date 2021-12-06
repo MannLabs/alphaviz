@@ -338,6 +338,10 @@ class DataImportWidget(BaseWidget):
                     self.path_fasta_file.value = os.path.join(dirpath, filename)
                 elif filename == 'evidence.txt':
                     self.path_output_folder.value = dirpath
+        if not self.path_fasta_file.value:
+            for filename in os.listdir(self.path_raw_folder.value):
+                if filename.endswith(".fasta"):
+                    self.path_fasta_file.value = os.path.join(self.path_raw_folder.value, filename)
 
     def load_data(self, *args):
         alphatims.utils.set_progress_callback(self.upload_progress)
@@ -1315,9 +1319,8 @@ class QCTab(object):
                 ),
                 margin=(0, 10, 5, 10),
                 sizing_mode='stretch_width',
-                align='center',
+                align='start',
             )
-            return self.layout_qc
         else:
             peptide_per_protein_distr = alphaviz.plotting.plot_pept_per_protein_barplot(
                 self.data.diann_proteins,
@@ -1339,7 +1342,7 @@ class QCTab(object):
                 pn.panel(
                     f"## Quality control of the entire sample",
                     align='center',
-                    margin=(0, 10, -5, 10)
+                    margin=(15, 10, -5, 10)
                 ),
                 pn.widgets.Tabulator(
                     self.data.diann_statist,
@@ -1360,9 +1363,9 @@ class QCTab(object):
                 ),
                 margin=(0, 10, 5, 10),
                 sizing_mode='stretch_width',
-                align='center',
+                align='start',
             )
-            return self.layout_qc
+        return self.layout_qc
 
 class GUI(object):
     # TODO: move to alphabase and docstring
