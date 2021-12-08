@@ -503,35 +503,44 @@ class XicOptionsWidget(object):
 
     def __init__(self):
         self.info = pn.panel('Will be updated soon.')
-        self.xic_tolerance = pn.widgets.FloatInput(
-            name='XIC Tolerance',
+        self.mz_tolerance = pn.widgets.FloatInput(
+            name='M/z Tolerance (ppm)',
             value=10,
             step=5,
             start=0,
             end=1000,
             width=100
         )
-        self.xic_tolerance_units = pn.widgets.Select(
-            name='XIC Tolerance Units',
+        self.mz_tolerance_units = pn.widgets.Select(
+            name='M/z Tolerance Units',
             value='ppm',
             options=['ppm', 'Da'],
             width=130
         )
         self.im_tolerance = pn.widgets.FloatInput(
-            name='IM Tolerance',
+            name='IM Tolerance (ppm)',
             value=0.05,
             step=0.1,
             start=0,
             end=2,
             width=100
         )
+        self.rt_tolerance = pn.widgets.FloatInput(
+            name='RT Tolerance (ppm)',
+            value=30,
+            step=5,
+            start=0,
+            end=1000,
+            width=100
+        )
 
     def create_layout(self, *args):
         layout = pn.Card(
             pn.Row(
-                self.xic_tolerance,
-                self.xic_tolerance_units,
-                self.im_tolerance
+                self.mz_tolerance,
+                self.mz_tolerance_units,
+                self.im_tolerance,
+                self.rt_tolerance
             ),
             title='XIC Options',
             collapsed=False,
@@ -593,6 +602,7 @@ class MainTab(object):
                 alphaviz.utils.DATA_PATH,
                 'amino_acids.tsv'
             ),
+            verbose=False,
         )
         self.analysis_software = self.data.settings.get('analysis_software')
         # self.options = options
@@ -602,9 +612,10 @@ class MainTab(object):
         self.heatmap_background_color = options.layout[0][0][3]
         self.heatmap_precursor_size = options.layout[0][0][4]
         self.heatmap_precursor_color = options.layout[0][0][5]
-        self.xic_tol = options.layout[1][0][0]
-        self.xic_tol_units = options.layout[1][0][1]
-        self.xic_im_tol = options.layout[1][0][2]
+        self.mz_tol = options.layout[1][0][0]
+        self.mz_tol_units = options.layout[1][0][1]
+        self.im_tol = options.layout[1][0][2]
+        self.rt_tol = options.layout[1][0][3]
         self.protein_seq = str()
         self.gene_name = str()
         self.ms1_ms2_frames = dict()
@@ -735,7 +746,6 @@ class MainTab(object):
         self.layout = None
 
     def create_layout(self):
-        print('inside create_layout start')
         self.update_gene_name_filter()
 
         dependances = {
@@ -753,8 +763,10 @@ class MainTab(object):
             self.previous_frame: [self.display_previous_frame, 'clicks'],
             self.next_frame: [self.display_next_frame, 'clicks'],
             self.plot_overlapped_frames: [self.display_overlapped_frames, 'value'],
-            self.xic_tol: [self.display_line_spectra_plots, 'value'],
-            self.xic_tol_units: [self.display_line_spectra_plots, 'value'],
+            self.mz_tol: [self.display_line_spectra_plots, 'value'],
+            self.mz_tol_units: [self.display_line_spectra_plots, 'value'],
+            self.im_tol: [self.display_line_spectra_plots, 'value'],
+            self.rt_tol: [self.display_line_spectra_plots, 'value'],
             self.x_axis_label: [self.display_line_spectra_plots, 'value'],
         }
         for k in dependances.keys():
@@ -872,7 +884,6 @@ class MainTab(object):
             margin=(20, 10, 5, 10),
             sizing_mode='stretch_width',
         )
-        print('inside create_layout end')
         return self.layout
 
     def update_gene_name_filter(self):
@@ -908,7 +919,7 @@ class MainTab(object):
                 self.data.diann_proteins,
                 pattern='|'.join(predefined_list),
                 column='Gene names',
-            )
+            ).reset_index()
         self.proteins_table.loading = False
 
     def run_after_gene_filter(self, *args):
@@ -924,7 +935,8 @@ class MainTab(object):
                 self.data.diann_proteins,
                 pattern=self.gene_name_filter.value,
                 column='Gene names',
-            )
+            ).reset_index()
+            # print(self.proteins_table.value.columns)
         self.proteins_table.loading = False
 
     def run_after_protein_selection(self, *args):
@@ -932,8 +944,11 @@ class MainTab(object):
             self.peptides_table.loading = True
             # self.peptides_table.selectable=True
             # self.peptides_table.selectable='checkbox'
-            # print(self.proteins_table.selected_dataframe)
-            # print(self.proteins_table.selection)
+            print(self.proteins_table.selected_dataframe)
+            print(self.proteins_table.selection)
+            print(self.proteins_table.value)
+            print(self.proteins_table.value.index.values)
+            print(self.proteins_table.selection[0])
             # print(self.proteins_table.value.loc[self.proteins_table.selection[0], 'Gene names'])
             self.gene_name = self.proteins_table.value.loc[self.proteins_table.selection[0], 'Gene names']
             curr_protein_ids = self.proteins_table.value.loc[self.proteins_table.selection[0], 'Protein IDs']
@@ -1046,17 +1061,17 @@ class MainTab(object):
 
     def display_line_spectra_plots(self, *args):
         if self.analysis_software == 'maxquant':
-            xic_tol_value = self.xic_tol.value
+            mz_tol_value = self.mz_tol.value
             prec_mono_mz = self.merged_precursor_data.MonoisotopicMz.median()
-            if self.xic_tol_units.value == 'ppm':
-                prec_mono_low_mz = prec_mono_mz / (1 + xic_tol_value / 10**6)
-                prec_mono_high_mz = prec_mono_mz * (1 + xic_tol_value / 10**6)
+            if self.mz_tol_units.value == 'ppm':
+                prec_mono_low_mz = prec_mono_mz / (1 + mz_tol_value / 10**6)
+                prec_mono_high_mz = prec_mono_mz * (1 + mz_tol_value / 10**6)
             else:
-                prec_mono_low_mz = prec_mono_mz - xic_tol_value
-                prec_mono_high_mz = prec_mono_mz + xic_tol_value
+                prec_mono_low_mz = prec_mono_mz - mz_tol_value
+                prec_mono_high_mz = prec_mono_mz + mz_tol_value
             if self.x_axis_label.value == 'rt':
                 one_over_k0 = float(self.peptides_table.selected_dataframe['1/K0'].values[0])
-                one_over_k0_low, one_over_k0_high = one_over_k0 - self.xic_im_tol.value, one_over_k0 + self.xic_im_tol.value
+                one_over_k0_low, one_over_k0_high = one_over_k0 - self.im_tol.value, one_over_k0 + self.im_tol.value
                 precursor_indices = self.data.raw_data[
                     :,
                     one_over_k0_low : one_over_k0_high,
@@ -1105,6 +1120,7 @@ class MainTab(object):
             align='center',
             margin=(0, 10, 0, -10)
         )
+
         if self.x_axis_label.value == 'rt':
             self.layout[8] = pn.Row(
                 self.x_axis_label,
@@ -1113,6 +1129,9 @@ class MainTab(object):
                         self.data.raw_data,
                         self.peptide,
                         self.mass_dict,
+                        mz_tol=self.mz_tol.value,
+                        rt_tol=self.rt_tol.value,
+                        im_tol=self.im_tol.value,
                         title=f"Precursor/fragments elution profile of {self.peptides_table.selected_dataframe['Modified.Sequence'].values[0]} in RT dimension ({self.peptide['rt'] / 60: .2f} min)"
                     ),
                     sizing_mode='stretch_width',
@@ -1129,6 +1148,9 @@ class MainTab(object):
                         self.data.raw_data,
                         self.peptide,
                         self.mass_dict,
+                        mz_tol=self.mz_tol.value,
+                        rt_tol=self.rt_tol.value,
+                        im_tol=self.im_tol.value,
                         n_cols=8,
                         width=180,
                         height=180
@@ -1195,8 +1217,6 @@ class MainTab(object):
                 margin=(15, 0, 0, 0),
                 sizing_mode='stretch_width'
             )
-            print('layout should be updated')
-            print(self.layout)
             if self.analysis_software == 'maxquant':
                 data_ions = alphaviz.preprocessing.get_mq_ms2_scan_data(
                     self.data.mq_msms,
