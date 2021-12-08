@@ -633,6 +633,7 @@ class MainTab(object):
                 "Protein IDs": {
                     'type': 'link',
                     'urlPrefix':"https://www.uniprot.org/uniprot/",
+                    'target':"_blank",
                 }
             },
             # formatters={
