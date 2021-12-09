@@ -67,7 +67,8 @@ def get_mq_unique_proteins(
 def filter_df(
     df: pd.DataFrame,
     pattern: str,
-    column: str
+    column: str,
+    software: str
 )-> pd.DataFrame:
     """Filter the data frame based on the pattern (any value) in the specified column.
 
@@ -79,6 +80,8 @@ def filter_df(
         The string to be used to filter of the data frame column.
     column : str
         The column to be used to filter.
+    software: str
+        The name of the software tool where the filtering is used.
 
     Returns
     -------
@@ -88,9 +91,9 @@ def filter_df(
     """
     if not pattern:
         return df
-    try:
+    if software == 'maxquant':
         output = df[df[column].str.contains(pattern)]
-    except ValueError:
+    else:
         output = df[df[column] == pattern]
     return output
 
