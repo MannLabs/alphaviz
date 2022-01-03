@@ -627,7 +627,7 @@ class MainTab(object):
             page_size=5,
             disabled=True,
             height=250,
-            show_index=True,
+            show_index=False,
             selectable=1,
             formatters={
                 "Protein IDs": {
@@ -836,7 +836,7 @@ class MainTab(object):
             self.peptides_table.widths = self.dictionary[self.analysis_software]['peptides_table']['widths']
         elif self.analysis_software == 'diann':
             self.proteins_table.value = self.data.diann_proteins
-            self.peptides_table.value = self.data.diann_peptides
+            # self.peptides_table.value = self.data.diann_peptides
 
         # plots
         self.chromatograms_plot = alphaviz.plotting.plot_chrom(
@@ -905,28 +905,30 @@ class MainTab(object):
         self.proteins_table.loading = False
 
     def filter_protein_table(self, *args):
-        self.proteins_table.loading = True
-        predefined_list = []
-        for line in StringIO(str(self.protein_list.value, "utf-8")).readlines():
-            predefined_list.append(line.strip().upper())
-        if self.analysis_software == 'maxquant':
-            self.proteins_table.value = alphaviz.preprocessing.filter_df(
-                self.data.mq_protein_groups,
-                pattern='|'.join(predefined_list),
-                column='Gene names',
-                software='maxquant',
-            )
-        elif self.analysis_software == 'diann':
-            self.proteins_table.value = alphaviz.preprocessing.filter_df(
-                self.data.diann_proteins,
-                pattern='|'.join(predefined_list),
-                column='Gene names',
-                software='diann',
-            )
-        self.proteins_table.loading = False
+        pass
+        # self.proteins_table.loading = True
+        # predefined_list = []
+        # for line in StringIO(str(self.protein_list.value, "utf-8")).readlines():
+        #     predefined_list.append(line.strip().upper())
+        # if self.analysis_software == 'maxquant':
+        #     self.proteins_table.value = alphaviz.preprocessing.filter_df(
+        #         self.data.mq_protein_groups,
+        #         pattern='|'.join(predefined_list),
+        #         column='Gene names',
+        #         software='maxquant',
+        #     )
+        # elif self.analysis_software == 'diann':
+        #     self.proteins_table.value = alphaviz.preprocessing.filter_df(
+        #         self.data.diann_proteins,
+        #         pattern='|'.join(predefined_list),
+        #         column='Gene names',
+        #         software='diann',
+        #     )
+        # self.proteins_table.loading = False
 
     def run_after_gene_filter(self, *args):
         self.proteins_table.loading = True
+        # self.peptides_table.value = pd.DataFrame()
         if self.analysis_software == 'maxquant':
             self.proteins_table.value = alphaviz.preprocessing.filter_df(
                 self.data.mq_protein_groups,
@@ -946,12 +948,11 @@ class MainTab(object):
     def run_after_protein_selection(self, *args):
         if self.proteins_table.selection:
             self.peptides_table.loading = True
-            # self.peptides_table.selectable=True
-            # self.peptides_table.selectable='checkbox'
-            # print(self.proteins_table.selected_dataframe)
-            # print(self.proteins_table.selection)
-            # print(self.proteins_table.value)
-            # print(self.proteins_table.value.index.values)
+
+            print(self.proteins_table.selected_dataframe)
+            print(self.proteins_table.selection)
+            print(self.proteins_table.value)
+            print(self.proteins_table.value.index.values)
             # print(self.proteins_table.selection[0])
 
             if self.analysis_software == 'maxquant':
@@ -972,12 +973,19 @@ class MainTab(object):
                     software='maxquant',
                 )
             elif self.analysis_software == 'diann':
-                if self.proteins_table.value.shape[0] < self.data.diann_proteins.shape[0]:
-                    self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
-                    curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
-                else:
-                    self.gene_name = self.proteins_table.value.loc[self.proteins_table.selection[0], 'Gene names']
-                    curr_protein_ids = self.proteins_table.value.loc[self.proteins_table.selection[0], 'Protein IDs']
+                # if self.proteins_table.value.shape[0] < self.data.diann_proteins.shape[0]:
+                #     # the case when the table is already filtered based on the typed gene name
+                #     print('1')
+                #     self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
+                #     print('2')
+                #     curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
+                #     print(self.gene_name, curr_protein_ids)
+                # else:
+                print('11')
+                self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
+                print('22')
+                curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
+                print(self.gene_name, curr_protein_ids)
                 self.protein_seq = alphaviz.preprocessing.get_aa_seq(
                     curr_protein_ids,
                     self.data.fasta,
@@ -988,11 +996,12 @@ class MainTab(object):
                     column='Gene names',
                     software='diann',
                 )
-            self.peptides_table.selection = list(range(len(self.peptides_table.value)))
+                print('3')
+                print(self.peptides_table.value)
+            # self.peptides_table.selection = list(range(len(self.peptides_table.value)))
             self.peptides_table.loading = False
         else:
             self.peptides_table.loading = True
-            # self.peptides_table.selectable=False
             if self.analysis_software == 'maxquant':
                 self.peptides_table.value = self.data.mq_evidence.loc[:, :'Andromeda score']
             elif self.analysis_software == 'diann':
