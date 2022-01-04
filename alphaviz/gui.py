@@ -916,7 +916,7 @@ class MainTab(object):
             predefined_list = []
             for line in StringIO(str(self.protein_list.value, "utf-8")).readlines():
                 predefined_list.append(line.strip().upper())
-            print(predefined_list)
+            # print(predefined_list)
             if self.analysis_software == 'maxquant':
                 self.proteins_table.value = alphaviz.preprocessing.filter_df(
                     self.data.mq_protein_groups,
@@ -958,12 +958,11 @@ class MainTab(object):
     def run_after_protein_selection(self, *args):
         if self.proteins_table.selection:
             self.peptides_table.loading = True
-
             # print(self.proteins_table.selected_dataframe)
             # print(self.proteins_table.selection)
             # print(self.proteins_table.value)
             # print(self.proteins_table.value.index.values)
-
+            self.peptides_table.selection = []
             if self.analysis_software == 'maxquant':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
                 curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
@@ -974,28 +973,42 @@ class MainTab(object):
                     software='maxquant',
                 )
             elif self.analysis_software == 'diann':
-                # print('11')
+                print('11')
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
-                # print('22')
+                print('22')
                 curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
-                # print(self.gene_name, curr_protein_ids)
+                print(self.gene_name, curr_protein_ids)
                 self.peptides_table.value = alphaviz.preprocessing.filter_df(
                     self.data.diann_peptides,
                     pattern=self.gene_name,
                     column='Gene names',
                     software='diann',
                 )
-                # print('3')
-                # print(self.peptides_table.value)
-            # self.peptides_table.selection = list(range(len(self.peptides_table.value)))
+                print('3')
+            self.layout[7:] = [
+                None, # peptide description
+                None, #XIC plot
+                pn.Row(
+                    None, #Previous frame button
+                    None, #Next frame button
+                ),
+                pn.Row(
+                    None,
+                    None,
+                    None, #Summed MS2 spectrum
+                ),
+                None, #Overlap frames button
+            ]
+            print('4')
             self.protein_seq = alphaviz.preprocessing.get_aa_seq(
                 curr_protein_ids,
                 self.data.fasta,
             )
+            print('5')
             self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                 self.protein_seq,
                 self.gene_name,
-                self.peptides_table.selected_dataframe.Sequence.tolist()
+                self.peptides_table.value.Sequence.tolist()
             )
             self.layout[5] = pn.Pane(
                 self.protein_coverage_plot,
@@ -1074,6 +1087,7 @@ class MainTab(object):
                     self.display_elution_profile_plots()
                     self.display_heatmap_spectrum()
             else:
+                self.peptides_table.selection = []
                 self.layout[7:] = [
                     None, # peptide description
                     None, #XIC plot
