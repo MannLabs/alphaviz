@@ -10,6 +10,7 @@ import alphatims.utils
 import panel as pn
 import bokeh.server.views.ws
 from bokeh.models.widgets.tables import NumberFormatter
+import plotly.express as px
 import holoviews as hv
 
 # local
@@ -502,7 +503,6 @@ class HeatmapOptionsWidget(object):
 class XicOptionsWidget(object):
 
     def __init__(self):
-        self.info = pn.panel('Will be updated soon.')
         self.mz_tolerance = pn.widgets.FloatInput(
             name='M/z Tolerance (ppm)',
             value=10,
@@ -534,15 +534,23 @@ class XicOptionsWidget(object):
             width=100
         )
 
+class CoveragePlotOptionsWidget(object):
+
+    def __init__(self):
+        self.peptides_colormap = pn.widgets.Select(
+            name='Peptides colormap',
+            value='Alphabet',
+            options=set([each['y'][0] for each in px.colors.qualitative.swatches()['data']]),
+            width=180,
+            margin=(20, 20, 20, 10),
+        )
+
     def create_layout(self, *args):
         layout = pn.Card(
             pn.Row(
-                self.mz_tolerance,
-                self.mz_tolerance_units,
-                self.im_tolerance,
-                self.rt_tolerance
+                self.peptides_colormap,
             ),
-            title='XIC Options',
+            title='Coverage Plot Options',
             collapsed=False,
             sizing_mode='stretch_width',
             # height=225,
