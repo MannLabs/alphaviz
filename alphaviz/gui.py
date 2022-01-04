@@ -534,13 +534,37 @@ class XicOptionsWidget(object):
             width=100
         )
 
+    def create_layout(self, *args):
+        layout = pn.Card(
+            pn.Row(
+                self.mz_tolerance,
+                self.mz_tolerance_units,
+                self.im_tolerance,
+                self.rt_tolerance
+            ),
+            title='XIC Options',
+            collapsed=False,
+            sizing_mode='stretch_width',
+            # height=225,
+            margin=(15, 8, 15, 8),
+            css_classes=['background']
+        )
+        return layout
+
 class CoveragePlotOptionsWidget(object):
 
     def __init__(self):
-        self.peptides_colormap = pn.widgets.Select(
-            name='Peptides colormap',
+        self.peptides_qualitative_colorscale = pn.widgets.Select(
+            name='Peptides qualitative color scale',
             value='Alphabet',
-            options=set([each['y'][0] for each in px.colors.qualitative.swatches()['data']]),
+            options=list(set([each['y'][0] for each in px.colors.qualitative.swatches()['data']])),
+            width=180,
+            margin=(20, 20, 20, 10),
+        )
+        self.peptides_sequential_colorscale = pn.widgets.Select(
+            name='Peptides sequential color scale',
+            value='Viridis',
+            options=list(set([each['y'][0] for each in px.colors.sequential.swatches()['data']])),
             width=180,
             margin=(20, 20, 20, 10),
         )
@@ -548,7 +572,8 @@ class CoveragePlotOptionsWidget(object):
     def create_layout(self, *args):
         layout = pn.Card(
             pn.Row(
-                self.peptides_colormap,
+                self.peptides_qualitative_colorscale,
+                self.peptides_sequential_colorscale,
             ),
             title='Coverage Plot Options',
             collapsed=False,
@@ -624,6 +649,8 @@ class MainTab(object):
         self.mz_tol_units = options.layout[1][0][1]
         self.im_tol = options.layout[1][0][2]
         self.rt_tol = options.layout[1][0][3]
+        self.colorscale_qualitative = options.layout[2][0][0]
+        self.colorscale_sequential = options.layout[2][0][1]
         self.protein_seq = str()
         self.gene_name = str()
         self.ms1_ms2_frames = dict()
@@ -777,6 +804,8 @@ class MainTab(object):
             self.im_tol: [self.display_line_spectra_plots, 'value'],
             self.rt_tol: [self.display_line_spectra_plots, 'value'],
             self.x_axis_label: [self.display_line_spectra_plots, 'value'],
+            self.colorscale_qualitative: [self.run_after_protein_selection, 'value'],
+            self.colorscale_sequential: [self.run_after_protein_selection, 'value'],
         }
         for k in dependances.keys():
             k.param.watch(
@@ -1016,7 +1045,9 @@ class MainTab(object):
             self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                 self.protein_seq,
                 self.gene_name,
-                self.peptides_table.value.Sequence.tolist()
+                self.peptides_table.value.Sequence.tolist(),
+                self.colorscale_qualitative.value,
+                self.colorscale_sequential.value,
             )
             self.layout[5] = pn.Pane(
                 self.protein_coverage_plot,
@@ -1051,7 +1082,9 @@ class MainTab(object):
             self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                 self.protein_seq,
                 self.gene_name,
-                self.peptides_table.selected_dataframe.Sequence.tolist()
+                self.peptides_table.selected_dataframe.Sequence.tolist(),
+                self.colorscale_qualitative.value,
+                self.colorscale_sequential.value,
             )
             self.layout[5] = pn.Pane(
                 self.protein_coverage_plot,
@@ -1536,6 +1569,7 @@ class AlphaVizGUI(GUI):
         self.options = OptionsWidget(self.data)
         self.options.add_option(HeatmapOptionsWidget().create_layout())
         self.options.add_option(XicOptionsWidget().create_layout())
+        self.options.add_option(CoveragePlotOptionsWidget().create_layout())
         self.tabs = TabsWidget(self.data, self.options)
         self.layout += [
             self.main_widget.create_layout(),
