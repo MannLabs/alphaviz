@@ -965,16 +965,8 @@ class MainTab(object):
             # print(self.proteins_table.value.index.values)
 
             if self.analysis_software == 'maxquant':
-                if self.proteins_table.value.shape[0] < self.data.mq_protein_groups.shape[0]:
-                    self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
-                    curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
-                else:
-                    self.gene_name = self.proteins_table.value.loc[self.proteins_table.selection[0], 'Gene names']
-                    curr_protein_ids = self.proteins_table.value.loc[self.proteins_table.selection[0], 'Protein IDs']
-                self.protein_seq = alphaviz.preprocessing.get_aa_seq(
-                    curr_protein_ids,
-                    self.data.fasta,
-                )
+                self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
+                curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
                 self.peptides_table.value = alphaviz.preprocessing.filter_df(
                     self.data.mq_evidence.loc[:, :'Andromeda score'],
                     pattern=self.gene_name,
@@ -987,10 +979,6 @@ class MainTab(object):
                 # print('22')
                 curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
                 # print(self.gene_name, curr_protein_ids)
-                self.protein_seq = alphaviz.preprocessing.get_aa_seq(
-                    curr_protein_ids,
-                    self.data.fasta,
-                )
                 self.peptides_table.value = alphaviz.preprocessing.filter_df(
                     self.data.diann_peptides,
                     pattern=self.gene_name,
@@ -1000,6 +988,21 @@ class MainTab(object):
                 # print('3')
                 # print(self.peptides_table.value)
             # self.peptides_table.selection = list(range(len(self.peptides_table.value)))
+            self.protein_seq = alphaviz.preprocessing.get_aa_seq(
+                curr_protein_ids,
+                self.data.fasta,
+            )
+            self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
+                self.protein_seq,
+                self.gene_name,
+                self.peptides_table.selected_dataframe.Sequence.tolist()
+            )
+            self.layout[5] = pn.Pane(
+                self.protein_coverage_plot,
+                config=update_config(f"{self.gene_name}_coverage_plot"),
+                align='center',
+                sizing_mode='stretch_width',
+            )
             self.peptides_table.loading = False
         else:
             self.peptides_table.loading = True
