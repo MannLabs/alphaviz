@@ -2,6 +2,7 @@
 """
 This module provides the plotting functions used by AlphaViz.
 """
+import re
 
 import numpy as np
 import pandas as pd
@@ -65,7 +66,9 @@ def plot_sequence_coverage(
     selected_peptide_cov = np.zeros(len(sequence), dtype=np.bool)
     if len(peptides_list) <= len(getattr(px.colors.qualitative, colorscale_qualitative)):
         print('px.colors.qualitative is used')
-        for ind, peptide in enumerate(peptides_list):
+        for ind, peptide_mod in enumerate(peptides_list):
+            peptide = re.sub(r"\[([^]]+)\]", "", peptide_mod)
+            print(peptide)
             start = sequence.find(peptide)
             peptide_cov = range(start + 1, start + len(peptide) + 1)
             selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
@@ -73,7 +76,7 @@ def plot_sequence_coverage(
                 go.Bar(
                     x=list(peptide_cov),
                     y=np.ones(len(peptide))*2,
-                    name=f'Peptide: {peptide}',
+                    name=f'Peptide: {peptide_mod}',
                     hovertemplate='<br><b>position:</b> %{x}.',
                     opacity=0.5,
                     marker=dict(color=getattr(px.colors.qualitative, colorscale_qualitative)[ind])
@@ -82,7 +85,9 @@ def plot_sequence_coverage(
     else:
         print('px.colors.sequential is used')
         colorscale_sequential_colors = px.colors.sample_colorscale(colorscale_sequential, samplepoints=len(peptides_list))
-        for ind, peptide in enumerate(peptides_list):
+        for ind, peptide_mod in enumerate(peptides_list):
+            peptide = re.sub(r"\[([^]]+)\]", "", peptide_mod)
+            print(peptide)
             start = sequence.find(peptide)
             peptide_cov = range(start + 1, start + len(peptide) + 1)
             selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
@@ -90,7 +95,7 @@ def plot_sequence_coverage(
                 go.Bar(
                     x=list(peptide_cov),
                     y=np.ones(len(peptide))*2,
-                    name=f'Peptide: {peptide}',
+                    name=f'Peptide: {peptide_mod}',
                     hovertemplate='<br><b>position:</b> %{x}.',
                     opacity=0.5,
                     marker=dict(color=colorscale_sequential_colors[ind])

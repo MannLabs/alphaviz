@@ -1045,7 +1045,7 @@ class MainTab(object):
             self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                 self.protein_seq,
                 self.gene_name,
-                self.peptides_table.value.Sequence.tolist(),
+                self.peptides_table.value['Modified.Sequence'].tolist(),
                 self.colorscale_qualitative.value,
                 self.colorscale_sequential.value,
             )
@@ -1082,7 +1082,7 @@ class MainTab(object):
             self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                 self.protein_seq,
                 self.gene_name,
-                self.peptides_table.selected_dataframe.Sequence.tolist(),
+                self.peptides_table.selected_dataframe['Modified.Sequence'].tolist(),
                 self.colorscale_qualitative.value,
                 self.colorscale_sequential.value,
             )
