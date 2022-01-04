@@ -9,6 +9,7 @@ from itertools import chain
 
 import plotly.graph_objects as go
 import plotly.subplots
+import plotly.express as px
 
 import holoviews as hv
 from holoviews.operation.datashader import dynspread, rasterize, shade
@@ -21,7 +22,9 @@ import alphaviz.utils
 def plot_sequence_coverage(
     sequence: str,
     gene_name: str,
-    peptides_list: list
+    peptides_list: list,
+    colorscale_qualitative: str,
+    colorscale_sequential: str,
 )-> go.Figure:
     """Create a protein sequence coverage plot.
 
@@ -33,6 +36,10 @@ def plot_sequence_coverage(
         Gene name.
     peptides_list : list
         List of all identified peptides for the specified protein.
+    colorscale_qualitative : str
+        A name of a built-in qualitative Plotly color scale.
+    colorscale_sequential : str
+        A name of a built-in sequential Plotly color scale.
 
     Returns
     -------
@@ -56,19 +63,39 @@ def plot_sequence_coverage(
         )
     )
     selected_peptide_cov = np.zeros(len(sequence), dtype=np.bool)
-    for ind, peptide in enumerate(peptides_list):
-        start = sequence.find(peptide)
-        peptide_cov = range(start + 1, start + len(peptide) + 1)
-        selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
-        fig.add_trace(
-            go.Bar(
-                x=list(peptide_cov),
-                y=np.ones(len(peptide))*2,
-                name=f'Peptide: {peptide}',
-                hovertemplate='<br><b>position:</b> %{x}.',
-                opacity=0.5
+    if len(peptides_list) <= len(getattr(px.colors.qualitative, colorscale_qualitative)):
+        print('px.colors.qualitative is used')
+        for ind, peptide in enumerate(peptides_list):
+            start = sequence.find(peptide)
+            peptide_cov = range(start + 1, start + len(peptide) + 1)
+            selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
+            fig.add_trace(
+                go.Bar(
+                    x=list(peptide_cov),
+                    y=np.ones(len(peptide))*2,
+                    name=f'Peptide: {peptide}',
+                    hovertemplate='<br><b>position:</b> %{x}.',
+                    opacity=0.5,
+                    marker=dict(color=getattr(px.colors.qualitative, colorscale_qualitative)[ind])
+                )
             )
-        )
+    else:
+        print('px.colors.sequential is used')
+        colorscale_sequential_colors = px.colors.sample_colorscale(colorscale_sequential, samplepoints=len(peptides_list))
+        for ind, peptide in enumerate(peptides_list):
+            start = sequence.find(peptide)
+            peptide_cov = range(start + 1, start + len(peptide) + 1)
+            selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
+            fig.add_trace(
+                go.Bar(
+                    x=list(peptide_cov),
+                    y=np.ones(len(peptide))*2,
+                    name=f'Peptide: {peptide}',
+                    hovertemplate='<br><b>position:</b> %{x}.',
+                    opacity=0.5,
+                    marker=dict(color=colorscale_sequential_colors[ind])
+                )
+            )
     aa_coverage = round(np.sum(selected_peptide_cov) / len(selected_peptide_cov) * 100, 2)
     fig.update_layout(
         title=dict(
@@ -1289,6 +1316,7 @@ def plot_pept_per_protein_barplot(
         A distribution barplot.
 
     """
+    df = df.copy()
     df['pept_per_prot'] = df[x_axis_label].apply(lambda x: str(x) if x <5 else '>5')
 
     fig = go.Figure()
