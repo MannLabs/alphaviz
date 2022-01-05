@@ -717,7 +717,7 @@ class MainTab(object):
         self.peptides_table = pn.widgets.Tabulator(
             # self.data.mq_evidence.loc[:, :'Andromeda score'],
             layout='fit_data_table',
-            pagination='remote',
+            pagination='local',
             page_size=8,
             disabled=True,
             height=300,
@@ -950,10 +950,11 @@ class MainTab(object):
             # print('inside if self.protein_list.value != b''')
             self.proteins_table.loading = True
             self.peptides_table.loading = True
+            self.peptides_table.value = self.data.diann_peptides.iloc[0:0]
+            self.proteins_table.selection = []
             predefined_list = []
             for line in StringIO(str(self.protein_list.value, "utf-8")).readlines():
                 predefined_list.append(line.strip().upper())
-            # print(predefined_list)
             if self.analysis_software == 'maxquant':
                 self.proteins_table.value = alphaviz.preprocessing.filter_df(
                     self.data.mq_protein_groups,
@@ -963,7 +964,6 @@ class MainTab(object):
                 )
             elif self.analysis_software == 'diann':
                 self.proteins_table.value = self.data.diann_proteins[self.data.diann_proteins['Gene names'].isin(predefined_list)]
-            self.peptides_table.value = self.data.diann_peptides.iloc[0:0]
             self.peptides_table.loading = False
             self.proteins_table.loading = False
 
@@ -999,6 +999,8 @@ class MainTab(object):
             # print(self.proteins_table.selection)
             # print(self.proteins_table.value)
             # print(self.proteins_table.value.index.values)
+            # self.peptides_table.page = 1
+            print(f"Peptide table page is {self.peptides_table.page}")
             self.peptides_table.selection = []
             if self.analysis_software == 'maxquant':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
@@ -1022,6 +1024,8 @@ class MainTab(object):
                     software='diann',
                 )
                 print('3')
+            # self.peptides_table.page = 1
+            print(f"Peptide table page is {self.peptides_table.page}")
             self.layout[7:] = [
                 None, # peptide description
                 None, #XIC plot
