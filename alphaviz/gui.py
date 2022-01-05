@@ -715,7 +715,7 @@ class MainTab(object):
         )
 
         self.peptides_table = pn.widgets.Tabulator(
-            # self.data.mq_evidence.loc[:, :'Andromeda score'],
+
             layout='fit_data_table',
             pagination='local',
             page_size=8,
@@ -1226,7 +1226,7 @@ class MainTab(object):
                     sizing_mode='stretch_width',
                     config=update_config('Precursor/fragments elution profile plot'),
                 ),
-                sizing_mode='stretch_width',
+                # sizing_mode='stretch_width',
                 margin=(5, 10, 0, 10)
             )
         else:
@@ -1276,7 +1276,7 @@ class MainTab(object):
                 background_color=self.heatmap_background_color.value,
                 precursor_size=self.heatmap_precursor_size.value,
                 precursor_color=self.heatmap_precursor_color.value,
-                width=450,
+                width=570,
                 height=450,
                 shared_axes=True
             )
@@ -1291,20 +1291,24 @@ class MainTab(object):
                 background_color=self.heatmap_background_color.value,
                 precursor_size=self.heatmap_precursor_size.value,
                 precursor_color=self.heatmap_precursor_color.value,
-                width=450,
+                width=570,
                 height=450,
                 shared_axes=True
             )
 
-            self.layout[10][0] = pn.Pane(
-                self.heatmap_ms1_plot,
-                margin=(15, 0, 0, 0),
-                sizing_mode='stretch_width'
-            )
-            self.layout[10][1] = pn.Pane(
-                self.heatmap_ms2_plot,
-                margin=(15, 0, 0, 0),
-                sizing_mode='stretch_width'
+            self.layout[10] = pn.Row(
+                pn.pane.HoloViews(
+                    self.heatmap_ms1_plot,
+                    margin=(15, 0, 0, 0),
+                    sizing_mode='stretch_width'
+                ),
+                pn.pane.HoloViews(
+                    self.heatmap_ms2_plot,
+                    margin=(15, 0, 0, 0),
+                    sizing_mode='stretch_width'
+                ),
+                sizing_mode='stretch_width',
+                align='center'
             )
             if self.analysis_software == 'maxquant':
                 data_ions = alphaviz.preprocessing.get_mq_ms2_scan_data(
