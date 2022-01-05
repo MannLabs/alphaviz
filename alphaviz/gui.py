@@ -1144,6 +1144,8 @@ class MainTab(object):
                         None,
                         None,
                         None, #Summed MS2 spectrum
+                        sizing_mode='stretch_width',
+                        align='center'
                     ),
                     None, #Overlap frames button
                 ]
@@ -1232,7 +1234,7 @@ class MainTab(object):
         else:
             self.layout[8] = pn.Row(
                 self.x_axis_label,
-                pn.Pane(
+                pn.pane.HoloViews(
                     alphaviz.plotting.plot_elution_profile_heatmap(
                         self.data.raw_data,
                         self.peptide,
@@ -1246,6 +1248,7 @@ class MainTab(object):
                         # title=f"Precursor/fragments elution profile of {self.peptides_table.selected_dataframe['Modified.Sequence'].values[0]} in RT dimension ({self.peptide['rt'] / 60: .2f} min)"
                     ),
                     sizing_mode='stretch_width',
+                    linked_axes=True,
                     config=update_config('Precursor/fragments elution profile plot'),
                 ),
                 sizing_mode='stretch_width',
@@ -1265,8 +1268,9 @@ class MainTab(object):
                 mz = self.peptide['mz']
                 im = self.peptide['im']
 
+            data_ms1 = self.data.raw_data[ms1_frame].copy()
             self.heatmap_ms1_plot = alphaviz.plotting.plot_heatmap(
-                self.data.raw_data[ms1_frame],
+                data_ms1,
                 mz=mz,
                 im=im,
                 x_axis_label=self.heatmap_x_axis.value,
@@ -1278,10 +1282,11 @@ class MainTab(object):
                 precursor_color=self.heatmap_precursor_color.value,
                 width=570,
                 height=450,
-                shared_axes=True
+                # shared_axes=True
             )
+            data_ms2 = self.data.raw_data[ms2_frame].copy()
             self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
-                self.data.raw_data[ms2_frame],
+                data_ms2,
                 mz=mz,
                 im=im,
                 x_axis_label=self.heatmap_x_axis.value,
@@ -1293,23 +1298,26 @@ class MainTab(object):
                 precursor_color=self.heatmap_precursor_color.value,
                 width=570,
                 height=450,
-                shared_axes=True
+                # shared_axes=True
             )
 
             self.layout[10] = pn.Row(
                 pn.pane.HoloViews(
                     self.heatmap_ms1_plot,
                     margin=(15, 0, 0, 0),
-                    sizing_mode='stretch_width'
+                    sizing_mode='stretch_width',
+                    linked_axes=False,
                 ),
                 pn.pane.HoloViews(
                     self.heatmap_ms2_plot,
                     margin=(15, 0, 0, 0),
-                    sizing_mode='stretch_width'
+                    sizing_mode='stretch_width',
+                    linked_axes=False,
                 ),
                 sizing_mode='stretch_width',
                 align='center'
             )
+
             if self.analysis_software == 'maxquant':
                 data_ions = alphaviz.preprocessing.get_mq_ms2_scan_data(
                     self.data.mq_msms,
@@ -1361,7 +1369,9 @@ class MainTab(object):
                 y_axis_label=self.heatmap_y_axis.value,
                 title=f'MS1 frame(s) #{list(self.ms1_ms2_frames.keys())}',
                 colormap=self.heatmap_colormap.value,
-                background_color=self.heatmap_background_color.value
+                background_color=self.heatmap_background_color.value,
+                width=570,
+                height=450,
             )
             self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
                 self.data.raw_data[[val[0] for val in self.ms1_ms2_frames.values()]],
@@ -1371,7 +1381,9 @@ class MainTab(object):
                 y_axis_label=self.heatmap_y_axis.value,
                 title=f'MS2 frame(s) #{[val[0] for val in self.ms1_ms2_frames.values()]}',
                 colormap=self.heatmap_colormap.value,
-                background_color=self.heatmap_background_color.value
+                background_color=self.heatmap_background_color.value,
+                width=570,
+                height=450,
             )
             self.layout[10][0] = self.heatmap_ms1_plot
             self.layout[10][1] = self.heatmap_ms2_plot
@@ -1455,7 +1467,7 @@ class QCTab(object):
                 'Length',
                 'Peptide length distribution'
             )
-
+            experiment = self.data.ms_file_name.value.split('.')[0]
             self.layout_qc = pn.Column(
                 pn.panel(
                     f"## Quality control of the entire sample",
@@ -1467,9 +1479,10 @@ class QCTab(object):
                     sizing_mode='stretch_width',
                     layout='fit_data_table',
                     name='Overview table',
-                    page_size=1,
+                    selection=list(self.data.diann_statist[self.data.diann_statist['File.Name'].str.contains(experiment)].index),
+                    row_height=40,
                     disabled=True,
-                    height=100,
+                    # height=100,
                     show_index=False,
                 ),
                 pn.Row(

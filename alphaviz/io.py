@@ -367,8 +367,8 @@ def import_diann_stats(
         The output data frame contains summary information about the whole experiment.
     """
     diann_overview = pd.read_csv(filepath, sep='\t')
-    diann_overview = diann_overview[diann_overview['File.Name'].str.contains(experiment)]
-    diann_overview = diann_overview[diann_overview.columns[1:]]#.T
+    # diann_overview = diann_overview[diann_overview['File.Name'].str.contains(experiment)]
+    # diann_overview = diann_overview[diann_overview#.columns[1:]]#.T
     # diann_overview.reset_index(inplace=True)
     # diann_overview.columns = ['index', 'values']
     # diann_overview['values'] = diann_overview['values'].apply(lambda x: '%.2E' % x if x>100000 else '%.2f' % x)
@@ -473,6 +473,9 @@ def import_diann_output(
     """
     diann_output_file, diann_stats_file = sorted(get_filenames_from_directory(
         path_diann_output_folder, 'tsv'), key=len)[:2]
+
+    # print(sorted(get_filenames_from_directory(
+    #     path_diann_output_folder, 'tsv'), key=len))
 
     diann_df = pd.read_csv(os.path.join(path_diann_output_folder, diann_output_file), sep='\t')
     diann_df = diann_df[diann_df.Run == experiment]
