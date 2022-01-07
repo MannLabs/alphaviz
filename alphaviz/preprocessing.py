@@ -349,6 +349,7 @@ def convert_diann_ap_mod(
         '(UniMod:4)': 'c', #'[Carbamidomethyl ({})]'
         '(UniMod:7)': 'deam', #'[Deamidation ({})]'
         '(UniMod:21)': 'p', #'[Phospho ({})]'
+        '(UniMod:26)': 'cm', #'[Pyro-carbamidomethyl ({})]',
         '(UniMod:27)': 'pg', #'[Glu->pyro-Glu]'
         '(UniMod:28)': 'pg', #'[Gln->pyro-Glu]'
         '(UniMod:35)': 'ox', #'[Oxidation ({})]'

@@ -1000,7 +1000,7 @@ class MainTab(object):
             # print(self.proteins_table.value)
             # print(self.proteins_table.value.index.values)
             # self.peptides_table.page = 1
-            print(f"Peptide table page is {self.peptides_table.page}")
+            # print(f"Peptide table page is {self.peptides_table.page}")
             self.peptides_table.selection = []
             if self.analysis_software == 'maxquant':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
@@ -1012,20 +1012,18 @@ class MainTab(object):
                     software='maxquant',
                 )
             elif self.analysis_software == 'diann':
-                print('11')
+                # print('11')
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
-                print('22')
+                # print('22')
                 curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
-                print(self.gene_name, curr_protein_ids)
+                # print(self.gene_name, curr_protein_ids)
                 self.peptides_table.value = alphaviz.preprocessing.filter_df(
                     self.data.diann_peptides,
                     pattern=self.gene_name,
                     column='Gene names',
                     software='diann',
                 )
-                print('3')
-            # self.peptides_table.page = 1
-            print(f"Peptide table page is {self.peptides_table.page}")
+                # print('3')
             self.layout[7:] = [
                 None, # peptide description
                 None, #XIC plot
@@ -1040,12 +1038,12 @@ class MainTab(object):
                 ),
                 None, #Overlap frames button
             ]
-            print('4')
+            # print('4')
             self.protein_seq = alphaviz.preprocessing.get_aa_seq(
                 curr_protein_ids,
                 self.data.fasta,
             )
-            print('5')
+            # print('5')
             self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                 self.protein_seq,
                 self.gene_name,

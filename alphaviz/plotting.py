@@ -65,10 +65,9 @@ def plot_sequence_coverage(
     )
     selected_peptide_cov = np.zeros(len(sequence), dtype=np.bool)
     if len(peptides_list) <= len(getattr(px.colors.qualitative, colorscale_qualitative)):
-        print('px.colors.qualitative is used')
+        # print('px.colors.qualitative is used')
         for ind, peptide_mod in enumerate(peptides_list):
             peptide = re.sub(r"\[([^]]+)\]", "", peptide_mod)
-            print(peptide)
             start = sequence.find(peptide)
             peptide_cov = range(start + 1, start + len(peptide) + 1)
             selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
@@ -83,11 +82,10 @@ def plot_sequence_coverage(
                 )
             )
     else:
-        print('px.colors.sequential is used')
+        # print('px.colors.sequential is used')
         colorscale_sequential_colors = px.colors.sample_colorscale(colorscale_sequential, samplepoints=len(peptides_list))
         for ind, peptide_mod in enumerate(peptides_list):
             peptide = re.sub(r"\[([^]]+)\]", "", peptide_mod)
-            print(peptide)
             start = sequence.find(peptide)
             peptide_cov = range(start + 1, start + len(peptide) + 1)
             selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
@@ -227,7 +225,7 @@ def plot_heatmap(
     mz: float = 0.0,
     im: float = 0.0,
     title: str = "",
-    # width: int = 450,
+    width: int = 450,
     height: int = 450,
     background_color: str = "black",
     precursor_color: str = 'green',
@@ -293,7 +291,7 @@ def plot_heatmap(
     #     plot.handles['layout']['yaxis']['gridcolor'] = background_color
 
     opts_ms1 = dict(
-        # width=width,
+        width=width,
         height=height,
         title=title,
         xlabel=x_axis_label,
@@ -313,7 +311,7 @@ def plot_heatmap(
     )
     agg = rasterize(
         dmap,
-        # width=width,
+        width=width,
         height=height,
         aggregator='sum'
     )
@@ -988,6 +986,9 @@ def plot_elution_heatmap(
         xlabel=x_axis_label,
         ylabel=y_axis_label,
         bgcolor=background_color,
+        framewise=True,
+        axiswise=True,
+        # shared_axes=False,
 #         hooks=[hook],
         **kwargs
     )
