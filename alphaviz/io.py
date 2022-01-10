@@ -196,6 +196,7 @@ def import_mq_protein_groups(
         subset=['Gene names'],
         inplace=True
     )
+    data_common['(EXP) # peptides'] = data_common['(EXP) # peptides'].astype('int')
     return data_common
 
 

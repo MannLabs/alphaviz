@@ -699,8 +699,9 @@ class MainTab(object):
 
         self.peptides_table = pn.widgets.Tabulator(
             layout='fit_data_table',
-            pagination='local',
+            pagination='remote',
             page_size=8,
+            page=1,
             disabled=True,
             height=300,
             show_index=False,
@@ -1369,6 +1370,11 @@ class QCTab(object):
                 'Mass error [ppm]',
                 'Calibrated mass density plot'
             )
+            peptide_per_protein_distr = alphaviz.plotting.plot_pept_per_protein_barplot(
+                self.data.mq_protein_groups,
+                '(EXP) # peptides',
+                'Peptides per protein',
+            )
             peptide_mz_distr = alphaviz.plotting.plot_peptide_distr(
                 self.data.mq_evidence,
                 'm/z',
@@ -1398,6 +1404,7 @@ class QCTab(object):
                     align='center'
                 ),
                 pn.Row(
+                    peptide_per_protein_distr,
                     peptide_mz_distr,
                     peptide_length_distr,
                     align='center',
