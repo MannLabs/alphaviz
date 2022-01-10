@@ -839,6 +839,12 @@ class MainTab(object):
         )
 
         self.layout = pn.Column(
+            pn.Pane(
+                self.chromatograms_plot,
+                config=update_config('Chromatograms'),
+                sizing_mode='stretch_width',
+                margin=(0, 10)
+            ),
             pn.Row(
                 self.gene_name_filter,
                 self.gene_name_reset,
@@ -859,12 +865,6 @@ class MainTab(object):
             ),
             self.peptides_table,
             self.protein_coverage_plot,
-            pn.Pane(
-                self.chromatograms_plot,
-                config=update_config('Chromatograms'),
-                sizing_mode='stretch_width',
-                margin=(0, 10)
-            ),
             None, # peptide description
             None, #XIC plot
             pn.Row(
@@ -1009,7 +1009,7 @@ class MainTab(object):
                 self.colorscale_sequential.value,
                 r"\[([^]]+)\]|\((\w+)\)"
             )
-            self.layout[5] = pn.Pane(
+            self.layout[6] = pn.Pane(
                 self.protein_coverage_plot,
                 config=update_config(f"{self.gene_name}_coverage_plot"),
                 align='center',
@@ -1020,7 +1020,7 @@ class MainTab(object):
             self.peptides_table.loading = True
             self.peptides_table.selection = []
             self.peptides_table.value = self.data.mq_evidence.iloc[0:0] if self.analysis_software == 'maxquant' else self.data.diann_peptides.iloc[0:0]
-            self.layout[5] = None
+            self.layout[6] = None
             self.layout[7:] = [
                 None, # peptide description
                 None, #XIC plot
@@ -1044,12 +1044,12 @@ class MainTab(object):
             self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                 self.protein_seq,
                 self.gene_name,
-                self.peptides_table.value['Modified.Sequence'].tolist() if self.analysis_software == 'diann' else self.peptides_table.value['Modified sequence'].tolist(),
+                self.peptides_table.selected_dataframe['Modified.Sequence'].tolist() if self.analysis_software == 'diann' else self.peptides_table.selected_dataframe['Modified sequence'].tolist(),
                 self.colorscale_qualitative.value,
                 self.colorscale_sequential.value,
                 r"\[([^]]+)\]|\((\w+)\)"
             )
-            self.layout[5] = pn.Pane(
+            self.layout[6] = pn.Pane(
                 self.protein_coverage_plot,
                 config=update_config(f"{self.gene_name}_coverage_plot"),
                 align='center',
@@ -1281,9 +1281,7 @@ class MainTab(object):
                     self.data.raw_data,
                     self.ms1_ms2_frames[self.current_frame][1]
                 )
-                print(data_ions)
-                print('1')
-                print(self.layout)
+                # print(self.layout)
                 self.ms_spectra_plot = alphaviz.plotting.plot_mass_spectra(
                     data_ions,
                     title=f'MS2 spectrum for Precursor: {self.ms1_ms2_frames[self.current_frame][1]}',
