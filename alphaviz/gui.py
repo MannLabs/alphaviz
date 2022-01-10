@@ -638,7 +638,6 @@ class MainTab(object):
             verbose=False,
         )
         self.analysis_software = self.data.settings.get('analysis_software')
-        # self.options = options
         self.heatmap_x_axis = options.layout[0][0][0]
         self.heatmap_y_axis = options.layout[0][0][1]
         self.heatmap_colormap = options.layout[0][0][2]
@@ -655,7 +654,6 @@ class MainTab(object):
         self.gene_name = str()
         self.ms1_ms2_frames = dict()
         self.proteins_table = pn.widgets.Tabulator(
-            # self.data.mq_protein_groups,
             layout='fit_data_table',
             name='Proteins table',
             pagination='remote',
@@ -671,21 +669,6 @@ class MainTab(object):
                     'target':"_blank",
                 }
             },
-            # formatters={
-            #     '(EXP) Seq coverage, %': {
-            #         'type': 'progress',
-            #         'max': 100,
-            #         'legend': True
-            #     },
-            #     'Protein names': {
-            #         'type': "textarea"
-            #     },
-            # },
-            # widths={
-            #     'Protein IDs': 230,
-            #     'Protein names': 350,
-            #     'Sequence lengths': 150,
-            # },
             sizing_mode='stretch_width',
             align='center',
             text_align='center',
@@ -715,7 +698,6 @@ class MainTab(object):
         )
 
         self.peptides_table = pn.widgets.Tabulator(
-
             layout='fit_data_table',
             pagination='local',
             page_size=8,
@@ -723,28 +705,6 @@ class MainTab(object):
             height=300,
             show_index=False,
             selectable=1,
-            # formatters={
-            #     'Acetylation (N-term)': {
-            #         'type': 'tickCross',
-            #         'allowTruthy': True
-            #     },
-            #     'Oxidation (M)': {
-            #         'type': 'tickCross',
-            #         'allowTruthy': True
-            #     },
-            #     'Mass': NumberFormatter(format='0,0.000'),
-            #     'm/z': NumberFormatter(format='0,0.000'),
-            #     '1/K0': NumberFormatter(format='0,0.000'),
-            #     'Intensity': NumberFormatter(format='0,0'),
-            #     'MS/MS scan number': NumberFormatter(format='0,0'),
-            #     'Andromeda score':  NumberFormatter(format='0,0.0'),
-            # },
-            # widths={
-            #     'Sequence': 220,
-            #     'Proteins': 200,
-            #     'MS/MS scan number': 100,
-            #     'Oxidation (M)': 130,
-            # },
             sizing_mode='stretch_width',
             align='center',
             text_align='center',
@@ -816,7 +776,6 @@ class MainTab(object):
         self.dictionary = {
             'maxquant': {
                 'peptides_table': {
-        #             'value': self.data.mq_evidence.loc[:, :'Andromeda score'],
                     'formatters': {
                         'Acetylation (N-term)': {
                             'type': 'tickCross',
@@ -841,7 +800,6 @@ class MainTab(object):
                     },
                 },
                 'proteins_table': {
-                    # 'value': 'self.data.mq_protein_groups',
                     'formatters': {
                         '(EXP) Seq coverage, %': {
                             'type': 'progress',
@@ -868,7 +826,7 @@ class MainTab(object):
             self.proteins_table.value = self.data.mq_protein_groups
             self.proteins_table.formatters = self.dictionary[self.analysis_software]['proteins_table']['formatters']
             self.proteins_table.widths = self.dictionary[self.analysis_software]['proteins_table']['widths']
-            self.peptides_table.value = self.data.mq_evidence.loc[:, :'Andromeda score']
+            self.peptides_table.value = self.data.mq_evidence.iloc[0:0]
             self.peptides_table.formatters = self.dictionary[self.analysis_software]['peptides_table']['formatters']
             self.peptides_table.widths = self.dictionary[self.analysis_software]['peptides_table']['widths']
         elif self.analysis_software == 'diann':
@@ -916,9 +874,11 @@ class MainTab(object):
             pn.Row(
                 self.heatmap_ms1_plot,
                 self.heatmap_ms2_plot,
-                None, #Summed MS2 spectrum
+                sizing_mode='stretch_width',
+                align='center'
             ),
             None, #Overlap frames button
+            None, #Summed MS2 spectrum
             margin=(20, 10, 5, 10),
             sizing_mode='stretch_width',
         )
@@ -941,27 +901,29 @@ class MainTab(object):
         self.protein_list.value = b''
         self.proteins_table.selection = []
         self.peptides_table.loading = False
-        # self.peptides_table.value = pd.DataFrame()
         self.proteins_table.loading = False
 
     def filter_protein_table(self, *args):
         # print('inside filter_protein_table')
         if self.protein_list.value != b'':
-            # print('inside if self.protein_list.value != b''')
+            print('inside if self.protein_list.value != b''')
             self.proteins_table.loading = True
             self.peptides_table.loading = True
-            self.peptides_table.value = self.data.diann_peptides.iloc[0:0]
+            self.peptides_table.value = self.data.mq_evidence.iloc[0:0] if self.analysis_software == 'maxquant' else self.data.diann_peptides.iloc[0:0]
             self.proteins_table.selection = []
+            print(self.proteins_table.selection)
             predefined_list = []
             for line in StringIO(str(self.protein_list.value, "utf-8")).readlines():
                 predefined_list.append(line.strip().upper())
             if self.analysis_software == 'maxquant':
+                print(self.proteins_table.value.shape)
                 self.proteins_table.value = alphaviz.preprocessing.filter_df(
                     self.data.mq_protein_groups,
                     pattern='|'.join(predefined_list),
                     column='Gene names',
                     software='maxquant',
                 )
+                print(self.proteins_table.value.shape)
             elif self.analysis_software == 'diann':
                 self.proteins_table.value = self.data.diann_proteins[self.data.diann_proteins['Gene names'].isin(predefined_list)]
             self.peptides_table.loading = False
@@ -978,35 +940,28 @@ class MainTab(object):
                 column='Gene names',
                 software='maxquant',
             )
+            self.peptides_table.value = self.data.mq_evidence.iloc[0:0],
         elif self.analysis_software == 'diann':
-            # print(self.data.diann_proteins.shape)
-            # print(self.gene_name_filter.value)
             self.proteins_table.value = alphaviz.preprocessing.filter_df(
                 self.data.diann_proteins,
                 pattern=self.gene_name_filter.value,
                 column='Gene names',
                 software='diann',
             )
-            # print(self.proteins_table.value)
+            self.peptides_table.value = self.data.diann_peptides.iloc[0:0]
         self.peptides_table.loading = False
-        self.peptides_table.value = self.data.diann_peptides.iloc[0:0]
         self.proteins_table.loading = False
 
     def run_after_protein_selection(self, *args):
         if self.proteins_table.selection:
             self.peptides_table.loading = True
-            # print(self.proteins_table.selected_dataframe)
-            # print(self.proteins_table.selection)
-            # print(self.proteins_table.value)
-            # print(self.proteins_table.value.index.values)
-            # self.peptides_table.page = 1
-            # print(f"Peptide table page is {self.peptides_table.page}")
             self.peptides_table.selection = []
             if self.analysis_software == 'maxquant':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
                 curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
+                print(self.gene_name, curr_protein_ids)
                 self.peptides_table.value = alphaviz.preprocessing.filter_df(
-                    self.data.mq_evidence.loc[:, :'Andromeda score'],
+                    self.data.mq_evidence,
                     pattern=self.gene_name,
                     column='Gene names',
                     software='maxquant',
@@ -1034,9 +989,11 @@ class MainTab(object):
                 pn.Row(
                     None,
                     None,
-                    None, #Summed MS2 spectrum
+                    sizing_mode='stretch_width',
+                    align='center'
                 ),
                 None, #Overlap frames button
+                None, #Summed MS2 spectrum
             ]
             # print('4')
             self.protein_seq = alphaviz.preprocessing.get_aa_seq(
@@ -1047,9 +1004,10 @@ class MainTab(object):
             self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                 self.protein_seq,
                 self.gene_name,
-                self.peptides_table.value['Modified.Sequence'].tolist(),
+                self.peptides_table.value['Modified.Sequence'].tolist() if self.analysis_software == 'diann' else self.peptides_table.value['Modified sequence'].tolist(),
                 self.colorscale_qualitative.value,
                 self.colorscale_sequential.value,
+                r"\[([^]]+)\]|\((\w+)\)"
             )
             self.layout[5] = pn.Pane(
                 self.protein_coverage_plot,
@@ -1061,7 +1019,7 @@ class MainTab(object):
         else:
             self.peptides_table.loading = True
             self.peptides_table.selection = []
-            self.peptides_table.value = self.data.diann_peptides.iloc[0:0]
+            self.peptides_table.value = self.data.mq_evidence.iloc[0:0] if self.analysis_software == 'maxquant' else self.data.diann_peptides.iloc[0:0]
             self.layout[5] = None
             self.layout[7:] = [
                 None, # peptide description
@@ -1073,9 +1031,11 @@ class MainTab(object):
                 pn.Row(
                     None,
                     None,
-                    None, #Summed MS2 spectrum
+                    sizing_mode='stretch_width',
+                    align='center'
                 ),
                 None, #Overlap frames button
+                None, #Summed MS2 spectrum
             ]
             self.peptides_table.loading = False
 
@@ -1084,9 +1044,10 @@ class MainTab(object):
             self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                 self.protein_seq,
                 self.gene_name,
-                self.peptides_table.selected_dataframe['Modified.Sequence'].tolist(),
+                self.peptides_table.value['Modified.Sequence'].tolist() if self.analysis_software == 'diann' else self.peptides_table.value['Modified sequence'].tolist(),
                 self.colorscale_qualitative.value,
                 self.colorscale_sequential.value,
+                r"\[([^]]+)\]|\((\w+)\)"
             )
             self.layout[5] = pn.Pane(
                 self.protein_coverage_plot,
@@ -1141,11 +1102,11 @@ class MainTab(object):
                     pn.Row(
                         None,
                         None,
-                        None, #Summed MS2 spectrum
                         sizing_mode='stretch_width',
                         align='center'
                     ),
                     None, #Overlap frames button
+                    None, #Summed MS2 spectrum
                 ]
 
     def display_line_spectra_plots(self, *args):
@@ -1280,6 +1241,7 @@ class MainTab(object):
                 precursor_color=self.heatmap_precursor_color.value,
                 width=570,
                 height=450,
+                margin=(0, 10, 10, 0)
                 # shared_axes=True
             )
             data_ms2 = self.data.raw_data[ms2_frame].copy()
@@ -1299,21 +1261,17 @@ class MainTab(object):
                 # shared_axes=True
             )
 
-            self.layout[10] = pn.Row(
-                pn.pane.HoloViews(
-                    self.heatmap_ms1_plot,
-                    margin=(15, 0, 0, 0),
-                    sizing_mode='stretch_width',
-                    linked_axes=False,
-                ),
-                pn.pane.HoloViews(
-                    self.heatmap_ms2_plot,
-                    margin=(15, 0, 0, 0),
-                    sizing_mode='stretch_width',
-                    linked_axes=False,
-                ),
+            self.layout[10][0] = pn.pane.HoloViews(
+                self.heatmap_ms1_plot,
+                margin=(15, 0, 0, 0),
                 sizing_mode='stretch_width',
-                align='center'
+                linked_axes=False,
+            )
+            self.layout[10][1] = pn.pane.HoloViews(
+                self.heatmap_ms2_plot,
+                margin=(15, 0, 0, 0),
+                sizing_mode='stretch_width',
+                linked_axes=False,
             )
 
             if self.analysis_software == 'maxquant':
@@ -1323,7 +1281,9 @@ class MainTab(object):
                     self.data.raw_data,
                     self.ms1_ms2_frames[self.current_frame][1]
                 )
-
+                print(data_ions)
+                print('1')
+                print(self.layout)
                 self.ms_spectra_plot = alphaviz.plotting.plot_mass_spectra(
                     data_ions,
                     title=f'MS2 spectrum for Precursor: {self.ms1_ms2_frames[self.current_frame][1]}',
@@ -1331,13 +1291,13 @@ class MainTab(object):
                 )
                 self.layout[9][0] = self.previous_frame
                 self.layout[9][1] = self.next_frame
-                self.layout[10][2] = pn.Pane(
+                self.layout[11] = self.plot_overlapped_frames
+                self.layout[12] = pn.Pane(
                     self.ms_spectra_plot,
                     config=update_config('Combined MS2 spectrum'),
-                    margin=(-10, 0, 0, 0),
+                    margin=(10, 0, 0, 0),
                     sizing_mode='stretch_width'
                 )
-                self.layout[11] = self.plot_overlapped_frames
 
     def display_previous_frame(self, *args):
         self.plot_overlapped_frames.value = False

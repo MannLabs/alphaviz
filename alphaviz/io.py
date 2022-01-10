@@ -87,7 +87,8 @@ def import_mq_evidence(
             - 'Score' (renamed to 'Andromeda score') ('int' type),
             - 'Raw file' ('category' type),
             - 'Uncalibrated mass error [ppm]' ('float:.4d' type),
-            - 'Mass error [ppm]' ('float:.4d' type).
+            - 'Mass error [ppm]' ('float:.4d' type),
+            - 'Modified sequence'.
         Renamed columns are marked as is the output data type of all columns. The rows of the data frame with missing 'MS/MS scan number' values are dropped.
     """
     maxquant_evidence_columns = [
@@ -108,7 +109,8 @@ def import_mq_evidence(
         'Score',
         'Raw file',
         'Uncalibrated mass error [ppm]',
-        'Mass error [ppm]'
+        'Mass error [ppm]',
+        'Modified sequence'
     ]
     data_common = read_file(filepath, maxquant_evidence_columns)
     data_common.rename(

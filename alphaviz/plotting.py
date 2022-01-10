@@ -26,6 +26,7 @@ def plot_sequence_coverage(
     peptides_list: list,
     colorscale_qualitative: str,
     colorscale_sequential: str,
+    regex: str
 )-> go.Figure:
     """Create a protein sequence coverage plot.
 
@@ -41,7 +42,8 @@ def plot_sequence_coverage(
         A name of a built-in qualitative Plotly color scale.
     colorscale_sequential : str
         A name of a built-in sequential Plotly color scale.
-
+    regex : str
+        A regular expression to be applied for the peptide sequence.
     Returns
     -------
     plotly.graph_objects.Figure object
@@ -67,7 +69,8 @@ def plot_sequence_coverage(
     if len(peptides_list) <= len(getattr(px.colors.qualitative, colorscale_qualitative)):
         # print('px.colors.qualitative is used')
         for ind, peptide_mod in enumerate(peptides_list):
-            peptide = re.sub(r"\[([^]]+)\]", "", peptide_mod)
+            peptide_mod = peptide_mod.replace('_', '')
+            peptide = re.sub(regex, "", peptide_mod)
             start = sequence.find(peptide)
             peptide_cov = range(start + 1, start + len(peptide) + 1)
             selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
@@ -85,7 +88,9 @@ def plot_sequence_coverage(
         # print('px.colors.sequential is used')
         colorscale_sequential_colors = px.colors.sample_colorscale(colorscale_sequential, samplepoints=len(peptides_list))
         for ind, peptide_mod in enumerate(peptides_list):
-            peptide = re.sub(r"\[([^]]+)\]", "", peptide_mod)
+            peptide_mod = peptide_mod.replace('_', '')
+            peptide = re.sub(regex, "", peptide_mod)
+            # peptide = re.sub(r"\[([^]]+)\]", "", peptide_mod)
             start = sequence.find(peptide)
             peptide_cov = range(start + 1, start + len(peptide) + 1)
             selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
