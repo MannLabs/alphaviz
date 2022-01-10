@@ -592,16 +592,17 @@ def plot_mass_spectra(
     )
 
     fig_common = plotly.subplots.make_subplots(
-        rows=5, cols=1, shared_xaxes=True,
+        rows=5, cols=3, shared_xaxes=True,
         figure=fig,
         specs=[
-          [{"rowspan": 3}],
-          [{}],
-          [{}],
-          [{}],
-          [{}]
+          [{"rowspan": 3, "colspan": 3}, None, None],
+          [None, None, None],
+          [None, None, None],
+          [{"colspan": 3}, None, None],
+          [{}, {}, {}]
         ],
         vertical_spacing=0.07,
+        column_widths=[0.25, 0.5, 0.25]
     )
 
     # add a second plot
@@ -657,7 +658,7 @@ def plot_mass_spectra(
                 yshift=1, align='center'
             ),
             row=5,
-            col=1
+            col=2
         )
     for i, b in enumerate(bions):
         if b:
@@ -672,7 +673,7 @@ def plot_mass_spectra(
                     hoverinfo='skip'
                 ),
                 row=5,
-                col=1
+                col=2
             )
             fig_common.add_annotation(
                 dict(
@@ -683,7 +684,7 @@ def plot_mass_spectra(
                     font_size=font_size_ion
                 ),
                 row=5,
-                col=1
+                col=2
             )
     for i, y in enumerate(yions):
         if y:
@@ -698,7 +699,7 @@ def plot_mass_spectra(
                     hoverinfo='skip'
                 ),
                 row=5,
-                col=1
+                col=2
             )
             fig_common.add_annotation(
                 dict(
@@ -709,18 +710,18 @@ def plot_mass_spectra(
                     font_size=font_size_ion
                 ),
                 row=5,
-                col=1
+                col=2
             )
     fig_common.update_yaxes(
         visible=False,
         range=(-1.5,1.5),
         row=5,
-        col=1
+        col=2
     )
     fig_common.update_xaxes(
         visible=False,
         row=5,
-        col=1
+        col=2
     )
 
     return fig_common # this function is quite long. Can it be split in smaller chunks?
