@@ -264,6 +264,26 @@ def import_mq_msms(
     return data_common
 
 
+def import_mq_summary(
+    filepath: str
+)-> pd.DataFrame:
+    """Read the output file summary.txt of MaxQuant software.
+
+    Parameters
+    ----------
+    filepath : str
+        Full path to the msms.txt file.
+
+    Returns
+    -------
+    pd.DataFrame
+        The output data frame contains summary information of all the experiments.
+    """
+    data_common = pd.read_csv(filepath, sep='\t')
+    data_common.dropna(subset=['MS'], axis=0, inplace=True)
+    return data_common
+
+
 def import_mq_output(
     necessary_files: list,
     path_mq_output_folder: str,
@@ -289,14 +309,15 @@ def import_mq_output(
         'allPeptides.txt': import_mq_all_peptides,
         'msms.txt': import_mq_msms,
         'evidence.txt': import_mq_evidence,
-        'proteinGroups.txt': import_mq_protein_groups
+        'proteinGroups.txt': import_mq_protein_groups,
+        'summary.txt': import_mq_summary,
     }
     for file in necessary_files:
         file_path = os.path.join(
             path_mq_output_folder,
             file
         )
-        if file in ['allPeptides.txt', 'msms.txt']:
+        if file in ['allPeptides.txt', 'msms.txt', 'summary.txt']:
             df = file_func_dict[file](
                 file_path
             )
