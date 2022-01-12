@@ -214,6 +214,7 @@ class DataImportWidget(BaseWidget):
         self.mq_all_peptides = None
         self.mq_msms = None
         self.mq_protein_groups = None
+        self.mq_summary = None
         self.diann_proteins = None
         self.diann_peptides = None
         self.diann_statist = None
@@ -352,7 +353,6 @@ class DataImportWidget(BaseWidget):
                 self.path_raw_folder.value,
                 self.ms_file_name.value
             ),
-            # slice_as_dataframe=False
         )
         alphatims.utils.set_progress_callback(True)
         # TODO: to change it just by changing the active=True parameter for the
@@ -377,11 +377,11 @@ class DataImportWidget(BaseWidget):
             extensions_list=['txt', 'tsv', 'csv']
         )
 
-        mq_files = ['allPeptides.txt', 'msms.txt', 'evidence.txt', 'proteinGroups.txt']
+        mq_files = ['allPeptides.txt', 'msms.txt', 'evidence.txt', 'proteinGroups.txt', 'summary.txt']
         if any(file in files for file in mq_files):
             print('Reading the MaxQuant output files...')
             if all(file in files for file in mq_files):
-                self.mq_all_peptides, self.mq_msms, self.mq_evidence, self.mq_protein_groups = alphaviz.io.import_mq_output(
+                self.mq_all_peptides, self.mq_msms, self.mq_evidence, self.mq_protein_groups, self.mq_summary = alphaviz.io.import_mq_output(
                     mq_files,
                     self.path_output_folder.value,
                     self.ms_file_name.value.split('.')[0]
@@ -1357,6 +1357,7 @@ class QCTab(object):
         self.analysis_software = self.data.settings.get('analysis_software')
 
     def create_layout(self):
+        experiment = self.data.ms_file_name.value.split('.')[0]
         if self.analysis_software == 'maxquant':
             uncalb_mass_dens_plot = alphaviz.plotting.plot_mass_error(
                 self.data.mq_evidence,
@@ -1387,6 +1388,17 @@ class QCTab(object):
             )
 
             self.layout_qc = pn.Column(
+                pn.widgets.Tabulator(
+                    self.data.mq_summary,
+                    sizing_mode='stretch_width',
+                    layout='fit_data_table',
+                    name='Overview table',
+                    selection=list(self.data.mq_summary[self.data.mq_summary['Raw file'].str.contains(experiment)].index),
+                    row_height=40,
+                    disabled=True,
+                    height=200,
+                    show_index=False,
+                ),
                 pn.panel(
                     f"## Quality control of the entire sample",
                     align='center',
@@ -1430,13 +1442,8 @@ class QCTab(object):
                 'Length',
                 'Peptide length distribution'
             )
-            experiment = self.data.ms_file_name.value.split('.')[0]
+            # experiment = self.data.ms_file_name.value.split('.')[0]
             self.layout_qc = pn.Column(
-                pn.panel(
-                    f"## Quality control of the entire sample",
-                    align='center',
-                    margin=(15, 10, -5, 10)
-                ),
                 pn.widgets.Tabulator(
                     self.data.diann_statist,
                     sizing_mode='stretch_width',
@@ -1447,6 +1454,11 @@ class QCTab(object):
                     disabled=True,
                     # height=100,
                     show_index=False,
+                ),
+                pn.panel(
+                    f"## Quality control of the entire sample",
+                    align='center',
+                    margin=(15, 10, -5, 10)
                 ),
                 pn.Row(
                     peptide_per_protein_distr,
