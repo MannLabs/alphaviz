@@ -112,16 +112,31 @@ def import_mq_evidence(
         'Mass error [ppm]',
         'Modified sequence'
     ]
-    data_common = read_file(filepath, maxquant_evidence_columns)
-    data_common.rename(
+    # data_common = read_file(filepath, maxquant_evidence_columns)
+    # import time
+    # start = time.time()
+    #read data in chunks of 1 million rows at a time
+    chunk = pd.read_csv(filepath, chunksize=1000000, sep='\t')
+    data_raw_file = pd.concat(chunk)
+    # end = time.time()
+    # print("Read csv with chunks: ",(end-start),"sec")
+    data_raw_file = data_raw_file[data_raw_file['Raw file'] == experiment]
+    data_raw_file.rename(
         columns={
             'Acetyl (Protein N-term)': 'Acetylation (N-term)',
-            'Score': 'Andromeda score'
+            'Score': 'Andromeda score',
+            'K0': '1/K0',
         },
         inplace=True
     )
-    data_raw_file = data_common[data_common['Raw file'] == experiment]
-
+    data_raw_file.dropna(
+        axis=0,
+        subset=['MS/MS scan number', 'Leading proteins']
+    )
+    if 'Gene names' not in data_raw_file.columns:
+        data_raw_file['Gene names'] = data_raw_file['Leading proteins'].apply(
+            lambda x: ';'.join([entry.split('|')[-1].split('_')[0] for entry in x.split(';') if 'sp' in entry])
+        )
     for col in ['Charge', 'MS/MS count', 'Gene names', 'Raw file']:
         data_raw_file[col] = data_raw_file[col].astype('category')
     for col in ['Retention time', 'Mass', 'm/z', '1/K0', 'Uncalibrated mass error [ppm]', 'Mass error [ppm]']:
@@ -142,7 +157,7 @@ def import_mq_protein_groups(
     filepath: str,
     experiment: str
 )-> pd.DataFrame:
-    """Read some columns from the output file proteinGroups.txt of MaxQuant software.
+    """Read the output file proteinGroups.txt of MaxQuant software.
 
     Parameters
     ----------
@@ -153,33 +168,21 @@ def import_mq_protein_groups(
 
     Returns
     -------
-    pd.DataFrame
-        The output data frame contains information about the following MQ columns:
-            - 'Protein IDs',
-            - 'Protein names',
-            - 'Gene names',
-            - 'Number of proteins' (renamed to '# proteins'),
-            - 'Mol. weight [kDa]' (renamed to 'Mol weight, kDa'),
-            - f'Peptides Exp_{experiment}' (renamed to '(EXP) # peptides'),
-            - f'Unique peptides Exp_{experiment}' (renamed to '(EXP) # unique peptides'),
-            - f'Sequence coverage Exp_{experiment} [%]' (renamed to '(EXP) Seq coverage, %'),
-            - 'MS/MS count' (renamed to '# MS/MS'),
-            - 'Sequence lengths',
-        Renamed columns are marked. The rows of the data frame with missing 'Gene names' values are dropped.
+    # pd.DataFrame
+    #     The output data frame contains information about the following MQ columns:
+    #         - 'Protein IDs',
+    #         - 'Protein names',
+    #         - 'Gene names',
+    #         - 'Number of proteins' (renamed to '# proteins'),
+    #         - 'Mol. weight [kDa]' (renamed to 'Mol weight, kDa'),
+    #         - f'Peptides Exp_{experiment}' (renamed to '(EXP) # peptides'),
+    #         - f'Unique peptides Exp_{experiment}' (renamed to '(EXP) # unique peptides'),
+    #         - f'Sequence coverage Exp_{experiment} [%]' (renamed to '(EXP) Seq coverage, %'),
+    #         - 'MS/MS count' (renamed to '# MS/MS'),
+    #         - 'Sequence lengths',
+    #     Renamed columns are marked. The rows of the data frame with missing 'Gene names' values are dropped.
     """
-    maxquant_protein_groups_columns = [
-        'Protein IDs',
-        'Protein names',
-        'Gene names',
-        'Number of proteins',
-        'Mol. weight [kDa]',
-        f'Peptides Exp_{experiment}',
-        f'Unique peptides Exp_{experiment}',
-        f'Sequence coverage Exp_{experiment} [%]',
-        'MS/MS count',
-        'Sequence lengths',
-    ]
-    data_common = read_file(filepath, maxquant_protein_groups_columns)
+    data_common = pd.read_csv(filepath, sep='\t', low_memory=False)
     data_common.rename(
         columns={
             'Number of proteins': '# proteins',
@@ -191,12 +194,39 @@ def import_mq_protein_groups(
         },
         inplace=True
     )
+    try:
+        data_common['(EXP) # peptides'] = data_common['(EXP) # peptides'].astype('int')
+    except KeyError:
+        pass
+
+    if 'Gene names' not in data_common.columns:
+        data_common.dropna(
+            axis=0,
+            subset=['Fasta headers'],
+            inplace=True
+        )
+        data_common[['Protein names', 'Protein IDs', 'Gene names']] = data_common.apply(lambda x: alphaviz.preprocessing.get_protein_info(x['Fasta headers']), axis=1, result_type ='expand')
+
     data_common.dropna(
         axis=0,
         subset=['Gene names'],
         inplace=True
     )
-    data_common['(EXP) # peptides'] = data_common['(EXP) # peptides'].astype('int')
+
+    first_columns = [
+        'Protein IDs',
+        'Protein names',
+        'Gene names',
+        '# proteins',
+        'Mol weight, kDa',
+        '(EXP) # peptides',
+        '(EXP) # unique peptides',
+        '(EXP) Seq coverage, %',
+        '# MS/MS',
+        'Sequence lengths',
+    ]
+    data_common = data_common[first_columns + sorted(list(set(data_common.columns).difference(first_columns)))]
+
     return data_common
 
 
@@ -251,15 +281,25 @@ def import_mq_msms(
             - 'Mass deviations [Da]',
             - 'Mass deviations [ppm]'.
     """
-    maxquant_msms_columns = [
-        'Scan number',
-        'Matches',
-        'Masses',
-        'Mass deviations [Da]',
-        'Mass deviations [ppm]'
-    ]
-    data_common = read_file(filepath, maxquant_msms_columns)
-    data_common.columns = [col.strip() for col in data_common.columns]
+    try:
+        maxquant_msms_columns = [
+            'Scan number',
+            'Matches',
+            'Masses',
+            'Mass deviations [Da]',
+            'Mass deviations [ppm]'
+        ]
+        data_common = read_file(filepath, maxquant_msms_columns)
+    except ValueError:
+        maxquant_msms_columns = [
+            'Scan number',
+            'Matches',
+            'Masses',
+            'Mass Deviations [Da]',
+            'Mass Deviations [ppm]'
+        ]
+        data_common = read_file(filepath, maxquant_msms_columns)
+    data_common.columns = [col.strip().replace('Deviations', 'deviations') for col in data_common.columns]
     data_common['Scan number'] = data_common['Scan number'].astype('int')
     return data_common
 
@@ -391,11 +431,6 @@ def import_diann_stats(
         The output data frame contains summary information about the whole experiment.
     """
     diann_overview = pd.read_csv(filepath, sep='\t')
-    # diann_overview = diann_overview[diann_overview['File.Name'].str.contains(experiment)]
-    # diann_overview = diann_overview[diann_overview#.columns[1:]]#.T
-    # diann_overview.reset_index(inplace=True)
-    # diann_overview.columns = ['index', 'values']
-    # diann_overview['values'] = diann_overview['values'].apply(lambda x: '%.2E' % x if x>100000 else '%.2f' % x)
     return diann_overview
 
 
@@ -497,9 +532,6 @@ def import_diann_output(
     """
     diann_output_file, diann_stats_file = sorted(get_filenames_from_directory(
         path_diann_output_folder, 'tsv'), key=len)[:2]
-
-    # print(sorted(get_filenames_from_directory(
-    #     path_diann_output_folder, 'tsv'), key=len))
 
     diann_df = pd.read_csv(os.path.join(path_diann_output_folder, diann_output_file), sep='\t')
     diann_df = diann_df[diann_df.Run == experiment]

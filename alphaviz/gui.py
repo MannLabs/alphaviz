@@ -246,6 +246,8 @@ class DataImportWidget(BaseWidget):
             margin=(15, 15, 0, 15)
         )
         self.path_fasta_file = pn.widgets.TextInput(
+            # TODO: remove the fixed fasta file before release
+            value='/Users/eugeniavoytik/copied/Bruker/MaxQuant_output_tables/20210413_TIMS03_EVO03_PaSk_MA_HeLa_200ng_S1-A1_1_24848.d/txt/human.fasta',
             name='Specify a fasta file:',
             placeholder='Enter the full path to the used for the analysis fasta file',
             width=900,
