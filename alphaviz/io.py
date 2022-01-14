@@ -194,6 +194,11 @@ def import_mq_protein_groups(
         },
         inplace=True
     )
+    data_common.dropna(
+        axis=0,
+        subset=['Fasta headers'],
+        inplace=True
+    )
     try:
         data_common.dropna(
             axis=0,
@@ -205,16 +210,11 @@ def import_mq_protein_groups(
         pass
 
     if 'Gene names' not in data_common.columns:
-        data_common.dropna(
-            axis=0,
-            subset=['Fasta headers'],
-            inplace=True
-        )
         data_common[['Protein names', 'Protein IDs', 'Gene names']] = data_common.apply(lambda x: alphaviz.preprocessing.get_protein_info(x['Fasta headers']), axis=1, result_type ='expand')
 
     data_common.dropna(
         axis=0,
-        subset=['Gene names'],
+        subset=['Gene names', 'Protein IDs'],
         inplace=True
     )
 

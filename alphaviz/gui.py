@@ -965,13 +965,14 @@ class MainTab(object):
                 print(self.gene_name, curr_protein_ids)
                 self.peptides_table.value = alphaviz.preprocessing.filter_df(
                     self.data.mq_evidence,
-                    pattern=self.gene_name,
+                    pattern=self.gene_name.replace(';', '|'), # use the regex | character to try to match each of the substrings in the genes separated by ; in the "Gene names" column
                     column='Gene names',
                     software='maxquant',
                 )
+                print(self.peptides_table.value)
             elif self.analysis_software == 'diann':
                 # print('11')
-                self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
+                self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene naames']
                 # print('22')
                 curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
                 # print(self.gene_name, curr_protein_ids)
@@ -1360,6 +1361,8 @@ class QCTab(object):
 
     def create_layout(self):
         experiment = self.data.ms_file_name.value.split('.')[0]
+        print(self.data.mq_protein_groups.columns)
+        print(self.data.mq_protein_groups.head())
         if self.analysis_software == 'maxquant':
             uncalb_mass_dens_plot = alphaviz.plotting.plot_mass_error(
                 self.data.mq_evidence,
