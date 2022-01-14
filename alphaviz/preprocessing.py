@@ -401,3 +401,44 @@ def get_protein_info(
         except KeyError:
             logging.info(f"The sequence length for the protein {protein_id} is not found in the fasta file.")
     return ','.join(protein_names), ','.join(protein_seq_lens)
+
+def get_protein_info(
+    string: str,
+    **kwargs
+):
+    """Extract information about protein IDs, protein names and gene names from the "Fasta headers" column of the MQ output tables.
+
+    Parameters
+    ----------
+    string : str
+        A 'Fasta header' string from the MQ output table for one protein group (e.g. from the proteinGroups.txt file).
+
+        E.g. a complex one: 'sp|Q3SY84|K2C71_HUMAN Keratin, type II cytoskeletal 71 OS=Homo sapiens OX=9606 GN=KRT71 PE=1 SV=3;;sp|Q14CN4|K2C72_HUMAN Keratin, type II cytoskeletal 72 OS=Homo sapiens OX=9606 GN=KRT72 PE=1 SV=2;;;sp|Q7RTS7|K2C74_HUMAN Keratin, type II cytoskeletal 74 OS'
+
+    Returns
+    -------
+    a tuple of strings
+        The function returns a tuple of three strings containing information about the protein names, protein IDs and gene names.
+
+    """
+    protein_names = []
+    protein_ids = []
+    genes = []
+    for protein in string.split(';'):
+        if protein:
+            try:
+                protein_names.append(re.findall(r'\s(.+)OS', protein)[0].strip())
+            except:
+                protein_names.append("")
+            try:
+                protein_ids.append(protein.split('|')[1])
+            except:
+                protein_ids.append("")
+            try:
+                genes.append(protein.split()[0].split('|')[-1].split('_')[0])
+            except:
+                genes.append("")
+    protein_names = ";".join(protein_names) if protein_names else None
+    protein_ids = ";".join(protein_ids) if protein_ids else None
+    genes = ";".join(genes) if genes else None
+    return protein_names, protein_ids, genes
