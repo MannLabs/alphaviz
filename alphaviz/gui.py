@@ -1540,42 +1540,56 @@ class TargetModeTab(object):
         self.analysis_software = self.data.settings.get('analysis_software')
         self.targeted_peptides_table = pn.widgets.Tabulator(
             value=pd.DataFrame(
-                columns=['sequence', 'charge', 'im', 'rt']
+                columns=['name','sequence', 'charge', 'im', 'rt']
             ),
             widths={'index': 70},
             layout='fit_columns',
             height=300,
             show_index=True,
             width=570,
-            align='center',
-            margin=(30, 12, 10, 18)
+            margin=(27, 12, 10, 18)
         )
-        self.rows_number = pn.widgets.IntInput(
+        self.peptides_count = pn.widgets.IntInput(
             name='Number of peptides',
             value=0,
-            step=1, 
+            step=1,
             start=0,
             end=1000
         )
-
+        self.peptides_table = pn.widgets.FileInput(
+            accept='.tsv,.csv,.txt',
+            margin=(25,0,0,10)
+        )
     def create_layout(self):
         experiment = self.data.ms_file_name.value.split('.')[0]
-
-        def callback(target, event):
+        # CALLBACKS
+        def update_row_count(target, event):
             target.value = pd.DataFrame(
-                columns=['sequence', 'charge', 'im', 'rt'],
+                columns=['name', 'sequence', 'charge', 'im', 'rt'],
                 index=range(event.new),
             )
-
-        self.rows_number.link(
+        self.peptides_count.link(
             self.targeted_peptides_table,
-            callbacks={'value': callback}
+            callbacks={'value': update_row_count}
         )
+
+        dependances = {
+            # self.gene_name_reset: [self.reset_protein_table, 'clicks'],
+            self.peptides_table: [self.read_peptides_table, 'value'],
+        }
+        for k in dependances.keys():
+            k.param.watch(
+                dependances[k][0],
+                dependances[k][1]
+            )
 
         if 'dia' in self.data.raw_data.acquisition_mode:
             self.layout_target_mode = pn.Column(
                 pn.Row(
-                    self.rows_number,
+                    pn.Column(
+                        self.peptides_count,
+                        self.peptides_table,
+                    ),
                     self.targeted_peptides_table,
                 ),
                 None,
@@ -1584,6 +1598,17 @@ class TargetModeTab(object):
                 align='start',
             )
         return self.layout_target_mode
+
+    def read_peptides_table(self, *args):
+        file_ext = os.path.splitext(self.peptides_table.filename)[-1]
+        if file_ext=='.csv':
+            sep=','
+        else:
+            sep='\t'
+        self.targeted_peptides_table.value = pd.read_csv(
+            StringIO(str(self.peptides_table.value, "utf-8")),
+            sep=sep
+        )
 
 class GUI(object):
     # TODO: move to alphabase and docstring
