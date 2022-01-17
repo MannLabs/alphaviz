@@ -1047,6 +1047,7 @@ class MainTab(object):
 
     def run_after_peptide_selection(self, *args):
         if self.proteins_table.selection:
+            self.peptides_table.loading = True
             self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                 self.protein_seq,
                 self.gene_name,
@@ -1114,9 +1115,14 @@ class MainTab(object):
                     None, #Overlap frames button
                     None, #Summed MS2 spectrum
                 ]
+            self.peptides_table.loading = False
 
     def display_line_spectra_plots(self, *args):
         if self.analysis_software == 'maxquant':
+            try:
+                self.layout[8][1].loading = True
+            except IndexError:
+                pass
             mz_tol_value = self.mz_tol.value
             prec_mono_mz = self.merged_precursor_data.MonoisotopicMz.median()
             if self.mz_tol_units.value == 'ppm':
@@ -1161,6 +1167,7 @@ class MainTab(object):
                     ),
                     sizing_mode='stretch_width',
                     config=update_config('Extracted Ion Chromatogram'),
+                    loading=False
                 ),
                 sizing_mode='stretch_width',
                 margin=(5, 10, 0, 10)
@@ -1192,6 +1199,7 @@ class MainTab(object):
                     ),
                     sizing_mode='stretch_width',
                     config=update_config('Precursor/fragments elution profile plot'),
+                    loading=False,
                 ),
                 # sizing_mode='stretch_width',
                 margin=(5, 10, 0, 10)
@@ -1215,6 +1223,7 @@ class MainTab(object):
                     sizing_mode='stretch_width',
                     linked_axes=True,
                     config=update_config('Precursor/fragments elution profile plot'),
+                    loading=False,
                 ),
                 sizing_mode='stretch_width',
                 margin=(5, 10, 0, 10)
@@ -1270,14 +1279,16 @@ class MainTab(object):
             self.layout[10][0] = pn.pane.HoloViews(
                 self.heatmap_ms1_plot,
                 margin=(15, 0, 0, 0),
-                sizing_mode='stretch_width',
+                # sizing_mode='stretch_width',
                 linked_axes=False,
+                loading=False
             )
             self.layout[10][1] = pn.pane.HoloViews(
                 self.heatmap_ms2_plot,
                 margin=(15, 0, 0, 0),
-                sizing_mode='stretch_width',
+                # sizing_mode='stretch_width',
                 linked_axes=False,
+                loading=False
             )
 
             if self.analysis_software == 'maxquant':
@@ -1300,10 +1311,17 @@ class MainTab(object):
                     self.ms_spectra_plot,
                     config=update_config('Combined MS2 spectrum'),
                     margin=(10, 0, 0, 0),
-                    sizing_mode='stretch_width'
+                    sizing_mode='stretch_width',
+                    loading=False
                 )
 
     def display_previous_frame(self, *args):
+        try:
+            self.layout[10][0].loading = True
+            self.layout[10][1].loading = True
+            self.layout[12].loading = True
+        except IndexError:
+            pass
         self.plot_overlapped_frames.value = False
         current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
         if current_frame_index == 0:
@@ -1313,6 +1331,12 @@ class MainTab(object):
         self.display_heatmap_spectrum()
 
     def display_next_frame(self, *args):
+        try:
+            self.layout[10][0].loading = True
+            self.layout[10][1].loading = True
+            self.layout[12].loading = True
+        except IndexError:
+            pass
         self.plot_overlapped_frames.value = False
         current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
         if current_frame_index == len(self.ms1_ms2_frames.keys())-1:
@@ -1322,6 +1346,12 @@ class MainTab(object):
         self.display_heatmap_spectrum()
 
     def display_overlapped_frames(self, *args):
+        try:
+            self.layout[10][0].loading = True
+            self.layout[10][1].loading = True
+            self.layout[12].loading = True
+        except IndexError:
+            pass
         if self.plot_overlapped_frames.value == True:
             self.heatmap_ms1_plot = alphaviz.plotting.plot_heatmap(
                 self.data.raw_data[list(self.ms1_ms2_frames.keys())],
@@ -1347,8 +1377,20 @@ class MainTab(object):
                 width=570,
                 height=450,
             )
-            self.layout[10][0] = self.heatmap_ms1_plot
-            self.layout[10][1] = self.heatmap_ms2_plot
+            self.layout[10][0] = pn.pane.HoloViews(
+                self.heatmap_ms1_plot,
+                margin=(15, 0, 0, 0),
+                # sizing_mode='stretch_width',
+                linked_axes=False,
+                loading=False
+            )
+            self.layout[10][1] = pn.pane.HoloViews(
+                self.heatmap_ms2_plot,
+                margin=(15, 0, 0, 0),
+                # sizing_mode='stretch_width',
+                linked_axes=False,
+                loading=False
+            )
         else:
             self.display_heatmap_spectrum()
 

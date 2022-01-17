@@ -240,7 +240,6 @@ def import_mq_protein_groups(
     first_columns.extend([col for col in data_common.columns if '(EXP)' in col])
 
     data_common = data_common[first_columns + sorted(list(set(data_common.columns).difference(first_columns)))]
-    # print(data_common.columns)
 
     return data_common
 
