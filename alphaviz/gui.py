@@ -326,9 +326,11 @@ class DataImportWidget(BaseWidget):
         return self.layout
 
     def update_file_names(self, *args):
-        self.ms_file_name.options = alphaviz.io.get_filenames_from_directory(
-            self.path_raw_folder.value,
-            ['d', 'hdf']
+        self.ms_file_name.options = sorted(
+            alphaviz.io.get_filenames_from_directory(
+                self.path_raw_folder.value,
+                ['d', 'hdf']
+            )
         )
 
     def update_output_folder_and_fasta(self, *args):
@@ -909,24 +911,24 @@ class MainTab(object):
     def filter_protein_table(self, *args):
         # print('inside filter_protein_table')
         if self.protein_list.value != b'':
-            print('inside if self.protein_list.value != b''')
+            # print('inside if self.protein_list.value != b''')
             self.proteins_table.loading = True
             self.peptides_table.loading = True
             self.peptides_table.value = self.data.mq_evidence.iloc[0:0] if self.analysis_software == 'maxquant' else self.data.diann_peptides.iloc[0:0]
             self.proteins_table.selection = []
-            print(self.proteins_table.selection)
+            # print(self.proteins_table.selection)
             predefined_list = []
             for line in StringIO(str(self.protein_list.value, "utf-8")).readlines():
                 predefined_list.append(line.strip().upper())
             if self.analysis_software == 'maxquant':
-                print(self.proteins_table.value.shape)
+                # print(self.proteins_table.value.shape)
                 self.proteins_table.value = alphaviz.preprocessing.filter_df(
                     self.data.mq_protein_groups,
                     pattern='|'.join(predefined_list),
                     column='Gene names',
                     software='maxquant',
                 )
-                print(self.proteins_table.value.shape)
+                # print(self.proteins_table.value.shape)
             elif self.analysis_software == 'diann':
                 self.proteins_table.value = self.data.diann_proteins[self.data.diann_proteins['Gene names'].isin(predefined_list)]
             self.peptides_table.loading = False
@@ -943,7 +945,7 @@ class MainTab(object):
                 column='Gene names',
                 software='maxquant',
             )
-            self.peptides_table.value = self.data.mq_evidence.iloc[0:0],
+            self.peptides_table.value = self.data.mq_evidence.iloc[0:0]
         elif self.analysis_software == 'diann':
             self.proteins_table.value = alphaviz.preprocessing.filter_df(
                 self.data.diann_proteins,
@@ -962,14 +964,14 @@ class MainTab(object):
             if self.analysis_software == 'maxquant':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
                 curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
-                print(self.gene_name, curr_protein_ids)
+                # print(self.gene_name, curr_protein_ids)
                 self.peptides_table.value = alphaviz.preprocessing.filter_df(
                     self.data.mq_evidence,
                     pattern=self.gene_name.replace(';', '|'), # use the regex | character to try to match each of the substrings in the genes separated by ; in the "Gene names" column
                     column='Gene names',
                     software='maxquant',
                 )
-                print(self.peptides_table.value)
+                # print(self.peptides_table.value)
             elif self.analysis_software == 'diann':
                 # print('11')
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene naames']
@@ -1361,8 +1363,8 @@ class QCTab(object):
 
     def create_layout(self):
         experiment = self.data.ms_file_name.value.split('.')[0]
-        print(self.data.mq_protein_groups.columns)
-        print(self.data.mq_protein_groups.head())
+        # print(self.data.mq_protein_groups.columns)
+        # print(self.data.mq_protein_groups.head())
         if self.analysis_software == 'maxquant':
             uncalb_mass_dens_plot = alphaviz.plotting.plot_mass_error(
                 self.data.mq_evidence,
