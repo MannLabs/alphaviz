@@ -254,6 +254,10 @@ class DataImportWidget(BaseWidget):
             sizing_mode='stretch_width',
             margin=(15, 15, 15, 15)
         )
+        self.is_prediction = pn.widgets.Checkbox(
+            name='Activate the prediction',
+            margin=(5, 0, 5, 15),
+        )
         # UPLOAD DATA
         self.upload_button = pn.widgets.Button(
             name='Upload Data',
@@ -287,6 +291,7 @@ class DataImportWidget(BaseWidget):
                     self.ms_file_name,
                     self.path_output_folder,
                     self.path_fasta_file,
+                    self.is_prediction,
                     margin=(10, 30, 10, 10),
                 ),
                 pn.Spacer(sizing_mode='stretch_width'),
@@ -619,6 +624,10 @@ class TabsWidget(object):
             self.layout[1] = (
                 'Quality Control',
                 QCTab(self.data, self.options).create_layout()
+            )
+            self.layout[2] = (
+                'Targeted Mode',
+                TargetModeTab(self.data, self.options).create_layout()
             )
             self.active = 0
             self.data.layout.collapsed = True
@@ -1394,7 +1403,6 @@ class MainTab(object):
         else:
             self.display_heatmap_spectrum()
 
-
 class QCTab(object):
 
     def __init__(self, data, options):
@@ -1522,6 +1530,61 @@ class QCTab(object):
             )
         return self.layout_qc
 
+
+class TargetModeTab(object):
+
+    def __init__(self, data, options):
+        self.name = "Targeted Mode"
+        self.data = data
+        self.layout_target_mode = None
+        self.analysis_software = self.data.settings.get('analysis_software')
+
+    def create_layout(self):
+        experiment = self.data.ms_file_name.value.split('.')[0]
+        if 'dia' in self.data.raw_data.acquisition_mode:
+            # print("INSIDE")
+            self.layout_target_mode = pn.Column(
+                # pn.widgets.Tabulator(
+                #     self.data.mq_summary,
+                #     sizing_mode='stretch_width',
+                #     layout='fit_data_table',
+                #     name='Overview table',
+                #     selection=list(self.data.mq_summary[self.data.mq_summary['Raw file'].str.contains(experiment)].index),
+                #     row_height=40,
+                #     disabled=True,
+                #     height=200,
+                #     show_index=False,
+                # ),
+                # pn.panel(
+                #     f"## Quality control of the entire sample",
+                #     align='center',
+                #     margin=(15, 10, -5, 10)
+                # ),
+                # pn.Row(
+                #     pn.Pane(
+                #         uncalb_mass_dens_plot,
+                #         config=update_config('Uncalibrated mass density plot'),
+                #     ),
+                #     pn.Pane(
+                #         calb_mass_dens_plot,
+                #         config=update_config('Calibrated mass density plot'),
+                #     ),
+                #     align='center'
+                # ),
+                # pn.Row(
+                #     peptide_per_protein_distr,
+                #     peptide_mz_distr,
+                #     peptide_length_distr,
+                #     align='center',
+                #     # margin=(0, 0, 0, 50)
+                # ),
+                margin=(0, 10, 5, 10),
+                sizing_mode='stretch_width',
+                align='start',
+            )
+
+        return self.layout_target_mode
+
 class GUI(object):
     # TODO: move to alphabase and docstring
 
@@ -1624,6 +1687,7 @@ class AlphaVizGUI(GUI):
                 [
                     ('Main View', pn.panel("Blank")),
                     ('Quality Control', pn.panel("Blank")),
+                    ('Targeted Mode', pn.panel("Blank"))
                 ]
             ),
         ]
