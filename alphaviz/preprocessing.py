@@ -402,7 +402,7 @@ def get_protein_info(
             logging.info(f"The sequence length for the protein {protein_id} is not found in the fasta file.")
     return ','.join(protein_names), ','.join(protein_seq_lens)
 
-def get_protein_info(
+def get_protein_info_from_fastaheader(
     string: str,
     **kwargs
 ):

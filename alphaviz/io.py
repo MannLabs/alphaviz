@@ -220,7 +220,7 @@ def import_mq_protein_groups(
         pass
 
     if 'Gene names' not in data_common.columns:
-        data_common[['Protein names', 'Protein IDs', 'Gene names']] = data_common.apply(lambda x: alphaviz.preprocessing.get_protein_info(x['Fasta headers']), axis=1, result_type ='expand')
+        data_common[['Protein names', 'Protein IDs', 'Gene names']] = data_common.apply(lambda x: alphaviz.preprocessing.get_protein_info_from_fastaheader(x['Fasta headers']), axis=1, result_type ='expand')
 
     data_common.dropna(
         axis=0,
