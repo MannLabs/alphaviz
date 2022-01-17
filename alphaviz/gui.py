@@ -1538,51 +1538,51 @@ class TargetModeTab(object):
         self.data = data
         self.layout_target_mode = None
         self.analysis_software = self.data.settings.get('analysis_software')
+        self.targeted_peptides_table = pn.widgets.Tabulator(
+            value=pd.DataFrame(
+                columns=['sequence', 'charge', 'im', 'rt']
+            ),
+            widths={'index': 70},
+            layout='fit_columns',
+            height=300,
+            show_index=True,
+            width=570,
+            align='center',
+            margin=(30, 12, 10, 18)
+        )
+        self.rows_number = pn.widgets.IntInput(
+            name='Number of peptides',
+            value=0,
+            step=1, 
+            start=0,
+            end=1000
+        )
 
     def create_layout(self):
         experiment = self.data.ms_file_name.value.split('.')[0]
+
+        def callback(target, event):
+            target.value = pd.DataFrame(
+                columns=['sequence', 'charge', 'im', 'rt'],
+                index=range(event.new),
+            )
+
+        self.rows_number.link(
+            self.targeted_peptides_table,
+            callbacks={'value': callback}
+        )
+
         if 'dia' in self.data.raw_data.acquisition_mode:
-            # print("INSIDE")
             self.layout_target_mode = pn.Column(
-                # pn.widgets.Tabulator(
-                #     self.data.mq_summary,
-                #     sizing_mode='stretch_width',
-                #     layout='fit_data_table',
-                #     name='Overview table',
-                #     selection=list(self.data.mq_summary[self.data.mq_summary['Raw file'].str.contains(experiment)].index),
-                #     row_height=40,
-                #     disabled=True,
-                #     height=200,
-                #     show_index=False,
-                # ),
-                # pn.panel(
-                #     f"## Quality control of the entire sample",
-                #     align='center',
-                #     margin=(15, 10, -5, 10)
-                # ),
-                # pn.Row(
-                #     pn.Pane(
-                #         uncalb_mass_dens_plot,
-                #         config=update_config('Uncalibrated mass density plot'),
-                #     ),
-                #     pn.Pane(
-                #         calb_mass_dens_plot,
-                #         config=update_config('Calibrated mass density plot'),
-                #     ),
-                #     align='center'
-                # ),
-                # pn.Row(
-                #     peptide_per_protein_distr,
-                #     peptide_mz_distr,
-                #     peptide_length_distr,
-                #     align='center',
-                #     # margin=(0, 0, 0, 50)
-                # ),
-                margin=(0, 10, 5, 10),
+                pn.Row(
+                    self.rows_number,
+                    self.targeted_peptides_table,
+                ),
+                None,
+                margin=(15, 10, 5, 10),
                 sizing_mode='stretch_width',
                 align='start',
             )
-
         return self.layout_target_mode
 
 class GUI(object):
