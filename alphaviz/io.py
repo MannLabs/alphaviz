@@ -150,6 +150,10 @@ def import_mq_evidence(
         axis=0,
         subset=['MS/MS scan number']
     )
+    first_column_names = ['Charge', 'm/z', 'Mass', '1/K0', 'Retention time']
+    columns = list(data_raw_file.columns.drop(first_column_names))
+    columns[1:1] = first_column_names
+    data_raw_file = data_raw_file[columns]
     return data_raw_file
 
 
@@ -183,6 +187,12 @@ def import_mq_protein_groups(
     #     Renamed columns are marked. The rows of the data frame with missing 'Gene names' values are dropped.
     """
     data_common = pd.read_csv(filepath, sep='\t', low_memory=False)
+
+    try:
+        data_common.drop([col for col in data_common.columns if 'IDs' in col] + ['Best MS/MS', 'Peptide is razor'], inplace=True, axis=1)
+    except:
+        pass
+
     data_common.rename(
         columns={
             'Number of proteins': '# proteins',
@@ -230,7 +240,8 @@ def import_mq_protein_groups(
     first_columns.extend([col for col in data_common.columns if '(EXP)' in col])
 
     data_common = data_common[first_columns + sorted(list(set(data_common.columns).difference(first_columns)))]
-    print(data_common.columns)
+    # print(data_common.columns)
+
     return data_common
 
 
