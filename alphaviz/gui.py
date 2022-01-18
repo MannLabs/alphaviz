@@ -1562,9 +1562,13 @@ class TargetModeTab(object):
             start=0,
             end=1000
         )
+        self.peptides_table_text = pn.pane.Markdown(
+            'Load a table of targeted peptides:',
+            margin=(5, 0, 0, 10),
+        )
         self.peptides_table_file = pn.widgets.FileInput(
             accept='.tsv,.csv,.txt',
-            margin=(25,0,0,10)
+            margin=(-5,0,0,10)
         )
         self.mass_dict = alphaviz.utils.get_mass_dict(
             modfile=os.path.join(
@@ -1585,7 +1589,6 @@ class TargetModeTab(object):
         dependances = {
             self.peptides_table_file: [self.read_peptides_table, 'value'],
             self.targeted_peptides_table: [self.visualize_elution_plots, ['selection', 'value']],
-            # self.targeted_peptides_table: [self.visualize_elution_plots, 'value'],
             self.peptides_count: [self.update_row_count, 'value']
         }
         for k in dependances.keys():
@@ -1599,6 +1602,7 @@ class TargetModeTab(object):
                 pn.Row(
                     pn.Column(
                         self.peptides_count,
+                        self.peptides_table_text,
                         self.peptides_table_file,
                     ),
                     self.targeted_peptides_table,
@@ -1622,15 +1626,15 @@ class TargetModeTab(object):
                 pd.DataFrame(
                     columns=self.targeted_peptides_table.value.columns,
                     index=range(self.peptides_count.value),
-                    ignore_index=True
-                )
+                ),
+                ignore_index=True
             )
 
 
     def read_peptides_table(self, *args):
         file_ext = os.path.splitext(self.peptides_table_file.filename)[-1]
         if file_ext=='.csv':
-            sep=','
+            sep=';'
         else:
             sep='\t'
         self.targeted_peptides_table.value = pd.read_csv(
@@ -1640,12 +1644,14 @@ class TargetModeTab(object):
 
     def visualize_elution_plots(self, *args):
         if self.targeted_peptides_table.selection:
-            print("inside if self.targeted_peptides_table.selected_dataframe.shape[0] == 1:")
-            print(self.targeted_peptides_table.selected_dataframe.shape[0])
             peptide = self.targeted_peptides_table.value.iloc[self.targeted_peptides_table.selection[0]].to_dict()
             if not any(pd.isna(val) for val in peptide.values()):
-                print('inside if not any(pd.isna(val) for val in peptide.values())')
                 self.targeted_peptides_table.loading = True
+                peptide['charge'] = int(peptide['charge'])
+                for val in ['im', 'rt']:
+                    peptide[val] = float(peptide[val])
+                for val in ['name', 'sequence']:
+                    peptide[val] = str(peptide[val])
                 peptide['mz'] = alphaviz.utils.calculate_mz(
                     prec_mass=alphaviz.utils.get_precmass(
                         alphaviz.utils.parse(peptide['sequence']),
@@ -1662,7 +1668,7 @@ class TargetModeTab(object):
                         mz_tol=self.mz_tol.value,
                         rt_tol=self.rt_tol.value,
                         im_tol=self.im_tol.value,
-                        title=f"Precursor/fragments elution profile of {peptide['sequence']} in RT dimension ({peptide['rt'] / 60: .2f} min)"
+                        title=f"Precursor/fragments elution profile of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60: .2f} min)"
                     ),
                     sizing_mode='stretch_width',
                     config=update_config('Precursor/fragments elution profile plot'),
@@ -1687,10 +1693,8 @@ class TargetModeTab(object):
                 )
                 self.targeted_peptides_table.loading = False
             else:
-                print('inside innere else')
                 self.layout_target_mode[1], self.layout_target_mode[2] = None, None
         else:
-            print('inside outer else')
             self.layout_target_mode[1], self.layout_target_mode[2] = None, None
 
 
