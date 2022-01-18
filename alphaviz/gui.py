@@ -1,6 +1,7 @@
 import os
 import logging
 import pandas as pd
+import numpy as np
 from io import StringIO
 
 import alphatims.bruker
@@ -1536,6 +1537,10 @@ class TargetModeTab(object):
     def __init__(self, data, options):
         self.name = "Targeted Mode"
         self.data = data
+        self.mz_tol = options.layout[1][0][0]
+        self.mz_tol_units = options.layout[1][0][1]
+        self.im_tol = options.layout[1][0][2]
+        self.rt_tol = options.layout[1][0][3]
         self.layout_target_mode = None
         self.analysis_software = self.data.settings.get('analysis_software')
         self.targeted_peptides_table = pn.widgets.Tabulator(
@@ -1544,38 +1549,44 @@ class TargetModeTab(object):
             ),
             widths={'index': 70},
             layout='fit_columns',
-            height=300,
+            selectable=1,
+            height=250,
             show_index=True,
             width=570,
-            margin=(27, 12, 10, 18)
+            margin=(25, 12, 10, 18)
         )
         self.peptides_count = pn.widgets.IntInput(
-            name='Number of peptides',
+            name='Add N empty row(s)',
             value=0,
             step=1,
             start=0,
             end=1000
         )
-        self.peptides_table = pn.widgets.FileInput(
+        self.peptides_table_file = pn.widgets.FileInput(
             accept='.tsv,.csv,.txt',
             margin=(25,0,0,10)
         )
-    def create_layout(self):
-        experiment = self.data.ms_file_name.value.split('.')[0]
-        # CALLBACKS
-        def update_row_count(target, event):
-            target.value = pd.DataFrame(
-                columns=['name', 'sequence', 'charge', 'im', 'rt'],
-                index=range(event.new),
-            )
-        self.peptides_count.link(
-            self.targeted_peptides_table,
-            callbacks={'value': update_row_count}
+        self.mass_dict = alphaviz.utils.get_mass_dict(
+            modfile=os.path.join(
+                alphaviz.utils.DATA_PATH,
+                'modifications.tsv'
+            ),
+            aasfile=os.path.join(
+                alphaviz.utils.DATA_PATH,
+                'amino_acids.tsv'
+            ),
+            verbose=False,
         )
 
+
+    def create_layout(self):
+        experiment = self.data.ms_file_name.value.split('.')[0]
+
         dependances = {
-            # self.gene_name_reset: [self.reset_protein_table, 'clicks'],
-            self.peptides_table: [self.read_peptides_table, 'value'],
+            self.peptides_table_file: [self.read_peptides_table, 'value'],
+            self.targeted_peptides_table: [self.visualize_elution_plots, ['selection', 'value']],
+            # self.targeted_peptides_table: [self.visualize_elution_plots, 'value'],
+            self.peptides_count: [self.update_row_count, 'value']
         }
         for k in dependances.keys():
             k.param.watch(
@@ -1588,10 +1599,11 @@ class TargetModeTab(object):
                 pn.Row(
                     pn.Column(
                         self.peptides_count,
-                        self.peptides_table,
+                        self.peptides_table_file,
                     ),
                     self.targeted_peptides_table,
                 ),
+                None,
                 None,
                 margin=(15, 10, 5, 10),
                 sizing_mode='stretch_width',
@@ -1599,16 +1611,88 @@ class TargetModeTab(object):
             )
         return self.layout_target_mode
 
+    def update_row_count(self, *args):
+        if self.targeted_peptides_table.value.empty:
+            self.targeted_peptides_table.value = pd.DataFrame(
+                columns=['name', 'sequence', 'charge', 'im', 'rt'],
+                index=range(self.peptides_count.value),
+            )
+        else:
+            self.targeted_peptides_table.value = self.targeted_peptides_table.value.append(
+                pd.DataFrame(
+                    columns=self.targeted_peptides_table.value.columns,
+                    index=range(self.peptides_count.value),
+                    ignore_index=True
+                )
+            )
+
+
     def read_peptides_table(self, *args):
-        file_ext = os.path.splitext(self.peptides_table.filename)[-1]
+        file_ext = os.path.splitext(self.peptides_table_file.filename)[-1]
         if file_ext=='.csv':
             sep=','
         else:
             sep='\t'
         self.targeted_peptides_table.value = pd.read_csv(
-            StringIO(str(self.peptides_table.value, "utf-8")),
+            StringIO(str(self.peptides_table_file.value, "utf-8")),
             sep=sep
         )
+
+    def visualize_elution_plots(self, *args):
+        if self.targeted_peptides_table.selection:
+            print("inside if self.targeted_peptides_table.selected_dataframe.shape[0] == 1:")
+            print(self.targeted_peptides_table.selected_dataframe.shape[0])
+            peptide = self.targeted_peptides_table.value.iloc[self.targeted_peptides_table.selection[0]].to_dict()
+            if not any(pd.isna(val) for val in peptide.values()):
+                print('inside if not any(pd.isna(val) for val in peptide.values())')
+                self.targeted_peptides_table.loading = True
+                peptide['mz'] = alphaviz.utils.calculate_mz(
+                    prec_mass=alphaviz.utils.get_precmass(
+                        alphaviz.utils.parse(peptide['sequence']),
+                        self.mass_dict
+                    ),
+                    charge=peptide['charge']
+                )
+                peptide['rt'] *= 60 # to convert to seconds
+                self.layout_target_mode[1] = pn.Pane(
+                    alphaviz.plotting.plot_elution_profile(
+                        self.data.raw_data,
+                        peptide,
+                        self.mass_dict,
+                        mz_tol=self.mz_tol.value,
+                        rt_tol=self.rt_tol.value,
+                        im_tol=self.im_tol.value,
+                        title=f"Precursor/fragments elution profile of {peptide['sequence']} in RT dimension ({peptide['rt'] / 60: .2f} min)"
+                    ),
+                    sizing_mode='stretch_width',
+                    config=update_config('Precursor/fragments elution profile plot'),
+                    loading=False,
+                )
+                self.layout_target_mode[2] = pn.pane.HoloViews(
+                    alphaviz.plotting.plot_elution_profile_heatmap(
+                        self.data.raw_data,
+                        peptide,
+                        self.mass_dict,
+                        mz_tol=self.mz_tol.value,
+                        rt_tol=self.rt_tol.value,
+                        im_tol=self.im_tol.value,
+                        n_cols=8,
+                        width=180,
+                        height=180
+                    ),
+                    sizing_mode='stretch_width',
+                    linked_axes=True,
+                    loading=False,
+                    align='center',
+                )
+                self.targeted_peptides_table.loading = False
+            else:
+                print('inside innere else')
+                self.layout_target_mode[1], self.layout_target_mode[2] = None, None
+        else:
+            print('inside outer else')
+            self.layout_target_mode[1], self.layout_target_mode[2] = None, None
+
 
 class GUI(object):
     # TODO: move to alphabase and docstring
