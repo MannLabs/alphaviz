@@ -271,6 +271,7 @@ class DataImportWidget(BaseWidget):
         self.is_prediction = pn.widgets.Checkbox(
             name='Activate the prediction',
             margin=(5, 0, 5, 15),
+            disabled=True,
         )
         # UPLOAD DATA
         self.upload_button = pn.widgets.Button(
@@ -588,7 +589,7 @@ class ColorscaleOptionsWidget(object):
             title='Color scheme options',
             collapsed=False,
             sizing_mode='stretch_width',
-            margin=(15, 8, 0, 8),
+            margin=(15, 8, 15, 8),
             css_classes=['background']
         )
         return layout
@@ -612,7 +613,7 @@ class TabsWidget(object):
         if self.data.raw_data is not None:
             self.layout = pn.Tabs(
                 tabs_location='above',
-                margin=(30, 10, 5, 8),
+                margin=(10, 10, 5, 8),
                 sizing_mode='stretch_width'
             )
             self.layout += self.tabs
@@ -685,7 +686,7 @@ class MainTab(object):
             margin=(0, 5, 10, 5)
         )
         self.gene_name_filter = pn.widgets.AutocompleteInput(
-            name='Search a protein by a gene name:',
+            name='Search the protein by its gene name:',
             min_characters=3,
             case_sensitive=False,
             width=350,
@@ -1171,7 +1172,9 @@ class MainTab(object):
                         im_tol=self.im_tol.value,
                         n_cols=8,
                         width=180,
-                        height=180
+                        height=180,
+                        colormap=self.heatmap_colormap.value,
+                        background_color=self.heatmap_background_color.value,
                     ),
                     sizing_mode='stretch_width',
                     linked_axes=True,
@@ -1240,7 +1243,8 @@ class MainTab(object):
                 linked_axes=False,
                 loading=False
             )
-
+            if self.x_axis_label.value == 'RT/IM dimension':
+                self.display_elution_profile_plots()
             if self.analysis_software == 'maxquant':
                 data_ions = alphaviz.preprocessing.get_mq_ms2_scan_data(
                     self.data.mq_msms,
@@ -1533,8 +1537,8 @@ class TargetModeTab(object):
             self.peptides_table_file: [self.read_peptides_table, 'value'],
             self.targeted_peptides_table: [self.visualize_elution_plots, ['selection', 'value']],
             self.peptides_count: [self.update_row_count, 'value'],
-            # self.heatmap_colormap: [self.visualize_elution_plots, 'value'],
-            # self.heatmap_background_color: [self.visualize_elution_plots, 'value'],
+            self.heatmap_colormap: [self.visualize_elution_plots, 'value'],
+            self.heatmap_background_color: [self.visualize_elution_plots, 'value'],
             self.mz_tol: [self.visualize_elution_plots, 'value'],
             self.im_tol: [self.visualize_elution_plots, 'value'],
             self.rt_tol: [self.visualize_elution_plots, 'value'],
@@ -1641,7 +1645,9 @@ class TargetModeTab(object):
                         im_tol=self.im_tol.value,
                         n_cols=8,
                         width=180,
-                        height=180
+                        height=180,
+                        colormap=self.heatmap_colormap.value,
+                        background_color=self.heatmap_background_color.value,
                     ),
                     sizing_mode='stretch_width',
                     linked_axes=True,

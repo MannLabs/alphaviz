@@ -84,12 +84,10 @@ def plot_sequence_coverage(
                 )
             )
     else:
-        # print('px.colors.sequential is used')
         colorscale_sequential_colors = px.colors.sample_colorscale(colorscale_sequential, samplepoints=len(peptides_list))
         for ind, peptide_mod in enumerate(peptides_list):
             peptide_mod = peptide_mod.replace('_', '')
             peptide = re.sub(regex, "", peptide_mod)
-            # peptide = re.sub(r"\[([^]]+)\]", "", peptide_mod)
             start = sequence.find(peptide)
             peptide_cov = range(start + 1, start + len(peptide) + 1)
             selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
@@ -976,14 +974,6 @@ def plot_elution_heatmap(
 
     df["rt_values"] /= 60
 
-#     def hook(plot, element):
-#         plot.handles['layout']['xaxis']['gridcolor'] = background_color
-#         plot.handles['layout']['yaxis']['gridcolor'] = background_color
-#         plot.handles['layout']['xaxis']['titlefont'] = dict(size=6)
-#         plot.handles['layout']['yaxis']['titlefont'] = dict(size=6)
-#         plot.handles['layout']['xaxis']['tickfont'] = dict(size=6)
-#         plot.handles['layout']['yaxis']['tickfont'] = dict(size=6)
-
     opts_ms1=dict(
         width=width,
         height=height,
@@ -993,8 +983,6 @@ def plot_elution_heatmap(
         bgcolor=background_color,
         framewise=True,
         axiswise=True,
-        # shared_axes=False,
-#         hooks=[hook],
         **kwargs
     )
     dmap = hv.DynamicMap(
@@ -1030,6 +1018,8 @@ def plot_elution_profile_heatmap(
     n_cols: int = 5,
     # width: int = 180,
     height: int = 400,
+    background_color: str = "black",
+    colormap: str = 'fire',
     **kwargs
 ):
     """Plot an elution profile for the specified precursor and all his identified fragments as heatmaps in the
@@ -1092,6 +1082,8 @@ def plot_elution_profile_heatmap(
         title='precursor',
         # width=width,
         height=height,
+        background_color=background_color,
+        colormap=colormap,
         # ylim=(im_slice.start, im_slice.stop),
         # y_axis_label="RT, min",
         # x_axis_label="Inversed IM, V·s·cm\u207B\u00B2",
@@ -1113,6 +1105,8 @@ def plot_elution_profile_heatmap(
                 title=frag,
                 # width=width,
                 height=height,
+                background_color=background_color,
+                colormap=colormap,
                 # y_axis_label="RT, min",
                 # x_axis_label="Inversed IM, V·s·cm\u207B\u00B2",
                 # ylim=(im_slice.start, im_slice.stop),
@@ -1249,10 +1243,8 @@ def plot_elution_profile(
 
     if len(peptide_info['fragments'].values()) + 1 <= len(getattr(px.colors.qualitative, colorscale_qualitative)):
         colors_set = getattr(px.colors.qualitative, colorscale_qualitative)
-        print('qualitative is used')
     else:
         colors_set = px.colors.sample_colorscale(colorscale_sequential, samplepoints=len(peptide_info['fragments'].values()) + 1)
-        print('sequential is used')
 
     # create an elution profile for the precursor
     precursor_indices = raw_data[
@@ -1263,7 +1255,6 @@ def plot_elution_profile(
         'raw'
     ]
     fig = go.Figure()
-    print(colors_set)
     fig.add_trace(
         plot_elution_line(
             raw_data,
@@ -1273,7 +1264,6 @@ def plot_elution_profile(
             marker_color=dict(color=colors_set[0])
         )
     )
-    print('1')
     # create elution profiles for all fragments
     for ind, (frag, frag_mz) in enumerate(peptide_info['fragments'].items()):
         fragment_data_indices = raw_data[
