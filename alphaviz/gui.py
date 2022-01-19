@@ -726,8 +726,15 @@ class MainTab(object):
         self.heatmap_ms1_plot = None
         self.heatmap_ms2_plot = None
         self.line_plot = None
-        self.x_axis_label = pn.widgets.Select(
-            name='Select X label',
+        self.x_axis_label_mq = pn.widgets.Select(
+            name='Select X label:',
+            value='Retention time',
+            options=['Retention time', 'Ion mobility'],
+            width=150,
+            align='center'
+        )
+        self.x_axis_label_diann = pn.widgets.Select(
+            name='Select dimension:',
             value='RT dimension',
             options=['RT dimension', 'RT/IM dimension'],
             width=150,
@@ -774,7 +781,8 @@ class MainTab(object):
                 self.mz_tol: [self.display_line_spectra_plots, 'value'],
                 self.im_tol: [self.display_line_spectra_plots, 'value'],
                 self.rt_tol: [self.display_line_spectra_plots, 'value'],
-                self.x_axis_label: [self.display_line_spectra_plots, 'value'],
+                self.x_axis_label_mq: [self.display_line_spectra_plots, 'value'],
+                self.x_axis_label_diann: [self.display_elution_profile_plots, 'value'],
                 self.colorscale_qualitative: [self.run_after_protein_selection, 'value'],
                 self.colorscale_sequential: [self.run_after_protein_selection, 'value'],
             }
@@ -1085,7 +1093,7 @@ class MainTab(object):
             prec_mono_mz = self.merged_precursor_data.MonoisotopicMz.median()
             prec_mono_low_mz = prec_mono_mz / (1 + mz_tol_value / 10**6)
             prec_mono_high_mz = prec_mono_mz * (1 + mz_tol_value / 10**6)
-            if self.x_axis_label.value == 'RT dimension':
+            if self.x_axis_label_mq.value == 'Retention time':
                 one_over_k0 = float(self.peptides_table.selected_dataframe['1/K0'].values[0])
                 one_over_k0_low, one_over_k0_high = one_over_k0 - self.im_tol.value, one_over_k0 + self.im_tol.value
                 precursor_indices = self.data.raw_data[
@@ -1110,14 +1118,17 @@ class MainTab(object):
                 align='center',
                 margin=(0, 10, 0, -10)
             )
-
+            conversion_dict = {
+                'Retention time': 'rt',
+                'Ion mobility': 'mobility'
+            }
             self.layout[8] = pn.Row(
-                self.x_axis_label,
+                self.x_axis_label_mq,
                 pn.Pane(
                     alphaviz.plotting.plot_line(
                         self.data.raw_data,
                         precursor_indices,
-                        self.x_axis_label.value,
+                        conversion_dict[self.x_axis_label_mq.value],
                     ),
                     sizing_mode='stretch_width',
                     config=update_config('Extracted Ion Chromatogram'),
@@ -1130,60 +1141,61 @@ class MainTab(object):
             self.display_elution_profile_plots()
 
     def display_elution_profile_plots(self, *args):
-        self.layout[7] = pn.panel(
-            f"## The selected peptide: m/z: {round(self.peptide['mz'], 3)}, charge: {self.peptide['charge']}, 1/K0: {round(self.peptide['im'], 3)}, Quantity.Quality score: {round(float(self.peptides_table.selected_dataframe['Quantity.Quality'].values[0]), 2)}.",
-            css_classes=['main-part'],
-            sizing_mode='stretch_width',
-            align='center',
-            margin=(0, 10, 0, -10)
-        )
-
-        if self.x_axis_label.value == 'RT dimension':
-            self.layout[8] = pn.Row(
-                self.x_axis_label,
-                pn.Pane(
-                    alphaviz.plotting.plot_elution_profile(
-                        self.data.raw_data,
-                        self.peptide,
-                        self.mass_dict,
-                        mz_tol=self.mz_tol.value,
-                        rt_tol=self.rt_tol.value,
-                        im_tol=self.im_tol.value,
-                        title=f"Precursor/fragments elution profile of {self.peptides_table.selected_dataframe['Modified.Sequence'].values[0]} in RT dimension ({self.peptide['rt'] / 60: .2f} min)",
-                        colorscale_qualitative=self.colorscale_qualitative.value,
-                        colorscale_sequential=self.colorscale_sequential.value,
-                    ),
-                    sizing_mode='stretch_width',
-                    config=update_config('Precursor/fragments elution profile plot'),
-                    loading=False,
-                ),
-                margin=(5, 10, 0, 10)
-            )
-        else:
-            self.layout[8] = pn.Row(
-                self.x_axis_label,
-                pn.pane.HoloViews(
-                    alphaviz.plotting.plot_elution_profile_heatmap(
-                        self.data.raw_data,
-                        self.peptide,
-                        self.mass_dict,
-                        mz_tol=self.mz_tol.value,
-                        rt_tol=self.rt_tol.value,
-                        im_tol=self.im_tol.value,
-                        n_cols=8,
-                        width=180,
-                        height=180,
-                        colormap=self.heatmap_colormap.value,
-                        background_color=self.heatmap_background_color.value,
-                    ),
-                    sizing_mode='stretch_width',
-                    linked_axes=True,
-                    config=update_config('Precursor/fragments elution profile plot'),
-                    loading=False,
-                ),
+        if self.analysis_software == 'diann':
+            self.layout[7] = pn.panel(
+                f"## The selected peptide: m/z: {round(self.peptide['mz'], 3)}, charge: {self.peptide['charge']}, 1/K0: {round(self.peptide['im'], 3)}, Quantity.Quality score: {round(float(self.peptides_table.selected_dataframe['Quantity.Quality'].values[0]), 2)}.",
+                css_classes=['main-part'],
                 sizing_mode='stretch_width',
-                margin=(5, 10, 0, 10)
+                align='center',
+                margin=(0, 10, 0, -10)
             )
+
+            if self.x_axis_label_diann.value == 'RT dimension':
+                self.layout[8] = pn.Row(
+                    self.x_axis_label_diann,
+                    pn.Pane(
+                        alphaviz.plotting.plot_elution_profile(
+                            self.data.raw_data,
+                            self.peptide,
+                            self.mass_dict,
+                            mz_tol=self.mz_tol.value,
+                            rt_tol=self.rt_tol.value,
+                            im_tol=self.im_tol.value,
+                            title=f"Precursor/fragments elution profile of {self.peptides_table.selected_dataframe['Modified.Sequence'].values[0]} in RT dimension ({self.peptide['rt'] / 60: .2f} min)",
+                            colorscale_qualitative=self.colorscale_qualitative.value,
+                            colorscale_sequential=self.colorscale_sequential.value,
+                        ),
+                        sizing_mode='stretch_width',
+                        config=update_config('Precursor/fragments elution profile plot'),
+                        loading=False,
+                    ),
+                    margin=(5, 10, 0, 10)
+                )
+            else:
+                self.layout[8] = pn.Row(
+                    self.x_axis_label_diann,
+                    pn.pane.HoloViews(
+                        alphaviz.plotting.plot_elution_profile_heatmap(
+                            self.data.raw_data,
+                            self.peptide,
+                            self.mass_dict,
+                            mz_tol=self.mz_tol.value,
+                            rt_tol=self.rt_tol.value,
+                            im_tol=self.im_tol.value,
+                            n_cols=8,
+                            width=180,
+                            height=180,
+                            colormap=self.heatmap_colormap.value,
+                            background_color=self.heatmap_background_color.value,
+                        ),
+                        sizing_mode='stretch_width',
+                        linked_axes=True,
+                        config=update_config('Precursor/fragments elution profile plot'),
+                        loading=False,
+                    ),
+                    sizing_mode='stretch_width',
+                    margin=(5, 10, 0, 10)
+                )
 
     def display_heatmap_spectrum(self, *args):
         if self.ms1_ms2_frames or self.ms1_frame:
@@ -1243,8 +1255,9 @@ class MainTab(object):
                 linked_axes=False,
                 loading=False
             )
-            if self.x_axis_label.value == 'RT/IM dimension':
-                self.display_elution_profile_plots()
+            if self.analysis_software == 'diann':
+                if self.x_axis_label_diann.value == 'RT/IM dimension':
+                    self.display_elution_profile_plots()
             if self.analysis_software == 'maxquant':
                 data_ions = alphaviz.preprocessing.get_mq_ms2_scan_data(
                     self.data.mq_msms,
@@ -1342,6 +1355,7 @@ class MainTab(object):
                 linked_axes=False,
                 loading=False
             )
+            self.layout[12] = None
         else:
             self.display_heatmap_spectrum()
 
