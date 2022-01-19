@@ -189,7 +189,7 @@ def import_mq_protein_groups(
     data_common = pd.read_csv(filepath, sep='\t', low_memory=False)
 
     try:
-        data_common.drop([col for col in data_common.columns if 'IDs' in col] + ['Best MS/MS', 'Peptide is razor'], inplace=True, axis=1)
+        data_common.drop([col for col in data_common.columns if 'IDs' in col and col != 'Protein IDs'] + ['Best MS/MS', 'Peptide is razor'], inplace=True, axis=1)
     except:
         pass
 
@@ -221,7 +221,6 @@ def import_mq_protein_groups(
 
     if 'Gene names' not in data_common.columns:
         data_common[['Protein names', 'Protein IDs', 'Gene names']] = data_common.apply(lambda x: alphaviz.preprocessing.get_protein_info_from_fastaheader(x['Fasta headers']), axis=1, result_type ='expand')
-
     data_common.dropna(
         axis=0,
         subset=['Gene names', 'Protein IDs'],
