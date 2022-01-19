@@ -1,5 +1,7 @@
 import os
 import logging
+import platform
+import json
 import pandas as pd
 import numpy as np
 from io import StringIO
@@ -13,6 +15,7 @@ import bokeh.server.views.ws
 from bokeh.models.widgets.tables import NumberFormatter
 import plotly.express as px
 import holoviews as hv
+import matplotlib.colors
 
 # local
 import alphaviz
@@ -53,6 +56,16 @@ def update_config(filename, height=500, width=1500, ext='svg'):
         }
     }
     return config
+
+if platform.system() == 'Windows':
+    raw_folder_placeholder = 'D:\bruker\21min_HELA_proteomics'
+    output_folder_placeholder = 'D:\bruker\21min_HELA_proteomics\txt'
+    fasta_path_placeholder = 'D:\fasta_files\human.fasta'
+else:
+    # TODO: add a linux support
+    raw_folder_placeholder = '/Users/test/bruker/21min_HELA_proteomics'
+    output_folder_placeholder = '/Users/test/bruker/21min_HELA_proteomics/txt'
+    fasta_path_placeholder = '/Users/test/fasta_files/human.fasta'
 
 
 class BaseWidget(object):
@@ -226,22 +239,22 @@ class DataImportWidget(BaseWidget):
             'analysis_software': str()
         }
         self.path_raw_folder = pn.widgets.TextInput(
-            name='Specify a folder with Bruker raw files:\u002a',
-            placeholder='Enter the full path to the folder with Bruker .d folders/.hdf files',
+            name='Specify the full path to the folder with unprocessed Bruker files:\u002a',
+            placeholder=raw_folder_placeholder,
             width=900,
             sizing_mode='stretch_width',
             margin=(5, 15, 0, 15)
         )
         self.ms_file_name = pn.widgets.Select(
-            name='Select a raw file:\u002a',
+            name='Select the raw file:\u002a',
             size=10,
             width=900,
             sizing_mode='stretch_width',
             margin=(5, 15, 0, 15)
         )
         self.path_output_folder = pn.widgets.TextInput(
-            name='Specify an analysis folder:',
-            placeholder='Enter the full path to the analysis folder',
+            name='Specify the full path to the output folder of any supported software analysis tool:',
+            placeholder=output_folder_placeholder,
             width=900,
             sizing_mode='stretch_width',
             margin=(15, 15, 0, 15)
@@ -249,8 +262,8 @@ class DataImportWidget(BaseWidget):
         self.path_fasta_file = pn.widgets.TextInput(
             # TODO: remove the fixed fasta file before release
             value='/Users/eugeniavoytik/copied/Bruker/MaxQuant_output_tables/20210413_TIMS03_EVO03_PaSk_MA_HeLa_200ng_S1-A1_1_24848.d/txt/human.fasta',
-            name='Specify a fasta file:',
-            placeholder='Enter the full path to the used for the analysis fasta file',
+            name='Specify the full path to the fasta file:',
+            placeholder=fasta_path_placeholder,
             width=900,
             sizing_mode='stretch_width',
             margin=(15, 15, 15, 15)
@@ -279,12 +292,22 @@ class DataImportWidget(BaseWidget):
         )
         self.import_error = pn.pane.Alert(
             alert_type="danger",
+            object='',
             sizing_mode='stretch_width',
-            # object='test warning message',
-            margin=(30, 15, 5, 15),
+            margin=(10, 0, 5, 50),
         )
 
     def create_layout(self):
+        dependances = {
+            self.path_raw_folder: [self.update_file_names, 'value'],
+            self.ms_file_name: [self.update_output_folder_and_fasta, 'value'],
+            self.upload_button: [self.load_data, 'clicks'],
+        }
+        for k in dependances.keys():
+            k.param.watch(
+                dependances[k][0],
+                dependances[k][1]
+            )
         self.layout = pn.Card(
             pn.Row(
                 pn.Column(
@@ -311,26 +334,13 @@ class DataImportWidget(BaseWidget):
             header_color='#333',
             align='center',
             sizing_mode='stretch_width',
-            # height=470,
             margin=(5, 8, 10, 8),
             css_classes=['background']
-        )
-        self.path_raw_folder.param.watch(
-            self.update_file_names,
-            'value'
-        )
-        self.ms_file_name.param.watch(
-            self.update_output_folder_and_fasta,
-            'value'
-        )
-        self.upload_button.param.watch(
-            self.load_data,
-            'clicks'
         )
         return self.layout
 
     def update_file_names(self, *args):
-        self.ms_file_name.options = sorted(
+        self.ms_file_name.options = alphaviz.preprocessing.sort_naturally(
             alphaviz.io.get_filenames_from_directory(
                 self.path_raw_folder.value,
                 ['d', 'hdf']
@@ -356,14 +366,18 @@ class DataImportWidget(BaseWidget):
     def load_data(self, *args):
         alphatims.utils.set_progress_callback(self.upload_progress)
         self.upload_progress.value = 0
-        self.raw_data = alphatims.bruker.TimsTOF(
-            os.path.join(
-                self.path_raw_folder.value,
-                self.ms_file_name.value
-            ),
-        )
+        try:
+            self.raw_data = alphatims.bruker.TimsTOF(
+                os.path.join(
+                    self.path_raw_folder.value,
+                    self.ms_file_name.value
+                ),
+            )
+        except:
+            self.import_error.object += '\n#### The selected unprocessed Bruker file is corrupted and cannot be loaded. \n#### Please select another file.',
+            raise OSError('The selected unprocessed Bruker file is corrupted and cannot be loaded. Please select another file.')
         alphatims.utils.set_progress_callback(True)
-        # TODO: to change it just by changing the active=True parameter for the
+        # TODO: to change it just by changing the active=True parameter for the self.upload_progress when the bug will be fixed
         self.upload_progress = pn.indicators.Progress(
             active=True,
             bar_color='light',
@@ -373,20 +387,21 @@ class DataImportWidget(BaseWidget):
         )
         self.layout[0][2][1] = self.upload_progress
 
-        # read a fasta file
+        # read the fasta file if specified
         if self.path_fasta_file.value:
-            self.fasta = alphaviz.io.read_fasta(
-                self.path_fasta_file.value
-            )
-
-        # read analysis output files (MQ, DIA-NN, etc.)
+            try:
+                self.fasta = alphaviz.io.read_fasta(
+                    self.path_fasta_file.value
+                )
+            except:
+                self.import_error.object += "\n#### The selected fasta file cannot be loaded."
+        # read analysis output files (MQ, DIA-NN, etc.) if specified
         ## check all files in the analysis output folder
         if self.path_output_folder.value:
             files = alphaviz.io.get_filenames_from_directory(
                 directory=self.path_output_folder.value,
                 extensions_list=['txt', 'tsv', 'csv']
             )
-
             mq_files = ['allPeptides.txt', 'msms.txt', 'evidence.txt', 'proteinGroups.txt', 'summary.txt']
             if any(file in files for file in mq_files):
                 print('Reading the MaxQuant output files...')
@@ -398,7 +413,7 @@ class DataImportWidget(BaseWidget):
                     )
                     self.settings['analysis_software'] = 'maxquant'
                 else:
-                    raise FileNotFoundError('The MQ output files necessary for the visualization are not found.')
+                    self.import_error.object += "\n#### The MQ output files necessary for the visualization are not found."
             else:
                 print('Reading the DIA-NN output files...')
                 try:
@@ -409,8 +424,7 @@ class DataImportWidget(BaseWidget):
                     )
                     self.settings['analysis_software'] = 'diann'
                 except:
-                    raise FileNotFoundError('The DIA-NN output files necessary for the visualization are not found.')
-
+                    self.import_error.object += "\n#### The DIA-NN output files necessary for the visualization are not found."
         self.trigger_dependancy()
         self.upload_progress.active = False
 
@@ -418,13 +432,11 @@ class DataImportWidget(BaseWidget):
 class OptionsWidget(object):
 
     def __init__(self, data):
-        self.info = pn.panel('Will be updated soon.')
         self.data = data
         self.layout = pn.Card(
             title='Options',
             collapsed=True,
             sizing_mode='stretch_width',
-            # height=225,
             margin=(5, 8, 10, 8),
             css_classes=['background']
         )
@@ -439,20 +451,15 @@ class OptionsWidget(object):
 class HeatmapOptionsWidget(object):
 
     def __init__(self):
-        # self.plot1_title = pn.pane.Markdown(
-        #     '#### Axis for Heatmap',
-        #     margin=(10, 0, -5, 0),
-        #     align='center'
-        # )
         self.plot1_x_axis = pn.widgets.Select(
-            name='X axis',
+            name='X-axis label',
             value='m/z, Th',
             options=['m/z, Th', 'Inversed IM, V·s·cm\u207B\u00B2', 'RT, min'],
             width=180,
             margin=(20, 20, 20, 20),
         )
         self.plot1_y_axis = pn.widgets.Select(
-            name='Y axis',
+            name='Y-axis label',
             value='Inversed IM, V·s·cm\u207B\u00B2',
             options=['m/z, Th', 'Inversed IM, V·s·cm\u207B\u00B2', 'RT, min'],
             width=180,
@@ -468,7 +475,7 @@ class HeatmapOptionsWidget(object):
         self.heatmap_background = pn.widgets.Select(
             name='Background color',
             value='black',
-            options=['black', 'white', 'red', 'yellow', 'green', 'blue'],
+            options=list(matplotlib.colors.CSS4_COLORS.keys()),
             width=180,
             margin=(20, 20, 20, 10),
         )
@@ -484,14 +491,13 @@ class HeatmapOptionsWidget(object):
         self.precursor_target_color = pn.widgets.Select(
             name='Precursor target color',
             value='blue',
-            options=['black', 'white', 'red', 'yellow', 'green', 'blue'],
+            options=list(matplotlib.colors.CSS4_COLORS.keys()),
             width=180,
             margin=(20, 20, 20, 10),
         )
 
     def create_layout(self, *args):
         layout = pn.Card(
-            # self.plot1_title,
             pn.Row(
                 self.plot1_x_axis,
                 self.plot1_y_axis,
@@ -500,96 +506,89 @@ class HeatmapOptionsWidget(object):
                 self.precursor_target_size,
                 self.precursor_target_color
             ),
-            title='Heatmap Options',
+            title='Heatmap options',
             collapsed=False,
             sizing_mode='stretch_width',
-            # height=225,
             margin=(15, 8, 0, 8),
             css_classes=['background']
         )
         return layout
 
 
-class XicOptionsWidget(object):
+class ToleranceOptionsWidget(object):
 
     def __init__(self):
         self.mz_tolerance = pn.widgets.FloatInput(
-            name='M/z Tolerance (ppm)',
+            name='m/z Tolerance (ppm)',
             value=10,
             step=5,
             start=0,
             end=1000,
-            width=100
-        )
-        self.mz_tolerance_units = pn.widgets.Select(
-            name='M/z Tolerance Units',
-            value='ppm',
-            options=['ppm', 'Da'],
-            width=130
+            width=150,
+            margin=(20, 20, 20, 10),
         )
         self.im_tolerance = pn.widgets.FloatInput(
-            name='IM Tolerance (ppm)',
+            name='IM Tolerance (1/K0)',
             value=0.05,
             step=0.1,
             start=0,
             end=2,
-            width=100
+            width=150,
+            margin=(20, 20, 20, 10),
         )
         self.rt_tolerance = pn.widgets.FloatInput(
-            name='RT Tolerance (ppm)',
+            name='RT Tolerance (sec)',
             value=30,
             step=5,
             start=0,
             end=1000,
-            width=100
+            width=150,
+            margin=(20, 20, 20, 10),
         )
 
     def create_layout(self, *args):
         layout = pn.Card(
             pn.Row(
                 self.mz_tolerance,
-                self.mz_tolerance_units,
                 self.im_tolerance,
                 self.rt_tolerance
             ),
-            title='XIC Options',
+            title='Tolerance settings',
             collapsed=False,
             sizing_mode='stretch_width',
-            # height=225,
-            margin=(15, 8, 15, 8),
+            margin=(15, 8, 0, 8),
             css_classes=['background']
         )
         return layout
 
-class CoveragePlotOptionsWidget(object):
+class ColorscaleOptionsWidget(object):
 
     def __init__(self):
-        self.peptides_qualitative_colorscale = pn.widgets.Select(
-            name='Peptides qualitative color scale',
+        self.colorscale_qualitative = pn.widgets.Select(
+            name='Qualitative color scale',
             value='Alphabet',
             options=list(set([each['y'][0] for each in px.colors.qualitative.swatches()['data']])),
             width=180,
             margin=(20, 20, 20, 10),
         )
-        self.peptides_sequential_colorscale = pn.widgets.Select(
-            name='Peptides sequential color scale',
+        self.colorscale_sequential = pn.widgets.Select(
+            name='Sequential color scale',
             value='Viridis',
             options=list(set([each['y'][0] for each in px.colors.sequential.swatches()['data']])),
-            width=180,
+            width=190,
             margin=(20, 20, 20, 10),
         )
 
     def create_layout(self, *args):
         layout = pn.Card(
             pn.Row(
-                self.peptides_qualitative_colorscale,
-                self.peptides_sequential_colorscale,
+                self.colorscale_qualitative,
+                self.colorscale_sequential,
             ),
-            title='Coverage Plot Options',
+            title='Color scheme options',
             collapsed=False,
             sizing_mode='stretch_width',
-            # height=225,
-            margin=(15, 8, 15, 8),
+            margin=(15, 8, 0, 8),
             css_classes=['background']
         )
         return layout
@@ -598,7 +597,6 @@ class CoveragePlotOptionsWidget(object):
 class TabsWidget(object):
 
     def __init__(self, data, options):
-        self.info = pn.panel('Will be updated soon.')
         self.layout = None
         self.data = data
         self.options = options
@@ -638,7 +636,6 @@ class TabsWidget(object):
 class MainTab(object):
 
     def __init__(self, data, options):
-        self.name = "Main View"
         self.data = data
         self.mass_dict = alphaviz.utils.get_mass_dict(
             modfile=os.path.join(
@@ -659,9 +656,8 @@ class MainTab(object):
         self.heatmap_precursor_size = options.layout[0][0][4]
         self.heatmap_precursor_color = options.layout[0][0][5]
         self.mz_tol = options.layout[1][0][0]
-        self.mz_tol_units = options.layout[1][0][1]
-        self.im_tol = options.layout[1][0][2]
-        self.rt_tol = options.layout[1][0][3]
+        self.im_tol = options.layout[1][0][1]
+        self.rt_tol = options.layout[1][0][2]
         self.colorscale_qualitative = options.layout[2][0][0]
         self.colorscale_sequential = options.layout[2][0][1]
         self.protein_seq = str()
@@ -710,7 +706,6 @@ class MainTab(object):
             accept='.txt',
             margin=(22, 5, 0, 5),
         )
-
         self.peptides_table = pn.widgets.Tabulator(
             layout='fit_data_table',
             pagination='remote',
@@ -732,8 +727,8 @@ class MainTab(object):
         self.line_plot = None
         self.x_axis_label = pn.widgets.Select(
             name='Select X label',
-            value='rt',
-            options=['rt', 'mobility'],
+            value='RT dimension',
+            options=['RT dimension', 'RT/IM dimension'],
             width=150,
             align='center'
         )
@@ -776,7 +771,6 @@ class MainTab(object):
                 self.next_frame: [self.display_next_frame, 'clicks'],
                 self.plot_overlapped_frames: [self.display_overlapped_frames, 'value'],
                 self.mz_tol: [self.display_line_spectra_plots, 'value'],
-                self.mz_tol_units: [self.display_line_spectra_plots, 'value'],
                 self.im_tol: [self.display_line_spectra_plots, 'value'],
                 self.rt_tol: [self.display_line_spectra_plots, 'value'],
                 self.x_axis_label: [self.display_line_spectra_plots, 'value'],
@@ -788,56 +782,10 @@ class MainTab(object):
                     dependances[k][0],
                     dependances[k][1]
                 )
-
-        self.dictionary = {
-            'maxquant': {
-                'peptides_table': {
-                    'formatters': {
-                        'Acetylation (N-term)': {
-                            'type': 'tickCross',
-                            'allowTruthy': True
-                        },
-                        'Oxidation (M)': {
-                            'type': 'tickCross',
-                            'allowTruthy': True
-                        },
-        #                 'Mass': NumberFormatter(format='0,0.000'),
-        #                 'm/z': NumberFormatter(format='0,0.000'),
-        #                 '1/K0': NumberFormatter(format='0,0.000'),
-        #                 'Intensity': NumberFormatter(format='0,0'),
-        #                 'MS/MS scan number': NumberFormatter(format='0,0'),
-        #                 'Andromeda score':  NumberFormatter(format='0,0.0'),
-                    },
-                    'widths': {
-                        'Sequence': 220,
-                        'Proteins': 200,
-                        'MS/MS scan number': 100,
-                        'Oxidation (M)': 130,
-                    },
-                },
-                'proteins_table': {
-                    'formatters': {
-                        '(EXP) Seq coverage, %': {
-                            'type': 'progress',
-                            'max': 100,
-                            'legend': True
-                        },
-                        'Protein names': {
-                            'type': "textarea"
-                        },
-                    },
-                    'widths': {
-                        'Protein IDs': 230,
-                        'Protein names': 350,
-                        'Sequence lengths': 150,
-                    },
-                }
-            },
-            'diann': {
-                'peptides_table': {},
-                'proteins_table': {}
-            }
-        }
+        self.dictionary = json.load(open(os.path.join(
+            alphaviz.utils.STYLE_PATH,
+            'tables_formatting.json',
+        )))
         if self.analysis_software == 'maxquant':
             self.proteins_table.value = self.data.mq_protein_groups
             self.proteins_table.formatters = self.dictionary[self.analysis_software]['proteins_table']['formatters']
@@ -931,26 +879,21 @@ class MainTab(object):
         self.proteins_table.loading = False
 
     def filter_protein_table(self, *args):
-        # print('inside filter_protein_table')
         if self.protein_list.value != b'':
-            # print('inside if self.protein_list.value != b''')
             self.proteins_table.loading = True
             self.peptides_table.loading = True
             self.peptides_table.value = self.data.mq_evidence.iloc[0:0] if self.analysis_software == 'maxquant' else self.data.diann_peptides.iloc[0:0]
             self.proteins_table.selection = []
-            # print(self.proteins_table.selection)
             predefined_list = []
             for line in StringIO(str(self.protein_list.value, "utf-8")).readlines():
                 predefined_list.append(line.strip().upper())
             if self.analysis_software == 'maxquant':
-                # print(self.proteins_table.value.shape)
                 self.proteins_table.value = alphaviz.preprocessing.filter_df(
                     self.data.mq_protein_groups,
                     pattern='|'.join(predefined_list),
                     column='Gene names',
                     software='maxquant',
                 )
-                # print(self.proteins_table.value.shape)
             elif self.analysis_software == 'diann':
                 self.proteins_table.value = self.data.diann_proteins[self.data.diann_proteins['Gene names'].isin(predefined_list)]
             self.peptides_table.loading = False
@@ -986,17 +929,14 @@ class MainTab(object):
             if self.analysis_software == 'maxquant':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
                 curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
-                # print(self.gene_name, curr_protein_ids)
                 self.peptides_table.value = alphaviz.preprocessing.filter_df(
                     self.data.mq_evidence,
                     pattern=self.gene_name.replace(';', '|'), # use the regex | character to try to match each of the substrings in the genes separated by ; in the "Gene names" column
                     column='Gene names',
                     software='maxquant',
                 )
-                # print(self.peptides_table.value)
             elif self.analysis_software == 'diann':
-                self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene naames']
-
+                self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
                 curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
                 self.peptides_table.value = alphaviz.preprocessing.filter_df(
                     self.data.diann_peptides,
@@ -1142,13 +1082,9 @@ class MainTab(object):
                 pass
             mz_tol_value = self.mz_tol.value
             prec_mono_mz = self.merged_precursor_data.MonoisotopicMz.median()
-            if self.mz_tol_units.value == 'ppm':
-                prec_mono_low_mz = prec_mono_mz / (1 + mz_tol_value / 10**6)
-                prec_mono_high_mz = prec_mono_mz * (1 + mz_tol_value / 10**6)
-            else:
-                prec_mono_low_mz = prec_mono_mz - mz_tol_value
-                prec_mono_high_mz = prec_mono_mz + mz_tol_value
-            if self.x_axis_label.value == 'rt':
+            prec_mono_low_mz = prec_mono_mz / (1 + mz_tol_value / 10**6)
+            prec_mono_high_mz = prec_mono_mz * (1 + mz_tol_value / 10**6)
+            if self.x_axis_label.value == 'RT dimension':
                 one_over_k0 = float(self.peptides_table.selected_dataframe['1/K0'].values[0])
                 one_over_k0_low, one_over_k0_high = one_over_k0 - self.im_tol.value, one_over_k0 + self.im_tol.value
                 precursor_indices = self.data.raw_data[
@@ -1201,7 +1137,7 @@ class MainTab(object):
             margin=(0, 10, 0, -10)
         )
 
-        if self.x_axis_label.value == 'rt':
+        if self.x_axis_label.value == 'RT dimension':
             self.layout[8] = pn.Row(
                 self.x_axis_label,
                 pn.Pane(
@@ -1212,13 +1148,14 @@ class MainTab(object):
                         mz_tol=self.mz_tol.value,
                         rt_tol=self.rt_tol.value,
                         im_tol=self.im_tol.value,
-                        title=f"Precursor/fragments elution profile of {self.peptides_table.selected_dataframe['Modified.Sequence'].values[0]} in RT dimension ({self.peptide['rt'] / 60: .2f} min)"
+                        title=f"Precursor/fragments elution profile of {self.peptides_table.selected_dataframe['Modified.Sequence'].values[0]} in RT dimension ({self.peptide['rt'] / 60: .2f} min)",
+                        colorscale_qualitative=self.colorscale_qualitative.value,
+                        colorscale_sequential=self.colorscale_sequential.value,
                     ),
                     sizing_mode='stretch_width',
                     config=update_config('Precursor/fragments elution profile plot'),
                     loading=False,
                 ),
-                # sizing_mode='stretch_width',
                 margin=(5, 10, 0, 10)
             )
         else:
@@ -1235,7 +1172,6 @@ class MainTab(object):
                         n_cols=8,
                         width=180,
                         height=180
-                        # title=f"Precursor/fragments elution profile of {self.peptides_table.selected_dataframe['Modified.Sequence'].values[0]} in RT dimension ({self.peptide['rt'] / 60: .2f} min)"
                     ),
                     sizing_mode='stretch_width',
                     linked_axes=True,
@@ -1258,7 +1194,6 @@ class MainTab(object):
                 ms2_frame = self.ms2_frame
                 mz = self.peptide['mz']
                 im = self.peptide['im']
-
             data_ms1 = self.data.raw_data[ms1_frame].copy()
             self.heatmap_ms1_plot = alphaviz.plotting.plot_heatmap(
                 data_ms1,
@@ -1296,14 +1231,12 @@ class MainTab(object):
             self.layout[10][0] = pn.pane.HoloViews(
                 self.heatmap_ms1_plot,
                 margin=(15, 0, 0, 0),
-                # sizing_mode='stretch_width',
                 linked_axes=False,
                 loading=False
             )
             self.layout[10][1] = pn.pane.HoloViews(
                 self.heatmap_ms2_plot,
                 margin=(15, 0, 0, 0),
-                # sizing_mode='stretch_width',
                 linked_axes=False,
                 loading=False
             )
@@ -1315,7 +1248,6 @@ class MainTab(object):
                     self.data.raw_data,
                     self.ms1_ms2_frames[self.current_frame][1]
                 )
-                # print(self.layout)
                 self.ms_spectra_plot = alphaviz.plotting.plot_mass_spectra(
                     data_ions,
                     title=f'MS2 spectrum for Precursor: {self.ms1_ms2_frames[self.current_frame][1]}',
@@ -1397,14 +1329,12 @@ class MainTab(object):
             self.layout[10][0] = pn.pane.HoloViews(
                 self.heatmap_ms1_plot,
                 margin=(15, 0, 0, 0),
-                # sizing_mode='stretch_width',
                 linked_axes=False,
                 loading=False
             )
             self.layout[10][1] = pn.pane.HoloViews(
                 self.heatmap_ms2_plot,
                 margin=(15, 0, 0, 0),
-                # sizing_mode='stretch_width',
                 linked_axes=False,
                 loading=False
             )
@@ -1421,8 +1351,6 @@ class QCTab(object):
 
     def create_layout(self):
         experiment = self.data.ms_file_name.value.split('.')[0]
-        # print(self.data.mq_protein_groups.columns)
-        # print(self.data.mq_protein_groups.head())
         if self.analysis_software == 'maxquant':
             uncalb_mass_dens_plot = alphaviz.plotting.plot_mass_error(
                 self.data.mq_evidence,
@@ -1485,7 +1413,6 @@ class QCTab(object):
                     peptide_mz_distr,
                     peptide_length_distr,
                     align='center',
-                    # margin=(0, 0, 0, 50)
                 ),
                 margin=(0, 10, 5, 10),
                 sizing_mode='stretch_width',
@@ -1507,7 +1434,6 @@ class QCTab(object):
                 'Length',
                 'Peptide length distribution'
             )
-            # experiment = self.data.ms_file_name.value.split('.')[0]
             self.layout_qc = pn.Column(
                 pn.widgets.Tabulator(
                     self.data.diann_statist,
@@ -1517,7 +1443,6 @@ class QCTab(object):
                     selection=list(self.data.diann_statist[self.data.diann_statist['File.Name'].str.contains(experiment)].index),
                     row_height=40,
                     disabled=True,
-                    # height=100,
                     show_index=False,
                 ),
                 pn.panel(
@@ -1530,7 +1455,6 @@ class QCTab(object):
                     peptide_charge_distr,
                     peptide_length_distr,
                     align='center',
-                    # margin=(0, 0, 0, 50)
                 ),
                 margin=(0, 10, 5, 10),
                 sizing_mode='stretch_width',
@@ -1556,9 +1480,8 @@ class TargetModeTab(object):
         self.heatmap_precursor_size = options.layout[0][0][4]
         self.heatmap_precursor_color = options.layout[0][0][5]
         self.mz_tol = options.layout[1][0][0]
-        self.mz_tol_units = options.layout[1][0][1]
-        self.im_tol = options.layout[1][0][2]
-        self.rt_tol = options.layout[1][0][3]
+        self.im_tol = options.layout[1][0][1]
+        self.rt_tol = options.layout[1][0][2]
         self.colorscale_qualitative = options.layout[2][0][0]
         self.colorscale_sequential = options.layout[2][0][1]
         self.layout_target_mode = None
@@ -1613,11 +1536,10 @@ class TargetModeTab(object):
             # self.heatmap_colormap: [self.visualize_elution_plots, 'value'],
             # self.heatmap_background_color: [self.visualize_elution_plots, 'value'],
             self.mz_tol: [self.visualize_elution_plots, 'value'],
-            self.mz_tol_units: [self.visualize_elution_plots, 'value'],
             self.im_tol: [self.visualize_elution_plots, 'value'],
             self.rt_tol: [self.visualize_elution_plots, 'value'],
-            # self.colorscale_qualitative: [self.visualize_elution_plots, 'value'],
-            # self.colorscale_sequential: [self.visualize_elution_plots, 'value'],
+            self.colorscale_qualitative: [self.visualize_elution_plots, 'value'],
+            self.colorscale_sequential: [self.visualize_elution_plots, 'value'],
         }
         for k in dependances.keys():
             k.param.watch(
@@ -1701,7 +1623,9 @@ class TargetModeTab(object):
                         mz_tol=self.mz_tol.value,
                         rt_tol=self.rt_tol.value,
                         im_tol=self.im_tol.value,
-                        title=f"Precursor/fragments elution profile of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60: .2f} min)"
+                        title=f"Precursor/fragments elution profile of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60: .2f} min)",
+                        colorscale_qualitative=self.colorscale_qualitative.value,
+                        colorscale_sequential=self.colorscale_sequential.value,
                     ),
                     sizing_mode='stretch_width',
                     config=update_config('Precursor/fragments elution profile plot'),
@@ -1822,8 +1746,8 @@ class AlphaVizGUI(GUI):
         self.data = DataImportWidget()
         self.options = OptionsWidget(self.data)
         self.options.add_option(HeatmapOptionsWidget().create_layout())
-        self.options.add_option(XicOptionsWidget().create_layout())
-        self.options.add_option(CoveragePlotOptionsWidget().create_layout())
+        self.options.add_option(ToleranceOptionsWidget().create_layout())
+        self.options.add_option(ColorscaleOptionsWidget().create_layout())
         self.tabs = TabsWidget(self.data, self.options)
         self.layout += [
             self.main_widget.create_layout(),

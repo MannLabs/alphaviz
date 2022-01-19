@@ -67,7 +67,6 @@ def plot_sequence_coverage(
     )
     selected_peptide_cov = np.zeros(len(sequence), dtype=np.bool)
     if len(peptides_list) <= len(getattr(px.colors.qualitative, colorscale_qualitative)):
-        # print('px.colors.qualitative is used')
         for ind, peptide_mod in enumerate(peptides_list):
             peptide_mod = peptide_mod.replace('_', '')
             peptide = re.sub(regex, "", peptide_mod)
@@ -1126,6 +1125,7 @@ def plot_elution_line(
     timstof_data,
     selected_indices: np.ndarray,
     label: str,
+    marker_color: str,
     remove_zeros: bool = False,
     trim: bool = True,
 ):
@@ -1182,7 +1182,8 @@ def plot_elution_line(
         mode='lines',
         text = [f'{x_axis_label}'.format(i + 1) for i in range(len(x_ticks))],
         hovertemplate='<b>%{text}:</b> %{x};<br><b>Intensity:</b> %{y}.',
-        name=label
+        name=label,
+        marker=marker_color,
     )
     return trace
 
@@ -1190,12 +1191,14 @@ def plot_elution_profile(
     raw_data,
     peptide_info: dict,
     mass_dict: dict,
+    colorscale_qualitative: str,
+    colorscale_sequential: str,
     mz_tol: float = 50,
     rt_tol: float = 30,
     im_tol: float = 0.05,
     title: str = "",
     # width: int = 900,
-    height: int = 400
+    height: int = 400,
 ):
     """Plot an elution profile plot for the specified precursor and all his identified fragments.
 
@@ -1244,6 +1247,13 @@ def plot_elution_profile(
     im_slice = slice(peptide_info['im'] - im_tol, peptide_info['im'] + im_tol)
     prec_mz_slice = slice(peptide_info['mz'] / (1 + mz_tol / 10**6), peptide_info['mz'] * (1 + mz_tol / 10**6))
 
+    if len(peptide_info['fragments'].values()) + 1 <= len(getattr(px.colors.qualitative, colorscale_qualitative)):
+        colors_set = getattr(px.colors.qualitative, colorscale_qualitative)
+        print('qualitative is used')
+    else:
+        colors_set = px.colors.sample_colorscale(colorscale_sequential, samplepoints=len(peptide_info['fragments'].values()) + 1)
+        print('sequential is used')
+
     # create an elution profile for the precursor
     precursor_indices = raw_data[
         rt_slice,
@@ -1253,12 +1263,19 @@ def plot_elution_profile(
         'raw'
     ]
     fig = go.Figure()
+    print(colors_set)
     fig.add_trace(
-        plot_elution_line(raw_data, precursor_indices, remove_zeros=True, label='precursor')
+        plot_elution_line(
+            raw_data,
+            precursor_indices,
+            remove_zeros=True,
+            label='precursor',
+            marker_color=dict(color=colors_set[0])
+        )
     )
-
+    print('1')
     # create elution profiles for all fragments
-    for frag, frag_mz in peptide_info['fragments'].items():
+    for ind, (frag, frag_mz) in enumerate(peptide_info['fragments'].items()):
         fragment_data_indices = raw_data[
             rt_slice,
             im_slice,
@@ -1268,7 +1285,13 @@ def plot_elution_profile(
         ]
         if len(fragment_data_indices) > 0:
             fig.add_trace(
-                plot_elution_line(raw_data, fragment_data_indices, remove_zeros=True, label=frag)
+                plot_elution_line(
+                    raw_data,
+                    fragment_data_indices,
+                    remove_zeros=True,
+                    label=frag,
+                    marker_color=dict(color=colors_set[ind+1])
+                )
             )
 
     fig.update_layout(
