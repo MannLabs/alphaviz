@@ -896,15 +896,26 @@ class MainTab(object):
             predefined_list = []
             for line in StringIO(str(self.protein_list.value, "utf-8")).readlines():
                 predefined_list.append(line.strip().upper())
-            if self.analysis_software == 'maxquant':
-                self.proteins_table.value = alphaviz.preprocessing.filter_df(
-                    self.data.mq_protein_groups,
-                    pattern='|'.join(predefined_list),
-                    column='Gene names',
-                    software='maxquant',
-                )
-            elif self.analysis_software == 'diann':
-                self.proteins_table.value = self.data.diann_proteins[self.data.diann_proteins['Gene names'].isin(predefined_list)]
+            if predefined_list:
+                if self.analysis_software == 'maxquant':
+                    filtered_df = alphaviz.preprocessing.filter_df(
+                        self.data.mq_protein_groups,
+                        pattern='|'.join(predefined_list),
+                        column='Gene names',
+                        software='maxquant',
+                    )
+                    if filtered_df.empty:
+                        self.proteins_table.value = self.data.mq_protein_groups.iloc[0:0,:]
+                    else:
+                        self.proteins_table.value = filtered_df
+                elif self.analysis_software == 'diann':
+                    filtered_df = self.data.diann_proteins[self.data.diann_proteins['Gene names'].isin(predefined_list)]
+                    if filtered_df.empty:
+                        self.proteins_table.value = self.data.diann_proteins.iloc[0:0,:]
+                    else:
+                        self.proteins_table.value = filtered_df
+            else:
+                self.proteins_table.value = self.data.mq_protein_groups if self.analysis_software == 'maxquant' else self.data.diann_proteins
             self.peptides_table.loading = False
             self.proteins_table.loading = False
 
