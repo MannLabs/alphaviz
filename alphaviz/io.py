@@ -148,7 +148,7 @@ def import_mq_evidence(
         )
     data_raw_file.dropna(
         axis=0,
-        subset=['MS/MS scan number']
+        subset=['MS/MS scan number', 'Gene names']
     )
     first_column_names = ['Charge', 'm/z', 'Mass', '1/K0', 'Retention time']
     columns = list(data_raw_file.columns.drop(first_column_names))

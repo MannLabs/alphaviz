@@ -92,7 +92,7 @@ def filter_df(
     if not pattern:
         return df
     if software == 'maxquant':
-        output = df[df[column].str.contains(pattern)]
+        output = df[df[column].str.contains(pattern, na=False)]
     else:
         output = df[df[column] == pattern]
     return output

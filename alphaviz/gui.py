@@ -428,6 +428,7 @@ class DataImportWidget(BaseWidget):
                     self.import_error.object += "\n#### The DIA-NN output files necessary for the visualization are not found."
         self.trigger_dependancy()
         self.upload_progress.active = False
+        self.upload_progress.value = 100
 
 
 class OptionsWidget(object):
@@ -614,7 +615,7 @@ class TabsWidget(object):
             self.layout = pn.Tabs(
                 tabs_location='above',
                 margin=(10, 10, 5, 8),
-                sizing_mode='stretch_width'
+                sizing_mode='stretch_width',
             )
             self.layout += self.tabs
             self.layout[0] = (
@@ -1025,10 +1026,14 @@ class MainTab(object):
     def run_after_peptide_selection(self, *args):
         if self.proteins_table.selection:
             self.peptides_table.loading = True
+            print('-'*10)
+            print(self.peptides_table.value.iloc[self.peptides_table.selection[0]].Sequence)
+            print()
+            print('-'*10)
             self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                 self.protein_seq,
                 self.gene_name,
-                self.peptides_table.selected_dataframe['Modified.Sequence'].tolist() if self.analysis_software == 'diann' else self.peptides_table.selected_dataframe['Modified sequence'].tolist(),
+                [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified.Sequence']] if self.analysis_software == 'diann' else [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified sequence']],
                 self.colorscale_qualitative.value,
                 self.colorscale_sequential.value,
                 r"\[([^]]+)\]|\((\w+)\)"
@@ -1041,7 +1046,8 @@ class MainTab(object):
             )
 
             if self.peptides_table.selected_dataframe.shape[0] == 1:
-                self.scan_number = [int(scan) for scan in self.peptides_table.selected_dataframe['MS/MS scan number'].tolist()]
+                print(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number'])
+                self.scan_number = [int(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number'])]
                 if 'dda' in self.data.raw_data.acquisition_mode:
                     pasef_ids = [int(pasef_id) for pasef_id in self.data.mq_all_peptides[self.data.mq_all_peptides['MS/MS scan number'].isin(self.scan_number)]['Pasef MS/MS IDs'].values[0]]
                     precursors = self.data.raw_data.fragment_frames[self.data.raw_data.fragment_frames.index.isin(pasef_ids)]
@@ -1059,11 +1065,13 @@ class MainTab(object):
                     self.ms2_frame = self.data.raw_data.fragment_frames[self.data.raw_data.fragment_frames.index.isin(self.scan_number)].Frame.values[0]
                     self.ms1_frame = self.data.raw_data.frames[(self.data.raw_data.frames.MsMsType == 0) & (self.data.raw_data.frames.Id < self.ms2_frame)].iloc[-1, 0]
                     self.peptide = {
-                        "sequence": self.peptides_table.selected_dataframe['Sequence_AP_mod'].values[0],
+                        "sequence":
+                        self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Sequence_AP_mod'],
                         "charge":
-                        self.peptides_table.selected_dataframe['Charge'].values[0],
-                        "im": self.peptides_table.selected_dataframe['IM'].values[0],
-                        "rt": self.peptides_table.selected_dataframe['RT'].values[0] * 60
+                        self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Charge'],
+                        "im":
+                        self.peptides_table.value.iloc[self.peptides_table.selection[0]]['IM'],
+                        "rt": self.peptides_table.value.iloc[self.peptides_table.selection[0]]['RT'] * 60
                     }
                     self.peptide['mz'] = alphaviz.utils.calculate_mz(
                         prec_mass=alphaviz.utils.get_precmass(
@@ -1105,7 +1113,7 @@ class MainTab(object):
             prec_mono_low_mz = prec_mono_mz / (1 + mz_tol_value / 10**6)
             prec_mono_high_mz = prec_mono_mz * (1 + mz_tol_value / 10**6)
             if self.x_axis_label_mq.value == 'Retention time':
-                one_over_k0 = float(self.peptides_table.selected_dataframe['1/K0'].values[0])
+                one_over_k0 = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0'])
                 one_over_k0_low, one_over_k0_high = one_over_k0 - self.im_tol.value, one_over_k0 + self.im_tol.value
                 precursor_indices = self.data.raw_data[
                     :,
@@ -1123,7 +1131,7 @@ class MainTab(object):
                     'raw'
                 ]
             self.layout[7] = pn.panel(
-                f"## The selected peptide: m/z: {round(float(self.peptides_table.selected_dataframe['m/z'].values[0]), 3)}, charge: {float(self.peptides_table.selected_dataframe['Charge'].values[0])}, 1/K0: {round(float(self.peptides_table.selected_dataframe['1/K0'].values[0]), 3)}, andromeda score: {round(float(self.peptides_table.selected_dataframe['Andromeda score'].values[0]), 1)}.",
+                f"## The selected peptide: m/z: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z']), 3)}, charge: {float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Charge'])}, 1/K0: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0']), 3)}, andromeda score: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Andromeda score']), 1)}.",
                 css_classes=['main-part'],
                 sizing_mode='stretch_width',
                 align='center',
@@ -1154,7 +1162,7 @@ class MainTab(object):
     def display_elution_profile_plots(self, *args):
         if self.analysis_software == 'diann':
             self.layout[7] = pn.panel(
-                f"## The selected peptide: m/z: {round(self.peptide['mz'], 3)}, charge: {self.peptide['charge']}, 1/K0: {round(self.peptide['im'], 3)}, Quantity.Quality score: {round(float(self.peptides_table.selected_dataframe['Quantity.Quality'].values[0]), 2)}.",
+                f"## The selected peptide: m/z: {round(self.peptide['mz'], 3)}, charge: {self.peptide['charge']}, 1/K0: {round(self.peptide['im'], 3)}, Quantity.Quality score: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Quantity.Quality']), 2)}.",
                 css_classes=['main-part'],
                 sizing_mode='stretch_width',
                 align='center',
@@ -1172,7 +1180,7 @@ class MainTab(object):
                             mz_tol=self.mz_tol.value,
                             rt_tol=self.rt_tol.value,
                             im_tol=self.im_tol.value,
-                            title=f"Precursor/fragments elution profile of {self.peptides_table.selected_dataframe['Modified.Sequence'].values[0]} in RT dimension ({self.peptide['rt'] / 60: .2f} min)",
+                            title=f"Precursor/fragments elution profile of {self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified.Sequence']} in RT dimension ({self.peptide['rt'] / 60: .2f} min)",
                             colorscale_qualitative=self.colorscale_qualitative.value,
                             colorscale_sequential=self.colorscale_sequential.value,
                         ),
@@ -1213,8 +1221,8 @@ class MainTab(object):
             if self.analysis_software == 'maxquant':
                 ms1_frame = self.current_frame
                 ms2_frame = self.ms1_ms2_frames[self.current_frame][0]
-                mz = float(self.peptides_table.selected_dataframe['m/z'].values[0])
-                im = float(self.peptides_table.selected_dataframe['1/K0'].values[0])
+                mz = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z'])
+                im = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0'])
             elif self.analysis_software == 'diann':
                 ms1_frame = self.ms1_frame
                 ms2_frame = self.ms2_frame
@@ -1279,7 +1287,7 @@ class MainTab(object):
                 self.ms_spectra_plot = alphaviz.plotting.plot_mass_spectra(
                     data_ions,
                     title=f'MS2 spectrum for Precursor: {self.ms1_ms2_frames[self.current_frame][1]}',
-                    sequence=self.peptides_table.selected_dataframe['Sequence'].values[0]
+                    sequence=self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Sequence']
                 )
                 self.layout[9][0] = self.previous_frame
                 self.layout[9][1] = self.next_frame
@@ -1330,10 +1338,12 @@ class MainTab(object):
         except IndexError:
             pass
         if self.plot_overlapped_frames.value == True:
+            mz = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z'])
+            im = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0'])
             self.heatmap_ms1_plot = alphaviz.plotting.plot_heatmap(
                 self.data.raw_data[list(self.ms1_ms2_frames.keys())],
-                mz=float(self.peptides_table.selected_dataframe['m/z'].values[0]),
-                im=float(self.peptides_table.selected_dataframe['1/K0'].values[0]),
+                mz=mz,
+                im=im,
                 x_axis_label=self.heatmap_x_axis.value,
                 y_axis_label=self.heatmap_y_axis.value,
                 title=f'MS1 frame(s) #{list(self.ms1_ms2_frames.keys())}',
@@ -1344,8 +1354,8 @@ class MainTab(object):
             )
             self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
                 self.data.raw_data[[val[0] for val in self.ms1_ms2_frames.values()]],
-                mz=float(self.peptides_table.selected_dataframe['m/z'].values[0]),
-                im=float(self.peptides_table.selected_dataframe['1/K0'].values[0]),
+                mz=mz,
+                im=im,
                 x_axis_label=self.heatmap_x_axis.value,
                 y_axis_label=self.heatmap_y_axis.value,
                 title=f'MS2 frame(s) #{[val[0] for val in self.ms1_ms2_frames.values()]}',
