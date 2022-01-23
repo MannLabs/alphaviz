@@ -295,7 +295,7 @@ class DataImportWidget(BaseWidget):
             alert_type="danger",
             object='',
             sizing_mode='stretch_width',
-            margin=(10, 0, 5, 50),
+            margin=(10, 0, 5, 0),
         )
 
     def create_layout(self):
@@ -366,6 +366,8 @@ class DataImportWidget(BaseWidget):
 
     def load_data(self, *args):
         alphatims.utils.set_progress_callback(self.upload_progress)
+        self.settings['analysis_software'] = ''
+        self.import_error.object = ''
         self.upload_progress.value = 0
         try:
             self.raw_data = alphatims.bruker.TimsTOF(
@@ -388,14 +390,6 @@ class DataImportWidget(BaseWidget):
         )
         self.layout[0][2][1] = self.upload_progress
 
-        # read the fasta file if specified
-        if self.path_fasta_file.value:
-            try:
-                self.fasta = alphaviz.io.read_fasta(
-                    self.path_fasta_file.value
-                )
-            except:
-                self.import_error.object += "\n#### The selected fasta file cannot be loaded."
         # read analysis output files (MQ, DIA-NN, etc.) if specified
         ## check all files in the analysis output folder
         if self.path_output_folder.value:
@@ -426,6 +420,20 @@ class DataImportWidget(BaseWidget):
                     self.settings['analysis_software'] = 'diann'
                 except:
                     self.import_error.object += "\n#### The DIA-NN output files necessary for the visualization are not found."
+        else:
+            self.import_error.object += "\n#### The output files of the supported software tools have not been provided."
+
+        # read the fasta file if specified
+        if self.path_fasta_file.value:
+            try:
+                self.fasta = alphaviz.io.read_fasta(
+                    self.path_fasta_file.value
+                )
+            except:
+                self.import_error.object += "\n#### The selected fasta file cannot be loaded."
+        else:
+            self.import_error.object += "\n#### The fasta file file has not been provided."
+        print(self.settings['analysis_software'])
         self.trigger_dependancy()
         self.upload_progress.active = False
         self.upload_progress.value = 100
@@ -650,7 +658,7 @@ class MainTab(object):
             ),
             verbose=False,
         )
-        self.analysis_software = self.data.settings.get('analysis_software')
+        self.analysis_software = ""
         self.heatmap_x_axis = options.layout[0][0][0]
         self.heatmap_y_axis = options.layout[0][0][1]
         self.heatmap_colormap = options.layout[0][0][2]
@@ -665,6 +673,9 @@ class MainTab(object):
         self.protein_seq = str()
         self.gene_name = str()
         self.ms1_ms2_frames = dict()
+        self.ms1_frame = None
+        self.merged_precursor_data = pd.DataFrame()
+        self.peptide = dict()
         self.proteins_table = pn.widgets.Tabulator(
             layout='fit_data_table',
             name='Proteins table',
@@ -762,7 +773,7 @@ class MainTab(object):
 
     def create_layout(self):
         self.update_gene_name_filter()
-
+        self.analysis_software = self.data.settings.get('analysis_software')
         if self.analysis_software:
             dependances = {
                 self.gene_name_reset: [self.reset_protein_table, 'clicks'],
@@ -1103,7 +1114,7 @@ class MainTab(object):
             self.peptides_table.loading = False
 
     def display_line_spectra_plots(self, *args):
-        if self.analysis_software == 'maxquant':
+        if self.analysis_software == 'maxquant' and not self.merged_precursor_data.empty:
             try:
                 self.layout[8][1].loading = True
             except IndexError:
@@ -1160,7 +1171,7 @@ class MainTab(object):
             self.display_elution_profile_plots()
 
     def display_elution_profile_plots(self, *args):
-        if self.analysis_software == 'diann':
+        if self.analysis_software == 'diann' and self.peptide:
             self.layout[7] = pn.panel(
                 f"## The selected peptide: m/z: {round(self.peptide['mz'], 3)}, charge: {self.peptide['charge']}, 1/K0: {round(self.peptide['im'], 3)}, Quantity.Quality score: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Quantity.Quality']), 2)}.",
                 css_classes=['main-part'],
@@ -1218,6 +1229,9 @@ class MainTab(object):
 
     def display_heatmap_spectrum(self, *args):
         if self.ms1_ms2_frames or self.ms1_frame:
+            print('-'*10)
+            print(self.analysis_software)
+            print('-'*10)
             if self.analysis_software == 'maxquant':
                 ms1_frame = self.current_frame
                 ms2_frame = self.ms1_ms2_frames[self.current_frame][0]
@@ -1242,7 +1256,7 @@ class MainTab(object):
                 precursor_color=self.heatmap_precursor_color.value,
                 width=570,
                 height=450,
-                margin=(0, 10, 10, 0)
+                margin=(0, 10, 10, 0),
                 # shared_axes=True
             )
             data_ms2 = self.data.raw_data[ms2_frame].copy()
@@ -1259,6 +1273,7 @@ class MainTab(object):
                 precursor_color=self.heatmap_precursor_color.value,
                 width=570,
                 height=450,
+                margin=(0, 10, 10, 0),
                 # shared_axes=True
             )
 
@@ -1351,6 +1366,7 @@ class MainTab(object):
                 background_color=self.heatmap_background_color.value,
                 width=570,
                 height=450,
+                margin=(0, 10, 10, 0),
             )
             self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
                 self.data.raw_data[[val[0] for val in self.ms1_ms2_frames.values()]],
@@ -1363,6 +1379,7 @@ class MainTab(object):
                 background_color=self.heatmap_background_color.value,
                 width=570,
                 height=450,
+                margin=(0, 10, 10, 0),
             )
             self.layout[10][0] = pn.pane.HoloViews(
                 self.heatmap_ms1_plot,
@@ -1603,9 +1620,13 @@ class TargetModeTab(object):
                 align='start',
             )
         else:
-            self.layout_target_mode = pn.pane.Markdown(
-                'To use this functionality please load DIA data.',
-                margin=(5, 0, 0, 10),
+            self.layout_target_mode = pn.Column(
+                pn.pane.Markdown(
+                    'To use this functionality please load DIA data.',
+                    margin=(5, 0, 0, 10),
+                ),
+                None,
+                None,
             )
         return self.layout_target_mode
 
@@ -1637,63 +1658,65 @@ class TargetModeTab(object):
         )
 
     def visualize_elution_plots(self, *args):
-        if self.targeted_peptides_table.selection:
-            peptide = self.targeted_peptides_table.value.iloc[self.targeted_peptides_table.selection[0]].to_dict()
-            if not any(pd.isna(val) for val in peptide.values()):
-                self.targeted_peptides_table.loading = True
-                peptide['charge'] = int(peptide['charge'])
-                for val in ['im', 'rt']:
-                    peptide[val] = float(peptide[val])
-                for val in ['name', 'sequence']:
-                    peptide[val] = str(peptide[val])
-                peptide['mz'] = alphaviz.utils.calculate_mz(
-                    prec_mass=alphaviz.utils.get_precmass(
-                        alphaviz.utils.parse(peptide['sequence']),
-                        self.mass_dict
-                    ),
-                    charge=peptide['charge']
-                )
-                peptide['rt'] *= 60 # to convert to seconds
-                self.layout_target_mode[1] = pn.Pane(
-                    alphaviz.plotting.plot_elution_profile(
-                        self.data.raw_data,
-                        peptide,
-                        self.mass_dict,
-                        mz_tol=self.mz_tol.value,
-                        rt_tol=self.rt_tol.value,
-                        im_tol=self.im_tol.value,
-                        title=f"Precursor/fragments elution profile of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60: .2f} min)",
-                        colorscale_qualitative=self.colorscale_qualitative.value,
-                        colorscale_sequential=self.colorscale_sequential.value,
-                    ),
-                    sizing_mode='stretch_width',
-                    config=update_config('Precursor/fragments elution profile plot'),
-                    loading=False,
-                )
-                self.layout_target_mode[2] = pn.pane.HoloViews(
-                    alphaviz.plotting.plot_elution_profile_heatmap(
-                        self.data.raw_data,
-                        peptide,
-                        self.mass_dict,
-                        mz_tol=self.mz_tol.value,
-                        rt_tol=self.rt_tol.value,
-                        im_tol=self.im_tol.value,
-                        n_cols=8,
-                        width=180,
-                        height=180,
-                        colormap=self.heatmap_colormap.value,
-                        background_color=self.heatmap_background_color.value,
-                    ),
-                    sizing_mode='stretch_width',
-                    linked_axes=True,
-                    loading=False,
-                    align='center',
-                )
-                self.targeted_peptides_table.loading = False
+        if 'dia' in self.data.raw_data.acquisition_mode:
+            if self.targeted_peptides_table.selection:
+                peptide = self.targeted_peptides_table.value.iloc[self.targeted_peptides_table.selection[0]].to_dict()
+                if not any(pd.isna(val) for val in peptide.values()):
+                    self.targeted_peptides_table.loading = True
+                    peptide['charge'] = int(peptide['charge'])
+                    for val in ['im', 'rt']:
+                        peptide[val] = float(peptide[val])
+                    for val in ['name', 'sequence']:
+                        peptide[val] = str(peptide[val])
+                    peptide['mz'] = alphaviz.utils.calculate_mz(
+                        prec_mass=alphaviz.utils.get_precmass(
+                            alphaviz.utils.parse(peptide['sequence']),
+                            self.mass_dict
+                        ),
+                        charge=peptide['charge']
+                    )
+                    peptide['rt'] *= 60 # to convert to seconds
+                    self.layout_target_mode[1] = pn.Pane(
+                        alphaviz.plotting.plot_elution_profile(
+                            self.data.raw_data,
+                            peptide,
+                            self.mass_dict,
+                            mz_tol=self.mz_tol.value,
+                            rt_tol=self.rt_tol.value,
+                            im_tol=self.im_tol.value,
+                            title=f"Precursor/fragments elution profile of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60: .2f} min)",
+                            colorscale_qualitative=self.colorscale_qualitative.value,
+                            colorscale_sequential=self.colorscale_sequential.value,
+                            height=500,
+                        ),
+                        sizing_mode='stretch_width',
+                        config=update_config('Precursor/fragments elution profile plot'),
+                        loading=False,
+                    )
+                    self.layout_target_mode[2] = pn.pane.HoloViews(
+                        alphaviz.plotting.plot_elution_profile_heatmap(
+                            self.data.raw_data,
+                            peptide,
+                            self.mass_dict,
+                            mz_tol=self.mz_tol.value,
+                            rt_tol=self.rt_tol.value,
+                            im_tol=self.im_tol.value,
+                            n_cols=8,
+                            width=180,
+                            height=180,
+                            colormap=self.heatmap_colormap.value,
+                            background_color=self.heatmap_background_color.value,
+                        ),
+                        sizing_mode='stretch_width',
+                        linked_axes=True,
+                        loading=False,
+                        align='center',
+                    )
+                    self.targeted_peptides_table.loading = False
+                else:
+                    self.layout_target_mode[1], self.layout_target_mode[2] = None, None
             else:
                 self.layout_target_mode[1], self.layout_target_mode[2] = None, None
-        else:
-            self.layout_target_mode[1], self.layout_target_mode[2] = None, None
 
 
 class GUI(object):
