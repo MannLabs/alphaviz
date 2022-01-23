@@ -1580,7 +1580,12 @@ class TargetModeTab(object):
             ),
             verbose=False,
         )
-
+        self.clear_peptides_table_button = pn.widgets.Button(
+            name='Clear table',
+            button_type='default',
+            width=60,
+            margin=(25, 12, 10, 18)
+        )
 
     def create_layout(self):
         experiment = self.data.ms_file_name.value.split('.')[0]
@@ -1596,6 +1601,9 @@ class TargetModeTab(object):
             self.rt_tol: [self.visualize_elution_plots, 'value'],
             self.colorscale_qualitative: [self.visualize_elution_plots, 'value'],
             self.colorscale_sequential: [self.visualize_elution_plots, 'value'],
+            self.clear_peptides_table_button: [
+            self.clear_peptide_table, 'clicks'
+            ]
         }
         for k in dependances.keys():
             k.param.watch(
@@ -1612,6 +1620,7 @@ class TargetModeTab(object):
                         self.peptides_table_file,
                     ),
                     self.targeted_peptides_table,
+                    self.clear_peptides_table_button,
                 ),
                 None,
                 None,
@@ -1629,6 +1638,12 @@ class TargetModeTab(object):
                 None,
             )
         return self.layout_target_mode
+
+    def clear_peptide_table(self, *args):
+        if not self.targeted_peptides_table.value.empty:
+            self.targeted_peptides_table.value = pd.DataFrame(
+                columns=['name', 'sequence', 'charge', 'im', 'rt'],
+            )
 
     def update_row_count(self, *args):
         if self.targeted_peptides_table.value.empty:
@@ -1652,6 +1667,7 @@ class TargetModeTab(object):
             sep=';'
         else:
             sep='\t'
+        self.targeted_peptides_table.selection = []
         self.targeted_peptides_table.value = pd.read_csv(
             StringIO(str(self.peptides_table_file.value, "utf-8")),
             sep=sep
@@ -1660,8 +1676,11 @@ class TargetModeTab(object):
     def visualize_elution_plots(self, *args):
         if 'dia' in self.data.raw_data.acquisition_mode:
             if self.targeted_peptides_table.selection:
-                peptide = self.targeted_peptides_table.value.iloc[self.targeted_peptides_table.selection[0]].to_dict()
-                if not any(pd.isna(val) for val in peptide.values()):
+                try:
+                    peptide = self.targeted_peptides_table.value.iloc[self.targeted_peptides_table.selection[0]].to_dict()
+                except IndexError:
+                    peptide = {}
+                if peptide and not any(pd.isna(val) for val in peptide.values()):
                     self.targeted_peptides_table.loading = True
                     peptide['charge'] = int(peptide['charge'])
                     for val in ['im', 'rt']:
