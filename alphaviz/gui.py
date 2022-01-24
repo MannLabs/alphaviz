@@ -261,7 +261,7 @@ class DataImportWidget(BaseWidget):
         )
         self.path_fasta_file = pn.widgets.TextInput(
             # TODO: remove the fixed fasta file before release
-            value='/Users/eugeniavoytik/copied/Bruker/MaxQuant_output_tables/20210413_TIMS03_EVO03_PaSk_MA_HeLa_200ng_S1-A1_1_24848.d/txt/human.fasta',
+            # value='/Users/eugeniavoytik/copied/Bruker/MaxQuant_output_tables/20210413_TIMS03_EVO03_PaSk_MA_HeLa_200ng_S1-A1_1_24848.d/txt/human.fasta',
             name='Specify the full path to the fasta file:',
             placeholder=fasta_path_placeholder,
             width=900,
@@ -390,6 +390,17 @@ class DataImportWidget(BaseWidget):
         )
         self.layout[0][2][1] = self.upload_progress
 
+        # read the fasta file if specified
+        if self.path_fasta_file.value:
+            try:
+                self.fasta = alphaviz.io.read_fasta(
+                    self.path_fasta_file.value
+                )
+            except:
+                self.import_error.object += "\n#### The selected fasta file cannot be loaded."
+        else:
+            self.import_error.object += "\n#### The fasta file file has not been provided."
+
         # read analysis output files (MQ, DIA-NN, etc.) if specified
         ## check all files in the analysis output folder
         if self.path_output_folder.value:
@@ -423,17 +434,6 @@ class DataImportWidget(BaseWidget):
         else:
             self.import_error.object += "\n#### The output files of the supported software tools have not been provided."
 
-        # read the fasta file if specified
-        if self.path_fasta_file.value:
-            try:
-                self.fasta = alphaviz.io.read_fasta(
-                    self.path_fasta_file.value
-                )
-            except:
-                self.import_error.object += "\n#### The selected fasta file cannot be loaded."
-        else:
-            self.import_error.object += "\n#### The fasta file file has not been provided."
-        print(self.settings['analysis_software'])
         self.trigger_dependancy()
         self.upload_progress.active = False
         self.upload_progress.value = 100
@@ -1037,27 +1037,21 @@ class MainTab(object):
     def run_after_peptide_selection(self, *args):
         if self.proteins_table.selection:
             self.peptides_table.loading = True
-            print('-'*10)
-            print(self.peptides_table.value.iloc[self.peptides_table.selection[0]].Sequence)
-            print()
-            print('-'*10)
-            self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
-                self.protein_seq,
-                self.gene_name,
-                [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified.Sequence']] if self.analysis_software == 'diann' else [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified sequence']],
-                self.colorscale_qualitative.value,
-                self.colorscale_sequential.value,
-                r"\[([^]]+)\]|\((\w+)\)"
-            )
-            self.layout[6] = pn.Pane(
-                self.protein_coverage_plot,
-                config=update_config(f"{self.gene_name}_coverage_plot"),
-                align='center',
-                sizing_mode='stretch_width',
-            )
-
             if self.peptides_table.selected_dataframe.shape[0] == 1:
-                print(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number'])
+                self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
+                    self.protein_seq,
+                    self.gene_name,
+                    [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified.Sequence']] if self.analysis_software == 'diann' else [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified sequence']],
+                    self.colorscale_qualitative.value,
+                    self.colorscale_sequential.value,
+                    r"\[([^]]+)\]|\((\w+)\)"
+                )
+                self.layout[6] = pn.Pane(
+                    self.protein_coverage_plot,
+                    config=update_config(f"{self.gene_name}_coverage_plot"),
+                    align='center',
+                    sizing_mode='stretch_width',
+                )
                 self.scan_number = [int(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number'])]
                 if 'dda' in self.data.raw_data.acquisition_mode:
                     pasef_ids = [int(pasef_id) for pasef_id in self.data.mq_all_peptides[self.data.mq_all_peptides['MS/MS scan number'].isin(self.scan_number)]['Pasef MS/MS IDs'].values[0]]
@@ -1229,9 +1223,6 @@ class MainTab(object):
 
     def display_heatmap_spectrum(self, *args):
         if self.ms1_ms2_frames or self.ms1_frame:
-            print('-'*10)
-            print(self.analysis_software)
-            print('-'*10)
             if self.analysis_software == 'maxquant':
                 ms1_frame = self.current_frame
                 ms2_frame = self.ms1_ms2_frames[self.current_frame][0]
