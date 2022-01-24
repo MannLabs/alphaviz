@@ -1055,7 +1055,10 @@ class MainTab(object):
                 self.scan_number = [int(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number'])]
                 if 'dda' in self.data.raw_data.acquisition_mode:
                     pasef_ids = [int(pasef_id) for pasef_id in self.data.mq_all_peptides[self.data.mq_all_peptides['MS/MS scan number'].isin(self.scan_number)]['Pasef MS/MS IDs'].values[0]]
-                    precursors = self.data.raw_data.fragment_frames[self.data.raw_data.fragment_frames.index.isin(pasef_ids)]
+                    precursors = self.data.raw_data.fragment_frames[self.data.raw_data.fragment_frames.index.isin(pasef_ids)].copy()
+                    # quick fix the AlphaTims's bug with the differences in the Frames in raw_data.fragment_frames table for .d and .hdf files
+                    if self.data.ms_file_name.value.split('.')[-1] == 'hdf':
+                        precursors.loc[:, 'Frame'] -= 1
                     self.merged_precursor_data = pd.merge(
                         precursors, self.data.raw_data.precursors[self.data.raw_data.precursors.Id.isin(precursors.Precursor.values)],
                         left_on='Precursor',
@@ -1068,6 +1071,8 @@ class MainTab(object):
                     self.display_heatmap_spectrum()
                 else:
                     self.ms2_frame = self.data.raw_data.fragment_frames[self.data.raw_data.fragment_frames.index.isin(self.scan_number)].Frame.values[0]
+                    if self.data.ms_file_name.value.split('.')[-1] == 'hdf':
+                        self.ms2_frame -= 1
                     self.ms1_frame = self.data.raw_data.frames[(self.data.raw_data.frames.MsMsType == 0) & (self.data.raw_data.frames.Id < self.ms2_frame)].iloc[-1, 0]
                     self.peptide = {
                         "sequence":
