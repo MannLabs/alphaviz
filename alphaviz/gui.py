@@ -1672,56 +1672,67 @@ class TargetModeTab(object):
                     peptide = {}
                 if peptide and not any(pd.isna(val) for val in peptide.values()):
                     self.targeted_peptides_table.loading = True
-                    peptide['charge'] = int(peptide['charge'])
-                    for val in ['im', 'rt']:
-                        peptide[val] = float(peptide[val])
-                    for val in ['name', 'sequence']:
-                        peptide[val] = str(peptide[val])
-                    peptide['mz'] = alphaviz.utils.calculate_mz(
-                        prec_mass=alphaviz.utils.get_precmass(
-                            alphaviz.utils.parse(peptide['sequence']),
-                            self.mass_dict
-                        ),
-                        charge=peptide['charge']
-                    )
-                    peptide['rt'] *= 60 # to convert to seconds
-                    self.layout_target_mode[1] = pn.Pane(
-                        alphaviz.plotting.plot_elution_profile(
-                            self.data.raw_data,
-                            peptide,
-                            self.mass_dict,
-                            mz_tol=self.mz_tol.value,
-                            rt_tol=self.rt_tol.value,
-                            im_tol=self.im_tol.value,
-                            title=f"Precursor/fragments elution profile of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60: .2f} min)",
-                            colorscale_qualitative=self.colorscale_qualitative.value,
-                            colorscale_sequential=self.colorscale_sequential.value,
-                            height=500,
-                        ),
-                        sizing_mode='stretch_width',
-                        config=update_config('Precursor/fragments elution profile plot'),
-                        loading=False,
-                    )
-                    self.layout_target_mode[2] = pn.pane.HoloViews(
-                        alphaviz.plotting.plot_elution_profile_heatmap(
-                            self.data.raw_data,
-                            peptide,
-                            self.mass_dict,
-                            mz_tol=self.mz_tol.value,
-                            rt_tol=self.rt_tol.value,
-                            im_tol=self.im_tol.value,
-                            n_cols=8,
-                            width=180,
-                            height=180,
-                            colormap=self.heatmap_colormap.value,
-                            background_color=self.heatmap_background_color.value,
-                        ),
-                        sizing_mode='stretch_width',
-                        linked_axes=True,
-                        loading=False,
-                        align='center',
-                    )
-                    self.targeted_peptides_table.loading = False
+                    try:
+                        peptide['charge'] = int(peptide['charge'])
+                        for val in ['im', 'rt']:
+                            peptide[val] = float(peptide[val])
+                        for val in ['name', 'sequence']:
+                            peptide[val] = str(peptide[val])
+                        peptide['mz'] = alphaviz.utils.calculate_mz(
+                            prec_mass=alphaviz.utils.get_precmass(
+                                alphaviz.utils.parse(peptide['sequence']),
+                                self.mass_dict
+                            ),
+                            charge=peptide['charge']
+                        )
+                    except:
+                        print('The current peptide cannot be loaded.')
+                    else:
+                        peptide['rt'] *= 60 # to convert to seconds
+                        try:
+                            self.layout_target_mode[1] = pn.Pane(
+                                alphaviz.plotting.plot_elution_profile(
+                                    self.data.raw_data,
+                                    peptide,
+                                    self.mass_dict,
+                                    mz_tol=self.mz_tol.value,
+                                    rt_tol=self.rt_tol.value,
+                                    im_tol=self.im_tol.value,
+                                    title=f"Precursor/fragments elution profile of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60: .2f} min)",
+                                    colorscale_qualitative=self.colorscale_qualitative.value,
+                                    colorscale_sequential=self.colorscale_sequential.value,
+                                    height=500,
+                                ),
+                                sizing_mode='stretch_width',
+                                config=update_config('Precursor/fragments elution profile plot'),
+                                loading=False,
+                            )
+                        except:
+                            self.layout_target_mode[1] = None
+                        try:
+                            self.layout_target_mode[2] = pn.pane.HoloViews(
+                                alphaviz.plotting.plot_elution_profile_heatmap(
+                                    self.data.raw_data,
+                                    peptide,
+                                    self.mass_dict,
+                                    mz_tol=self.mz_tol.value,
+                                    rt_tol=self.rt_tol.value,
+                                    im_tol=self.im_tol.value,
+                                    n_cols=8,
+                                    width=180,
+                                    height=180,
+                                    colormap=self.heatmap_colormap.value,
+                                    background_color=self.heatmap_background_color.value,
+                                ),
+                                sizing_mode='stretch_width',
+                                linked_axes=True,
+                                loading=False,
+                                align='center',
+                            )
+                        except AttibuteError:
+                            self.layout_target_mode[2] = None
+                    finally:
+                        self.targeted_peptides_table.loading = False
                 else:
                     self.layout_target_mode[1], self.layout_target_mode[2] = None, None
             else:
