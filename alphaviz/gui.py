@@ -1258,15 +1258,11 @@ class MainTab(object):
             data_ms2 = self.data.raw_data[ms2_frame].copy()
             self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
                 data_ms2,
-                # mz=mz,
-                # im=im,
                 x_axis_label=self.heatmap_x_axis.value,
                 y_axis_label=self.heatmap_y_axis.value,
                 title=f'MS2 frame(s) #{ms2_frame}',
                 colormap=self.heatmap_colormap.value,
                 background_color=self.heatmap_background_color.value,
-                # precursor_size=self.heatmap_precursor_size.value,
-                # precursor_color=self.heatmap_precursor_color.value,
                 width=570,
                 height=450,
                 margin=(0, 10, 10, 0),
@@ -1366,8 +1362,6 @@ class MainTab(object):
             )
             self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
                 self.data.raw_data[[val[0] for val in self.ms1_ms2_frames.values()]],
-                mz=mz,
-                im=im,
                 x_axis_label=self.heatmap_x_axis.value,
                 y_axis_label=self.heatmap_y_axis.value,
                 title=f'MS2 frame(s) #{[val[0] for val in self.ms1_ms2_frames.values()]}',
