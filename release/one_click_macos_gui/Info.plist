@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>alphaviz</string>
+	<string>AlphaViz</string>
 	<key>CFBundleExecutable</key>
 	<string>MacOS/alphaviz_terminal</string>
 	<key>CFBundleIconFile</key>
