@@ -275,7 +275,7 @@ class DataImportWidget(BaseWidget):
         )
         # UPLOAD DATA
         self.upload_button = pn.widgets.Button(
-            name='Upload Data',
+            name='Load Data',
             button_type='primary',
             height=31,
             width=250,
@@ -464,14 +464,14 @@ class HeatmapOptionsWidget(object):
         self.plot1_x_axis = pn.widgets.Select(
             name='X-axis label',
             value='m/z, Th',
-            options=['m/z, Th', 'Inversed IM, V·s·cm\u207B\u00B2', 'RT, min'],
+            options=['m/z, Th', 'Inversed IM, V·s·cm\u207B\u00B2'],
             width=180,
             margin=(20, 20, 20, 20),
         )
         self.plot1_y_axis = pn.widgets.Select(
             name='Y-axis label',
             value='Inversed IM, V·s·cm\u207B\u00B2',
-            options=['m/z, Th', 'Inversed IM, V·s·cm\u207B\u00B2', 'RT, min'],
+            options=['m/z, Th', 'Inversed IM, V·s·cm\u207B\u00B2'],
             width=180,
             margin=(20, 20, 20, 10),
         )
@@ -1258,15 +1258,15 @@ class MainTab(object):
             data_ms2 = self.data.raw_data[ms2_frame].copy()
             self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
                 data_ms2,
-                mz=mz,
-                im=im,
+                # mz=mz,
+                # im=im,
                 x_axis_label=self.heatmap_x_axis.value,
                 y_axis_label=self.heatmap_y_axis.value,
                 title=f'MS2 frame(s) #{ms2_frame}',
                 colormap=self.heatmap_colormap.value,
                 background_color=self.heatmap_background_color.value,
-                precursor_size=self.heatmap_precursor_size.value,
-                precursor_color=self.heatmap_precursor_color.value,
+                # precursor_size=self.heatmap_precursor_size.value,
+                # precursor_color=self.heatmap_precursor_color.value,
                 width=570,
                 height=450,
                 margin=(0, 10, 10, 0),
