@@ -58,9 +58,9 @@ def update_config(filename, height=500, width=1500, ext='svg'):
     return config
 
 if platform.system() == 'Windows':
-    raw_folder_placeholder = 'D:\bruker\21min_HELA_proteomics'
-    output_folder_placeholder = 'D:\bruker\21min_HELA_proteomics\txt'
-    fasta_path_placeholder = 'D:\fasta_files\human.fasta'
+    raw_folder_placeholder = r'D:\bruker\21min_HELA_proteomics'
+    output_folder_placeholder = r'D:\bruker\21min_HELA_proteomics\txt'
+    fasta_path_placeholder = r'D:\fasta_files\human.fasta'
 else:
     # TODO: add a linux support
     raw_folder_placeholder = '/Users/test/bruker/21min_HELA_proteomics'
@@ -1037,7 +1037,7 @@ class MainTab(object):
     def run_after_peptide_selection(self, *args):
         if self.proteins_table.selection:
             self.peptides_table.loading = True
-            if self.peptides_table.selected_dataframe.shape[0] == 1:
+            if self.peptides_table.selection:
                 self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                     self.protein_seq,
                     self.gene_name,

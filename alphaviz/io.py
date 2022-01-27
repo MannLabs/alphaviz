@@ -112,14 +112,8 @@ def import_mq_evidence(
         'Mass error [ppm]',
         'Modified sequence'
     ]
-    # data_common = read_file(filepath, maxquant_evidence_columns)
-    # import time
-    # start = time.time()
-    #read data in chunks of 1 million rows at a time
     chunk = pd.read_csv(filepath, chunksize=1000000, sep='\t')
     data_raw_file = pd.concat(chunk)
-    # end = time.time()
-    # print("Read csv with chunks: ",(end-start),"sec")
     data_raw_file = data_raw_file[data_raw_file['Raw file'] == experiment]
     data_raw_file.rename(
         columns={
