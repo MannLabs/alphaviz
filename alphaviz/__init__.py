@@ -1,7 +1,7 @@
 #!python
 
 __project__ = "alphaviz"
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 __license__ = "Apache"
 __description__ = "A interactive Dashboard to explore mass spectrometry data."
 __author__ = "Eugenia Voytik"
