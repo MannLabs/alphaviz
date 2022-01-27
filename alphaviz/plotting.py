@@ -2,6 +2,7 @@
 """
 This module provides the plotting functions used by AlphaViz.
 """
+import re
 
 import numpy as np
 import pandas as pd
@@ -9,18 +10,23 @@ from itertools import chain
 
 import plotly.graph_objects as go
 import plotly.subplots
+import plotly.express as px
 
 import holoviews as hv
 from holoviews.operation.datashader import dynspread, rasterize, shade
 from bokeh.models import BoxZoomTool, WheelZoomTool, ResetTool, SaveTool
 
 import alphaviz.preprocessing
+import alphaviz.utils
 
 
 def plot_sequence_coverage(
     sequence: str,
     gene_name: str,
-    peptides_list: list
+    peptides_list: list,
+    colorscale_qualitative: str,
+    colorscale_sequential: str,
+    regex: str
 )-> go.Figure:
     """Create a protein sequence coverage plot.
 
@@ -32,7 +38,12 @@ def plot_sequence_coverage(
         Gene name.
     peptides_list : list
         List of all identified peptides for the specified protein.
-
+    colorscale_qualitative : str
+        A name of a built-in qualitative Plotly color scale.
+    colorscale_sequential : str
+        A name of a built-in sequential Plotly color scale.
+    regex : str
+        A regular expression to be applied for the peptide sequence.
     Returns
     -------
     plotly.graph_objects.Figure object
@@ -55,19 +66,41 @@ def plot_sequence_coverage(
         )
     )
     selected_peptide_cov = np.zeros(len(sequence), dtype=np.bool)
-    for ind, peptide in enumerate(peptides_list):
-        start = sequence.find(peptide)
-        peptide_cov = range(start + 1, start + len(peptide) + 1)
-        selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
-        fig.add_trace(
-            go.Bar(
-                x=list(peptide_cov),
-                y=np.ones(len(peptide))*2,
-                name=f'Peptide: {peptide}',
-                hovertemplate='<br><b>position:</b> %{x}.',
-                opacity=0.5
+    if len(peptides_list) <= len(getattr(px.colors.qualitative, colorscale_qualitative)):
+        for ind, peptide_mod in enumerate(peptides_list):
+            peptide_mod = peptide_mod.replace('_', '')
+            peptide = re.sub(regex, "", peptide_mod)
+            start = sequence.find(peptide)
+            peptide_cov = range(start + 1, start + len(peptide) + 1)
+            selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
+            fig.add_trace(
+                go.Bar(
+                    x=list(peptide_cov),
+                    y=np.ones(len(peptide))*2,
+                    name=f'Peptide: {peptide_mod}',
+                    hovertemplate='<br><b>position:</b> %{x}.',
+                    opacity=0.5,
+                    marker=dict(color=getattr(px.colors.qualitative, colorscale_qualitative)[ind])
+                )
             )
-        )
+    else:
+        colorscale_sequential_colors = px.colors.sample_colorscale(colorscale_sequential, samplepoints=len(peptides_list))
+        for ind, peptide_mod in enumerate(peptides_list):
+            peptide_mod = peptide_mod.replace('_', '')
+            peptide = re.sub(regex, "", peptide_mod)
+            start = sequence.find(peptide)
+            peptide_cov = range(start + 1, start + len(peptide) + 1)
+            selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
+            fig.add_trace(
+                go.Bar(
+                    x=list(peptide_cov),
+                    y=np.ones(len(peptide))*2,
+                    name=f'Peptide: {peptide_mod}',
+                    hovertemplate='<br><b>position:</b> %{x}.',
+                    opacity=0.5,
+                    marker=dict(color=colorscale_sequential_colors[ind])
+                )
+            )
     aa_coverage = round(np.sum(selected_peptide_cov) / len(selected_peptide_cov) * 100, 2)
     fig.update_layout(
         title=dict(
@@ -188,11 +221,11 @@ def plot_chrom(
 
 def plot_heatmap(
     df: pd.DataFrame,
-    mz: float,
-    im: float,
-    x_axis_label: str,
-    y_axis_label: str,
+    x_axis_label: str = "RT, min",
+    y_axis_label: str = "Inversed IM, V·s·cm\u207B\u00B2",
     z_axis_label: str = "Intensity",
+    mz: float = 0.0,
+    im: float = 0.0,
     title: str = "",
     width: int = 450,
     height: int = 450,
@@ -245,8 +278,8 @@ def plot_heatmap(
         A scatter plot projected on the 2 dimensions with markered position of the precursor.
 
     """
-    hv.extension('bokeh')
     labels = {
+        'RT, min': "rt_values",
         'm/z, Th': "mz_values",
         'Inversed IM, V·s·cm\u207B\u00B2': "mobility_values",
         'Intensity': "intensity_values",
@@ -291,14 +324,15 @@ def plot_heatmap(
         )
     ).opts(plot=opts_ms1)
 
-    precursor = hv.Points((mz, im)).opts(
-        marker='x',
-        size=precursor_size,
-        color=precursor_color,
-        # axiswise=True,
-    )
-    return fig * precursor
-
+    if mz and im:
+        precursor = hv.Points((mz, im)).opts(
+            marker='x',
+            size=precursor_size,
+            color=precursor_color,
+            # axiswise=True,
+        )
+        return fig * precursor
+    return fig
 
 def _change_plot(plot, element):
     plot.state.toolbar.logo = None
@@ -555,16 +589,17 @@ def plot_mass_spectra(
     )
 
     fig_common = plotly.subplots.make_subplots(
-        rows=5, cols=1, shared_xaxes=True,
+        rows=5, cols=3, shared_xaxes=True,
         figure=fig,
         specs=[
-          [{"rowspan": 3}],
-          [{}],
-          [{}],
-          [{}],
-          [{}]
+          [{"rowspan": 3, "colspan": 3}, None, None],
+          [None, None, None],
+          [None, None, None],
+          [{"colspan": 3}, None, None],
+          [{}, {}, {}]
         ],
         vertical_spacing=0.07,
+        column_widths=[0.25, 0.5, 0.25]
     )
 
     # add a second plot
@@ -601,8 +636,8 @@ def plot_mass_spectra(
 
     fig_common.update_yaxes(title_text="Error, ppm", row=4, col=1)
 
-    bions = alphaviz.preprocessing.extract_identified_ions(data.ions, sequence, 'b')
-    yions = alphaviz.preprocessing.extract_identified_ions(data.ions, sequence, 'y')
+    bions = alphaviz.preprocessing.get_identified_ions(data.ions, sequence, 'b')
+    yions = alphaviz.preprocessing.get_identified_ions(data.ions, sequence, 'y')
 
     sl = len(sequence)
     distance = (data.mz_values.max() - data.mz_values.min()) / sl
@@ -620,7 +655,7 @@ def plot_mass_spectra(
                 yshift=1, align='center'
             ),
             row=5,
-            col=1
+            col=2
         )
     for i, b in enumerate(bions):
         if b:
@@ -635,7 +670,7 @@ def plot_mass_spectra(
                     hoverinfo='skip'
                 ),
                 row=5,
-                col=1
+                col=2
             )
             fig_common.add_annotation(
                 dict(
@@ -646,7 +681,7 @@ def plot_mass_spectra(
                     font_size=font_size_ion
                 ),
                 row=5,
-                col=1
+                col=2
             )
     for i, y in enumerate(yions):
         if y:
@@ -661,7 +696,7 @@ def plot_mass_spectra(
                     hoverinfo='skip'
                 ),
                 row=5,
-                col=1
+                col=2
             )
             fig_common.add_annotation(
                 dict(
@@ -672,18 +707,18 @@ def plot_mass_spectra(
                     font_size=font_size_ion
                 ),
                 row=5,
-                col=1
+                col=2
             )
     fig_common.update_yaxes(
         visible=False,
         range=(-1.5,1.5),
         row=5,
-        col=1
+        col=2
     )
     fig_common.update_xaxes(
         visible=False,
         row=5,
-        col=1
+        col=2
     )
 
     return fig_common # this function is quite long. Can it be split in smaller chunks?
@@ -889,5 +924,466 @@ def plot_peptide_distr(
         showlegend = False,
         height = 400,
         width = 600,
+    )
+    return fig
+
+
+def plot_elution_heatmap(
+    df: pd.DataFrame,
+    title: str = "",
+    width: int = 250,
+    height: int = 250,
+    background_color: str = "black",
+    colormap: str = "fire",
+    **kwargs
+):
+    """Create a heatmap showing a correlation of retention time  and ion mobility with color coding for signal intensity.
+
+    Parameters
+    ----------
+    df : pandas Dataframe
+        A dataframe obtained by slicing an alphatims.bruker.TimsTOF object.
+    title: str
+        The title of the plot. Default: "".
+    width : int
+        The width of the plot. Default: 250.
+    height : int
+        The height of the plot. Default: 250.
+    background_color : str
+        The background color of the plot. Default: "black".
+    colormap : str
+        The name of the colormap in Plotly. Default: "fire".
+
+    Returns
+    -------
+    a Plotly scatter plot
+        The scatter plot showing the correlation of retention time  and ion mobility with color coding for signal intensity.
+    """
+    labels = {
+        'RT, min': "rt_values",
+        'Inversed IM, V·s·cm\u207B\u00B2': "mobility_values",
+        'Intensity': "intensity_values",
+    }
+    x_axis_label = "RT, min"
+    y_axis_label = "Inversed IM, V·s·cm\u207B\u00B2"
+    z_axis_label = "Intensity"
+
+    x_dimension = labels[x_axis_label]
+    y_dimension = labels[y_axis_label]
+    z_dimension = labels[z_axis_label]
+
+    df["rt_values"] /= 60
+
+    opts_ms1=dict(
+        width=width,
+        height=height,
+        title=title,
+        xlabel=x_axis_label,
+        ylabel=y_axis_label,
+        bgcolor=background_color,
+        framewise=True,
+        axiswise=True,
+        **kwargs
+    )
+    dmap = hv.DynamicMap(
+        hv.Points(
+            df,
+            [x_dimension, y_dimension],
+            z_dimension
+        )
+    )
+    agg = rasterize(
+        dmap,
+        width=width,
+        height=height,
+        aggregator='sum'
+    )
+    fig = dynspread(
+        shade(
+            agg,
+            cmap=colormap
+        )
+    ).opts(plot=opts_ms1)
+
+    return fig
+
+def plot_elution_profile_heatmap(
+    timstof_data,
+    peptide_info: dict,
+    mass_dict: dict,
+    mz_tol: int = 50,
+    rt_tol: int = 30,
+    im_tol: int = 0.05,
+    title: str = "",
+    n_cols: int = 5,
+    # width: int = 180,
+    height: int = 400,
+    background_color: str = "black",
+    colormap: str = 'fire',
+    **kwargs
+):
+    """Plot an elution profile for the specified precursor and all his identified fragments as heatmaps in the
+    retention time/ion mobility dimensions.
+
+    Parameters
+    ----------
+    timstof_data : alphatims.bruker.TimsTOF
+        An alphatims.bruker.TimsTOF data object.
+    peptide_info : dict
+        Peptide information including sequence, fragments' patterns, rt, mz and im values.
+    mass_dict : dict
+        The basic mass dictionaty with the masses of all amino acids and modifications.
+    mz_tol: float
+        The mz tolerance value. Default: 50 ppm.
+    rt_tol: float
+        The rt tolerance value. Default: 30 ppm.
+    im_tol: float
+        The im tolerance value. Default: 0.05 ppm.
+    title : str
+        The title of the plot. Default: "".
+    n_cols: int
+        The number of the heatmaps plotted per row. Default: 5.
+    # width : int
+    #     The width of the plot. Default: 180.
+    height : int
+        The height of the plot. Default: 180.
+
+    Returns
+    -------
+    a Bokeh heatmap plots
+        The elution profile heatmap plots in retention time and ion mobility dimensions
+        for the specified peptide and all his fragments.
+    """
+    # predict the theoretical fragments using the Alphapept get_fragmass() function.
+    frag_masses, frag_type = alphaviz.utils.get_fragmass(
+        parsed_pep=alphaviz.utils.parse(peptide_info['sequence']),
+        mass_dict=mass_dict
+    )
+    peptide_info['fragments'] = {
+        (f"b{key}" if key>0 else f"y{-key}"):value for key,value in zip(frag_type, frag_masses)
+    }
+
+    # slice the data using the rt_tol, im_tol and mz_tol values
+    rt_slice = slice(peptide_info['rt'] - rt_tol, peptide_info['rt'] + rt_tol)
+    im_slice = slice(peptide_info['im'] - im_tol, peptide_info['im'] + im_tol)
+    prec_mz_slice = slice(peptide_info['mz'] / (1 + mz_tol / 10**6), peptide_info['mz'] * (1 + mz_tol / 10**6))
+
+    # create an elution profile for the precursor
+    precursor_indices = timstof_data[
+        rt_slice,
+        im_slice,
+        0,
+        prec_mz_slice,
+        'raw'
+    ]
+
+    common_plot = plot_elution_heatmap(
+        timstof_data.as_dataframe(precursor_indices),
+        title='precursor',
+        # width=width,
+        height=height,
+        background_color=background_color,
+        colormap=colormap,
+        # ylim=(im_slice.start, im_slice.stop),
+        # y_axis_label="RT, min",
+        # x_axis_label="Inversed IM, V·s·cm\u207B\u00B2",
+        **kwargs
+    )
+
+    # create elution profiles for all fragments
+    for frag, frag_mz in peptide_info['fragments'].items():
+        fragment_data_indices = timstof_data[
+            rt_slice,
+            im_slice,
+            prec_mz_slice,
+            slice(frag_mz / (1 + mz_tol / 10**6), frag_mz * (1 + mz_tol / 10**6)),
+            'raw'
+        ]
+        if len(fragment_data_indices) > 0:
+            common_plot += plot_elution_heatmap(
+                timstof_data.as_dataframe(fragment_data_indices),
+                title=frag,
+                # width=width,
+                height=height,
+                background_color=background_color,
+                colormap=colormap,
+                # y_axis_label="RT, min",
+                # x_axis_label="Inversed IM, V·s·cm\u207B\u00B2",
+                # ylim=(im_slice.start, im_slice.stop),
+                **kwargs
+            )
+
+    return common_plot.cols(n_cols)
+
+def plot_elution_line(
+    timstof_data,
+    selected_indices: np.ndarray,
+    label: str,
+    marker_color: str,
+    remove_zeros: bool = False,
+    trim: bool = True,
+):
+    """Plot an XIC as a lineplot.
+
+    Parameters
+    ----------
+    timstof_data : alphatims.bruker.TimsTOF
+        An alphatims.bruker.TimsTOF data object.
+    selected_indices : np.ndarray
+        The raw indices that are selected for this plot.
+    label : str
+        The label for the line plot.
+    remove_zeros : bool
+        If True, zeros are removed. Default: False.
+    trim : bool
+        If True, zeros on the left and right are trimmed. Default: True.
+
+    Returns
+    -------
+    a Plotly line plot
+        The XIC line plot.
+    """
+    axis_dict = {
+        "rt": "RT, min",
+        "intensity": "Intensity",
+    }
+    x_axis_label = axis_dict["rt"]
+    y_axis_label = axis_dict["intensity"]
+    labels = {
+        'RT, min': "rt_values",
+    }
+    x_dimension = labels[x_axis_label]
+    intensities = timstof_data.bin_intensities(selected_indices, [x_dimension])
+    x_ticks = timstof_data.rt_values / 60
+
+    non_zeros = np.flatnonzero(intensities)
+    if len(non_zeros) == 0:
+        x_ticks = np.empty(0, dtype=x_ticks.dtype)
+        intensities = np.empty(0, dtype=intensities.dtype)
+    else:
+        if remove_zeros:
+            x_ticks = x_ticks[non_zeros]
+            intensities = intensities[non_zeros]
+        elif trim:
+            start = max(0, non_zeros[0] - 1)
+            end = non_zeros[-1] + 2
+            x_ticks = x_ticks[start: end]
+            intensities = intensities[start: end]
+
+    trace = go.Scatter(
+        x=x_ticks,
+        y=intensities,
+        mode='lines',
+        text = [f'{x_axis_label}'.format(i + 1) for i in range(len(x_ticks))],
+        hovertemplate='<b>%{text}:</b> %{x};<br><b>Intensity:</b> %{y}.',
+        name=label,
+        marker=marker_color,
+    )
+    return trace
+
+def plot_elution_profile(
+    raw_data,
+    peptide_info: dict,
+    mass_dict: dict,
+    colorscale_qualitative: str,
+    colorscale_sequential: str,
+    mz_tol: float = 50,
+    rt_tol: float = 30,
+    im_tol: float = 0.05,
+    title: str = "",
+    # width: int = 900,
+    height: int = 400,
+):
+    """Plot an elution profile plot for the specified precursor and all his identified fragments.
+
+    Parameters
+    ----------
+    raw_data : alphatims.bruker.TimsTOF
+        An alphatims.bruker.TimsTOF data object.
+    peptide_info : dict
+        Peptide information including sequence, fragments' patterns, rt, mz and im values.
+    mass_dict : dict
+        The basic mass dictionaty with the masses of all amino acids and modifications.
+    mz_tol: float
+        The mz tolerance value. Default: 50 ppm.
+    rt_tol: float
+        The rt tolerance value. Default: 30 ppm.
+    im_tol: float
+        The im tolerance value. Default: 0.05 ppm.
+    title : str
+        The title of the plot.
+    # width : int
+    #     The width of the plot. Default: 900.
+    # height : int
+    #     The height of the plot. Default: 400.
+
+    Returns
+    -------
+    a Plotly line plot
+        The elution profile plot in retention time dimension for the specified peptide and all his fragments.
+    """
+    import alphaviz.utils
+
+    x_axis_label = "rt"
+    y_axis_label = "intensity"
+
+    # predict the theoretical fragments using the Alphapept get_fragmass() function.
+    frag_masses, frag_type = alphaviz.utils.get_fragmass(
+        parsed_pep=alphaviz.utils.parse(peptide_info['sequence']),
+        mass_dict=mass_dict
+    )
+    peptide_info['fragments'] = {
+        (f"b{key}" if key>0 else f"y{-key}"):value for key,value in zip(frag_type, frag_masses)
+    }
+
+    # slice the data using the rt_tol, im_tol and mz_tol values
+    rt_slice = slice(peptide_info['rt'] - rt_tol, peptide_info['rt'] + rt_tol)
+    im_slice = slice(peptide_info['im'] - im_tol, peptide_info['im'] + im_tol)
+    prec_mz_slice = slice(peptide_info['mz'] / (1 + mz_tol / 10**6), peptide_info['mz'] * (1 + mz_tol / 10**6))
+
+    if len(peptide_info['fragments'].values()) + 1 <= len(getattr(px.colors.qualitative, colorscale_qualitative)):
+        colors_set = getattr(px.colors.qualitative, colorscale_qualitative)
+    else:
+        colors_set = px.colors.sample_colorscale(colorscale_sequential, samplepoints=len(peptide_info['fragments'].values()) + 1)
+
+    # create an elution profile for the precursor
+    precursor_indices = raw_data[
+        rt_slice,
+        im_slice,
+        0,
+        prec_mz_slice,
+        'raw'
+    ]
+    fig = go.Figure()
+    fig.add_trace(
+        plot_elution_line(
+            raw_data,
+            precursor_indices,
+            remove_zeros=True,
+            label='precursor',
+            marker_color=dict(color=colors_set[0])
+        )
+    )
+    # create elution profiles for all fragments
+    for ind, (frag, frag_mz) in enumerate(peptide_info['fragments'].items()):
+        fragment_data_indices = raw_data[
+            rt_slice,
+            im_slice,
+            prec_mz_slice,
+            slice(frag_mz / (1 + mz_tol / 10**6), frag_mz * (1 + mz_tol / 10**6)),
+            'raw'
+        ]
+        if len(fragment_data_indices) > 0:
+            fig.add_trace(
+                plot_elution_line(
+                    raw_data,
+                    fragment_data_indices,
+                    remove_zeros=True,
+                    label=frag,
+                    marker_color=dict(color=colors_set[ind+1])
+                )
+            )
+
+    fig.update_layout(
+        title=dict(
+            text=title,
+            font=dict(
+                size=16,
+            ),
+            x=0.5,
+            xanchor='center',
+            yanchor='top'
+        ),
+        xaxis=dict(
+            title=x_axis_label,
+            titlefont_size=14,
+            tickmode = 'auto',
+            tickfont_size=14,
+        ),
+        yaxis=dict(
+            title=y_axis_label
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.6,
+            xanchor="right",
+            x=0.95
+        ),
+        template = "plotly_white",
+        # width=width,
+        height=height,
+        hovermode="x unified",
+        showlegend=True
+    )
+    return fig
+
+
+def plot_pept_per_protein_barplot(
+    df: pd.DataFrame,
+    x_axis_label: str,
+    plot_title: str
+)-> go.Figure:
+    """Create a barplot for the number of peptides identified per protein.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The data frame containing the data.
+    x_axis_label : str
+        The label of the x-axis containing information about the number of identified peptides per protein.
+    plot_title : str
+        The title of the plot.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure object
+        A distribution barplot.
+
+    """
+    df = df.copy()
+    df['pept_per_prot'] = df[x_axis_label].apply(lambda x: str(x) if x <5 else '>5')
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Bar(
+            x=df.pept_per_prot.value_counts().sort_index().index,
+            y=df.pept_per_prot.value_counts().sort_index().values,
+            marker=dict(
+                color='rgb(198,219,239)'
+            ),
+            text=[f'{each:.2f}' for each in df.pept_per_prot.value_counts(normalize=True).sort_index().values],
+            textfont={
+                'size':8,
+                'color':'green'
+            },
+        )
+    )
+
+    fig.update_layout(
+        title=dict(
+            text=plot_title,
+            font=dict(
+                size=16,
+            ),
+            x=0.5,
+            xanchor='center',
+            yanchor='top'
+        ),
+        xaxis = dict(
+            zeroline = True,
+            showgrid = True,
+            title="Number of peptide",
+
+        ),
+        yaxis = dict(
+            zeroline = True,
+            showgrid = True,
+            title='Count',
+        ),
+        template = "plotly_white",
+        height = 400,
+        width = 400,
     )
     return fig

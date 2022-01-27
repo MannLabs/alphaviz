@@ -145,6 +145,6 @@ progress.light::-moz-progress-bar {
     border-bottom: 3px solid #045082;
 }
 
-/* .tabulator-row.tabulator-selected {
-    background-color: #fff;
-} */
+a:link, a:visited {
+  color: blue;
+}

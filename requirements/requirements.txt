@@ -1,1 +1,1 @@
-alphatims==0.2.8
+alphatims==0.3.0

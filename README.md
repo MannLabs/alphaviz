@@ -6,7 +6,7 @@
 
 
 # AlphaViz
-**AlphaViz** is a cutting-edge browser-based interactive visualization tool allowing to visualize the processed mass spectrometry data acquired with **Bruker** or **Thermo** instruments. The **AlphaViz** dashboard facilitates easy quality control of your analyzed samples and a clear inspection of the raw data of significant peptides/proteins.
+**AlphaViz** is a cutting-edge browser-based interactive visualization tool allowing to visualize the processed mass spectrometry data acquired with **Bruker** instrument. The **AlphaViz** dashboard facilitates easy quality control of your analyzed samples and a clear inspection of the raw data of significant peptides/proteins.
 
 To enable all hyperlinks in this document, please view it at [GitHub](https://github.com/MannLabs/alphaviz).
 
@@ -28,7 +28,7 @@ To enable all hyperlinks in this document, please view it at [GitHub](https://gi
 ---
 ## About
 
-Software tools such as **AlphaPept**, **MaxQuant** or **DIA-NN** identify and quantify high amounts of proteins. After downstream processing in **Perseus**, **MSstats** or the **Clinical Knowledge Graph**, differentially expressed proteins become possible candidates for biomarker discovery. **AlphaViz** is an automated visualization pipeline to link these identifications with the original raw data and easily assess their individual quality or the overall quality whole samples.
+Software tools such as **MaxQuant** or **DIA-NN** identify and quantify high amounts of proteins. After downstream processing in **Perseus**, **MSstats** or the **Clinical Knowledge Graph**, differentially expressed proteins become possible candidates for biomarker discovery. **AlphaViz** is an automated visualization pipeline to link these identifications with the original raw data and easily assess their individual quality or the overall quality whole samples.
 
 Data that was processed by any of the above-mentioned software tools can be uploaded to **AlphaViz** and proteins of interests can be selected to explore all available information about the identified peptides. It shows the position of each peptide on the protein sequence, its extracted ion chromatogram or the spectra with the identified b- or y-ions. Additionally, it visualizes the position where the precursor was peaked for sequencing on MS1 and MS2/PASEF frames.
 
@@ -42,7 +42,7 @@ AlphaViz was developed by the [Mann Labs at the Max Planck Institute of Biochemi
 ---
 ## Installation
 
-AlphaViz can be installed and used on all major operating systems (Windows, macOS). (*) Linux will be included soon.
+AlphaViz can be installed and used on all major operating systems (Windows, macOS, Linux).
 There are three different types of installation possible:
 
 * [**One-click GUI installer:**](#one-click-gui) Choose this installation if you only want the GUI and/or keep things as simple as possible.
@@ -72,7 +72,7 @@ pip install alphaviz
 Installing AlphaViz like this avoids conflicts when integrating it in other tools, as this does not enforce strict versioning of dependancies. However, if new versions of dependancies are released, they are not guaranteed to be fully compatible with AlphaViz. While this should only occur in rare cases where dependencies are not backwards compatible, you can always force AlphaViz to use dependancy versions which are known to be compatible with:
 
 ```bash
-pip install "alphaviz[stable]"
+pip install "alphaviz[gui-stable]"
 ```
 
 NOTE: You might need to run `pip install pip==21.0` before installing alphaviz like this. Also note the double quotes `"`.
@@ -131,7 +131,7 @@ NOTE: The first time you use a fresh installation of AlphaViz, it is often quite
 If the GUI was not installed through a one-click GUI installer, it can be activate with the following `bash` command:
 
 ```bash
-alphaviz
+alphaviz gui
 ```
 
 Note that this needs to be prepended with a `!` when you want to run this from within a Jupyter notebook. When the command is run directly from the command-line, make sure you use the right environment (activate it with e.g. `conda activate alphaviz` or set an alias to the binary executable (can be obtained with `where alphaviz` or `which alphaviz`)).
