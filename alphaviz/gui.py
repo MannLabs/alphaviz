@@ -444,7 +444,7 @@ class OptionsWidget(object):
     def __init__(self, data):
         self.data = data
         self.layout = pn.Card(
-            title='Options',
+            title='Settings',
             collapsed=True,
             sizing_mode='stretch_width',
             margin=(5, 8, 10, 8),
