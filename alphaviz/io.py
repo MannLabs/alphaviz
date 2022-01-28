@@ -112,7 +112,7 @@ def import_mq_evidence(
         'Mass error [ppm]',
         'Modified sequence'
     ]
-    chunk = pd.read_csv(filepath, chunksize=1000000, sep='\t')
+    chunk = pd.read_csv(filepath, chunksize=1000000, sep='\t', low_memory=False)
     data_raw_file = pd.concat(chunk)
     data_raw_file = data_raw_file[data_raw_file['Raw file'] == experiment]
     data_raw_file.rename(
@@ -125,10 +125,11 @@ def import_mq_evidence(
     )
     data_raw_file.dropna(
         axis=0,
-        subset=['MS/MS scan number', 'Leading proteins']
+        subset=['MS/MS scan number', 'Proteins'],
+        inplace=True
     )
     if 'Gene names' not in data_raw_file.columns:
-        data_raw_file['Gene names'] = data_raw_file['Leading proteins'].apply(
+        data_raw_file['Gene names'] = data_raw_file['Proteins'].apply(
             lambda x: ';'.join([entry.split('|')[-1].split('_')[0] for entry in x.split(';') if 'sp' in entry])
         )
     for col in ['Charge', 'MS/MS count', 'Gene names', 'Raw file']:
@@ -142,7 +143,8 @@ def import_mq_evidence(
         )
     data_raw_file.dropna(
         axis=0,
-        subset=['MS/MS scan number', 'Gene names']
+        subset=['MS/MS scan number', 'Gene names'],
+        inplace=True
     )
     first_column_names = ['Charge', 'm/z', 'Mass', '1/K0', 'Retention time']
     columns = list(data_raw_file.columns.drop(first_column_names))
