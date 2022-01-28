@@ -203,6 +203,13 @@ def import_mq_protein_groups(
         subset=['Fasta headers'],
         inplace=True
     )
+    if '(EXP) # peptides' not in data_common.columns:
+        data_common.rename(
+            columns={
+                f'Peptides': '(EXP) # peptides',
+            },
+            inplace=True
+        )
     try:
         data_common.dropna(
             axis=0,
