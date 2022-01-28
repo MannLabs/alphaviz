@@ -772,8 +772,8 @@ class MainTab(object):
         self.layout = None
 
     def create_layout(self):
-        self.update_gene_name_filter()
         self.analysis_software = self.data.settings.get('analysis_software')
+        self.update_gene_name_filter()
         if self.analysis_software:
             dependances = {
                 self.gene_name_reset: [self.reset_protein_table, 'clicks'],
