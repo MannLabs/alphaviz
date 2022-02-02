@@ -3,6 +3,7 @@
 [![Downloads](https://pepy.tech/badge/alphaviz)](https://pepy.tech/project/alphaviz)
 [![Downloads](https://pepy.tech/badge/alphaviz/month)](https://pepy.tech/project/alphaviz)
 [![Downloads](https://pepy.tech/badge/alphaviz/week)](https://pepy.tech/project/alphaviz)
+[![Documentation Status](https://readthedocs.org/projects/alphaviz/badge/?version=latest)](https://alphaviz.readthedocs.io/en/latest/?badge=latest)
 
 
 # AlphaViz
@@ -140,7 +141,7 @@ Note that this needs to be prepended with a `!` when you want to run this from w
 
 AlphaViz can be imported as a Python package into any Python script or notebook with the command `import alphaviz`.
 
-A brief Jupyter notebook tutorial on how to use the API will be added soon.
+An ‘nbs’ folder in the GitHub repository contains several Jupyter Notebooks as tutorials regarding using AlphaViz as a Python package for all available pipelines: for DDA data analyzed with MaxQuant, for DIA data analyzed with DIA-NN, and for the targeted mode. 
 
 ---
 ## Troubleshooting
