@@ -203,12 +203,35 @@ class MainWidget(object):
             width=200,
             margin=(0, 20, 0, 0)
         )
+        self.download_new_version_button = pn.widgets.Button(
+            button_type="danger",
+            align='center',
+            height=31,
+            width=200,
+            margin=(20, 20, 0, 0)
+        )
 
     def create_layout(self):
+
+        latest_github_version = alphaviz.utils.check_github_version(silent=False)
+
+        if latest_github_version and latest_github_version != alphaviz.__version__:
+            self.download_new_version_button.name = f"Download version {latest_github_version}"
+            download_new_version_button = self.download_new_version_button
+            download_new_version_button.js_on_click(
+                code=f"""window.open("https://github.com/MannLabs/alphaviz/releases/latest")"""
+            )
+        else:
+            download_new_version_button = None
+
         self.layout = pn.Row(
             self.project_description,
             pn.layout.HSpacer(width=500),
-            self.manual,
+            pn.Column(
+                self.manual,
+                download_new_version_button,
+                align='center',
+            ),
             background='#eaeaea',
             align='center',
             sizing_mode='stretch_width',

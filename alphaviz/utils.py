@@ -6,12 +6,48 @@ IMG_PATH = os.path.join(BASE_PATH, "img")
 STYLE_PATH = os.path.join(BASE_PATH, "style")
 DOCS_PATH = os.path.join(BASE_PATH, "docs")
 DATA_PATH = os.path.join(BASE_PATH, "data")
-
+LATEST_GITHUB_INIT_FILE = "https://github.com/MannLabs/alphaviz/blob/main/alphaviz/__init__.py"
 
 def check_analysis_file(file):
     ## TODO: write the checks for the preloaded file and return the exception when the file can't be uploaded
     pass
 
+# this code was taken from the AlphaTims Python package (https://github.com/MannLabs/alphatims/blob/master/alphatims/utils.py) and modified
+def check_github_version(silent=False) -> str:
+    """Checks and logs the current version of AlphaViz.
+    Check if the local version equals the AlphaViz GitHub master branch.
+    This is only possible with an active internet connection and
+    if no credentials are required for GitHub.
+    Parameters
+    ----------
+    silent : str
+        Use the logger to display the obtained conclusion.
+        Default is False.
+    Returns
+    -------
+    : str
+        The version on the AlphaViz GitHub master branch.
+        "" if no version can be found on GitHub
+    """
+    import requests
+    from bs4 import BeautifulSoup
+    import alphaviz
+
+    try:
+        main_response = requests.get(LATEST_GITHUB_INIT_FILE)
+        main_soap = BeautifulSoup(main_response.content.decode('utf-8'), 'html.parser')
+        for line in main_soap.find_all('td', class_='blob-code blob-code-inner js-file-line'):
+            if line.text.startswith('__version__'):
+                github_version = line.text.split()[-1].strip()[1:-1]
+                if not silent:
+                    if github_version != alphaviz.__version__:
+                        print(f"You are currently using AlphaViz version {alphaviz.__version__}. However, the latest version of AlphaViz on GitHub is {github_version}. Checkout https://github.com/MannLabs/alphaviz.git for instructions on how to update AlphaViz...")
+                    else:
+                        print("Current AlphaViz version is up-to-date with GitHub.")
+                return github_version
+    except:
+        print("Could not check GitHub for the latest AlphaViz release.")
+        return ""
 
 # This code was taken from the AlphaPept Python package (https://github.com/MannLabs/alphapept/blob/master/nbs/03_fasta.ipynb)
 import numba
