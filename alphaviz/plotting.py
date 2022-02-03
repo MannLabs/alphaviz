@@ -589,17 +589,18 @@ def plot_mass_spectra(
     )
 
     fig_common = plotly.subplots.make_subplots(
-        rows=5, cols=3, shared_xaxes=True,
+        rows=6, cols=3, shared_xaxes=True,
         figure=fig,
         specs=[
           [{"rowspan": 3, "colspan": 3}, None, None],
           [None, None, None],
           [None, None, None],
-          [{"colspan": 3}, None, None],
-          [{}, {}, {}]
+          [{"rowspan": 2, "colspan": 3}, None, None],
+          [None, None, None],
+          [{"colspan": 3}, None, None]
         ],
-        vertical_spacing=0.07,
-        column_widths=[0.25, 0.5, 0.25]
+        vertical_spacing=0.09,
+
     )
 
     # add a second plot
@@ -635,92 +636,92 @@ def plot_mass_spectra(
     )
 
     fig_common.update_yaxes(title_text="Error, ppm", row=4, col=1)
+    fig_common.update_xaxes(range=[data.mz_values.min()-10, data.mz_values.max()+10], row=4, col=1)
+    fig_common.update_xaxes(range=[data.mz_values.min()-10, data.mz_values.max()+10], row=1, col=1)
 
     bions = alphaviz.preprocessing.get_identified_ions(data.ions, sequence, 'b')
     yions = alphaviz.preprocessing.get_identified_ions(data.ions, sequence, 'y')
 
     sl = len(sequence)
-    distance = (data.mz_values.max() - data.mz_values.min()) / sl
-    correct_value = distance * 0.5
-    correct_value_2 = distance * 0.3
-    multipl_value = distance + correct_value
+    distance_from_side = (data.mz_values.max() - data.mz_values.min()) * 2/8
+    distance = np.linspace(data.mz_values.min()+distance_from_side, data.mz_values.max()-distance_from_side, sl)
     for i, aa in enumerate(sequence):
         fig_common.add_annotation(
             dict(
                 text=aa,
-                x=i*multipl_value,
+                x=distance[i],
                 y=0,
                 showarrow=False,
                 font_size=font_size_seq,
                 yshift=1, align='center'
             ),
-            row=5,
-            col=2
+            row=6,
+            col=1
         )
     for i, b in enumerate(bions):
         if b:
             fig_common.add_trace(
                 go.Scatter(
-                    x=[i*multipl_value,i*multipl_value+correct_value,i*multipl_value+correct_value],
-                    y=[0.8,0.8,0],
+                    x=[distance[i],distance[i] + (distance[i+1] - distance[i])/2,distance[i] + (distance[i+1] - distance[i])/2],
+                    y=[0.7,0.7,0],
                     mode="lines",
                     showlegend=False,
                     marker_color=b_ion_color,
                     line_width=spectrum_line_width,
                     hoverinfo='skip'
                 ),
-                row=5,
-                col=2
+                row=6,
+                col=1
             )
             fig_common.add_annotation(
                 dict(
                     text="b{}".format(str(i+1)),
-                    x=i*multipl_value+correct_value_2,
-                    y=1.4,
+                    x=distance[i] + (distance[i+1] - distance[i])/4,
+                    y=1.1,
                     showarrow=False,
                     font_size=font_size_ion
                 ),
-                row=5,
-                col=2
+                row=6,
+                col=1
             )
     for i, y in enumerate(yions):
         if y:
             fig_common.add_trace(
                 go.Scatter(
-                    x=[i*multipl_value,i*multipl_value-correct_value,i*multipl_value-correct_value],
-                    y=[-0.8,-0.8,0],
+                    x=[distance[i],distance[i] - (distance[i+1] - distance[i])/2,distance[i] - (distance[i+1] - distance[i])/2],
+                    y=[-0.7,-0.7,0],
                     mode="lines",
                     showlegend=False,
                     marker_color=y_ion_color,
                     line_width=spectrum_line_width,
                     hoverinfo='skip'
                 ),
-                row=5,
-                col=2
+                row=6,
+                col=1
             )
             fig_common.add_annotation(
                 dict(
                     text="y{}".format(str(sl-i)),
-                    x=i*multipl_value-correct_value_2,
-                    y=-1.4,
+                    x=distance[i] - (distance[i+1] - distance[i])/4,
+                    y=-1.1,
                     showarrow=False,
                     font_size=font_size_ion
                 ),
-                row=5,
-                col=2
+                row=6,
+                col=1
             )
     fig_common.update_yaxes(
         visible=False,
-        range=(-1.5,1.5),
-        row=5,
-        col=2
+        range=(-1.1,1.1),
+        row=6,
+        col=1
     )
     fig_common.update_xaxes(
         visible=False,
-        row=5,
-        col=2
+        row=6,
+        col=1
     )
-
+    fig_common.update_xaxes(matches='x')
     return fig_common # this function is quite long. Can it be split in smaller chunks?
 
 
