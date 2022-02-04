@@ -835,8 +835,10 @@ class MainTab(object):
             self.proteins_table.formatters = self.dictionary[self.analysis_software]['proteins_table']['formatters']
             self.proteins_table.widths = self.dictionary[self.analysis_software]['proteins_table']['widths']
             self.peptides_table.value = self.data.mq_evidence.iloc[0:0]
-            self.peptides_table.formatters = self.dictionary[self.analysis_software]['peptides_table']['formatters']
             self.peptides_table.widths = self.dictionary[self.analysis_software]['peptides_table']['widths']
+            if '(EXP) Seq coverage, %' in self.data.mq_protein_groups.columns:
+                self.proteins_table.formatters['(EXP) Seq coverage, %'] = {"type": "progress", "max": 100, "legend": True}
+
         elif self.analysis_software == 'diann':
             self.proteins_table.value = self.data.diann_proteins
             self.peptides_table.value = self.data.diann_peptides.iloc[0:0]
@@ -983,14 +985,8 @@ class MainTab(object):
             self.peptides_table.selection = []
             if self.analysis_software == 'maxquant':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
-                curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
-                # self.peptides_table.value = alphaviz.preprocessing.filter_df(
-                #     self.data.mq_evidence,
-                #     pattern=self.gene_name.replace(';', '|'), # use the regex | character to try to match each of the substrings in the genes separated by ; in the "Gene names" column
-                #     column='Gene names',
-                #     software='maxquant',
-                # )
                 self.peptides_table.value = self.data.mq_evidence[self.data.mq_evidence['Gene names'] == self.gene_name]
+                curr_protein_ids = self.peptides_table.value['Leading razor protein'].values[0]
             elif self.analysis_software == 'diann':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
                 curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
@@ -1026,7 +1022,7 @@ class MainTab(object):
                 self.peptides_table.value['Modified.Sequence'].tolist() if self.analysis_software == 'diann' else self.peptides_table.value['Modified sequence'].tolist(),
                 self.colorscale_qualitative.value,
                 self.colorscale_sequential.value,
-                r"\[([^]]+)\]|\([\w\W]*([\w\W]*)[\w\W]*\)"
+                r"\[(.*?)\]|\((.*?)\)\)?"
             )
             self.layout[6] = pn.Pane(
                 self.protein_coverage_plot,
@@ -1068,7 +1064,7 @@ class MainTab(object):
                     [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified.Sequence']] if self.analysis_software == 'diann' else [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified sequence']],
                     self.colorscale_qualitative.value,
                     self.colorscale_sequential.value,
-                    r"\[([^]]+)\]|\([\w\W]*([\w\W]*)[\w\W]*\)"
+                    r"\[(.*?)\]|\((.*?)\)\)?"
                 )
                 self.layout[6] = pn.Pane(
                     self.protein_coverage_plot,

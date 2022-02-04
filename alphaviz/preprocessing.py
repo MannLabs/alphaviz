@@ -125,7 +125,7 @@ def sort_naturally(
 
 
 def get_aa_seq(
-    protein_ids: str,
+    protein_id: str,
     fasta, # pyteomics.fasta.IndexedUniProt object
 )-> str:
     """Extract the leading razor protein sequence for the list of
@@ -144,12 +144,12 @@ def get_aa_seq(
         Protein sequence for the leading razor protein, e.g. from the list of proteinIDs 'Q15149;Q15149-7;Q15149-9;Q15149-5' the AA sequence for protein Q15149 will be returned.
 
     """
-    for id in sorted(protein_ids.split(';'), reverse=True):
-        try:
-            protein_seq = fasta.get_by_id(id).sequence
-            return protein_seq
-        except KeyError:
-            logging.info(f"The provided protein ID {id} is missing in the fasta file.")
+    # for id in sorted(protein_ids.split(';'), reverse=True):
+    try:
+        protein_seq = fasta.get_by_id(protein_id).sequence
+        return protein_seq
+    except KeyError:
+        logging.info(f"The provided protein ID {id} is missing in the fasta file.")
 
 
 def get_mq_ms2_scan_data(
