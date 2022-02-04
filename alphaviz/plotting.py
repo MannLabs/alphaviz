@@ -740,7 +740,8 @@ def plot_mass_error(
     df: pd.DataFrame,
     x_axis_label: str,
     y_axis_label: str,
-    plot_title: str
+    plot_title: str,
+    mz_tol: float = None
 )-> go.Figure:
     """Create a density plot superimposed on the scatter plot together with the 1D distributions of both variables as marginal histograms.
 
@@ -812,6 +813,35 @@ def plot_mass_error(
             )
         )
     )
+    if mz_tol:
+        fig.add_trace(
+            go.Scatter(
+                x = [df[x_axis_label].values.min(), df[x_axis_label].values.max()],
+                y = [mz_tol, mz_tol],
+                mode='lines',
+                line=dict(
+                    color='darkred',
+                    width=2,
+                    dash='dash'
+                ),
+                showlegend = False,
+                hoverinfo='none',
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x = [df[x_axis_label].values.min(), df[x_axis_label].values.max()],
+                y = [-mz_tol, -mz_tol],
+                mode='lines',
+                line=dict(
+                    color='darkred',
+                    width=2,
+                    dash='dash'
+                ),
+                showlegend = False,
+                hoverinfo='none',
+            )
+        )
 
     fig.update_layout(
         autosize = False,
