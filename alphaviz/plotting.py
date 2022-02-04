@@ -984,6 +984,7 @@ def plot_elution_heatmap(
         bgcolor=background_color,
         framewise=True,
         axiswise=True,
+        fontsize={'title': 12},
         **kwargs
     )
     dmap = hv.DynamicMap(
@@ -1080,7 +1081,7 @@ def plot_elution_profile_heatmap(
 
     common_plot = plot_elution_heatmap(
         timstof_data.as_dataframe(precursor_indices),
-        title='precursor',
+        title="precursor",
         # width=width,
         height=height,
         background_color=background_color,
@@ -1103,7 +1104,7 @@ def plot_elution_profile_heatmap(
         if len(fragment_data_indices) > 0:
             common_plot += plot_elution_heatmap(
                 timstof_data.as_dataframe(fragment_data_indices),
-                title=frag,
+                title=f"{frag} ({round(frag_mz, 3)})",
                 # width=width,
                 height=height,
                 background_color=background_color,
@@ -1261,6 +1262,7 @@ def plot_elution_profile(
             raw_data,
             precursor_indices,
             remove_zeros=True,
+            # label=f"precursor ({round(peptide_info['mz'], 3)})",
             label='precursor',
             marker_color=dict(color=colors_set[0])
         )
@@ -1280,7 +1282,7 @@ def plot_elution_profile(
                     raw_data,
                     fragment_data_indices,
                     remove_zeros=True,
-                    label=frag,
+                    label=f"{frag} ({round(frag_mz, 3)})",
                     marker_color=dict(color=colors_set[ind+1])
                 )
             )
