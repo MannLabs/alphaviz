@@ -73,16 +73,19 @@ def plot_sequence_coverage(
             start = sequence.find(peptide)
             peptide_cov = range(start + 1, start + len(peptide) + 1)
             selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
-            fig.add_trace(
-                go.Bar(
-                    x=list(peptide_cov),
-                    y=np.ones(len(peptide))*2,
-                    name=f'Peptide: {peptide_mod}',
-                    hovertemplate='<br><b>position:</b> %{x}.',
-                    opacity=0.5,
-                    marker=dict(color=getattr(px.colors.qualitative, colorscale_qualitative)[ind])
+            if start != -1:
+                fig.add_trace(
+                    go.Bar(
+                        x=list(peptide_cov),
+                        y=np.ones(len(peptide))*2,
+                        name=f'Peptide: {peptide_mod}',
+                        hovertemplate='<br><b>position:</b> %{x}.',
+                        opacity=0.5,
+                        marker=dict(color=getattr(px.colors.qualitative, colorscale_qualitative)[ind])
+                    )
                 )
-            )
+            else:
+                print(f'The peptide {peptide} is not located on the protein sequence.')
     else:
         colorscale_sequential_colors = px.colors.sample_colorscale(colorscale_sequential, samplepoints=len(peptides_list))
         for ind, peptide_mod in enumerate(peptides_list):
@@ -91,16 +94,19 @@ def plot_sequence_coverage(
             start = sequence.find(peptide)
             peptide_cov = range(start + 1, start + len(peptide) + 1)
             selected_peptide_cov[start + 1: start + len(peptide) + 1] = True
-            fig.add_trace(
-                go.Bar(
-                    x=list(peptide_cov),
-                    y=np.ones(len(peptide))*2,
-                    name=f'Peptide: {peptide_mod}',
-                    hovertemplate='<br><b>position:</b> %{x}.',
-                    opacity=0.5,
-                    marker=dict(color=colorscale_sequential_colors[ind])
+            if start != -1:
+                fig.add_trace(
+                    go.Bar(
+                        x=list(peptide_cov),
+                        y=np.ones(len(peptide))*2,
+                        name=f'Peptide: {peptide_mod}',
+                        hovertemplate='<br><b>position:</b> %{x}.',
+                        opacity=0.5,
+                        marker=dict(color=colorscale_sequential_colors[ind])
+                    )
                 )
-            )
+            else:
+                print(f'The peptide {peptide} is not located on the protein sequence.')
     aa_coverage = round(np.sum(selected_peptide_cov) / len(selected_peptide_cov) * 100, 2)
     fig.update_layout(
         title=dict(
