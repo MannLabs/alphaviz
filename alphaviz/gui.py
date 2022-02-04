@@ -1418,23 +1418,34 @@ class QCTab(object):
     def __init__(self, data, options):
         self.name = "Quality Control"
         self.data = data
+        self.mz_tol = options.layout[0][0][0]
         self.layout_qc = None
         self.analysis_software = self.data.settings.get('analysis_software')
 
     def create_layout(self):
+        dependances = {
+            self.mz_tol: [self.update_tol_range_mass_density, 'value'],
+        }
+        for k in dependances.keys():
+            k.param.watch(
+                dependances[k][0],
+                dependances[k][1]
+            )
+
         experiment = self.data.ms_file_name.value.split('.')[0]
         if self.analysis_software == 'maxquant':
             uncalb_mass_dens_plot = alphaviz.plotting.plot_mass_error(
                 self.data.mq_evidence,
                 'm/z',
                 'Uncalibrated mass error [ppm]',
-                'Uncalibrated mass density plot'
+                'Uncalibrated mass density plot',
+                self.mz_tol.value,
             )
             calb_mass_dens_plot = alphaviz.plotting.plot_mass_error(
                 self.data.mq_evidence,
                 'm/z',
                 'Mass error [ppm]',
-                'Calibrated mass density plot'
+                'Calibrated mass density plot',
             )
             peptide_per_protein_distr = alphaviz.plotting.plot_pept_per_protein_barplot(
                 self.data.mq_protein_groups,
@@ -1444,12 +1455,12 @@ class QCTab(object):
             peptide_mz_distr = alphaviz.plotting.plot_peptide_distr(
                 self.data.mq_evidence,
                 'm/z',
-                'Peptide m/z distribution'
+                'Peptide m/z distribution',
             )
             peptide_length_distr = alphaviz.plotting.plot_peptide_distr(
                 self.data.mq_evidence,
                 'Length',
-                'Peptide length distribution'
+                'Peptide length distribution',
             )
 
             self.layout_qc = pn.Column(
@@ -1539,9 +1550,21 @@ class QCTab(object):
             )
         return self.layout_qc
 
+    def update_tol_range_mass_density(self, *args):
+        if self.analysis_software == 'maxquant' and self.layout_qc:
+            self.layout_qc[2][0] = pn.Pane(
+                alphaviz.plotting.plot_mass_error(
+                    self.data.mq_evidence,
+                    'm/z',
+                    'Uncalibrated mass error [ppm]',
+                    'Uncalibrated mass density plot',
+                    self.mz_tol.value,
+                ),
+                config=update_config('Uncalibrated mass density plot'),
+            )
+
 
 class TargetModeTab(object):
-
     def __init__(self, data, options):
         self.name = "Targeted Mode"
         self.data = data
