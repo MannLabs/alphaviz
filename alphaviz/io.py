@@ -91,33 +91,11 @@ def import_mq_evidence(
             - 'Modified sequence'.
         Renamed columns are marked as is the output data type of all columns. The rows of the data frame with missing 'MS/MS scan number' values are dropped.
     """
-    maxquant_evidence_columns = [
-        'Sequence',
-        'Length',
-        'Acetyl (Protein N-term)',
-        'Oxidation (M)',
-        'Proteins',
-        'Retention time',
-        'Mass',
-        'm/z',
-        'Charge',
-        'Intensity',
-        '1/K0',
-        'MS/MS count',
-        'MS/MS scan number',
-        'Gene names',
-        'Score',
-        'Raw file',
-        'Uncalibrated mass error [ppm]',
-        'Mass error [ppm]',
-        'Modified sequence'
-    ]
     chunk = pd.read_csv(filepath, chunksize=1000000, sep='\t', low_memory=False)
     data_raw_file = pd.concat(chunk)
     data_raw_file = data_raw_file[data_raw_file['Raw file'] == experiment]
     data_raw_file.rename(
         columns={
-            'Acetyl (Protein N-term)': 'Acetylation (N-term)',
             'Score': 'Andromeda score',
             'K0': '1/K0',
         },
@@ -136,7 +114,7 @@ def import_mq_evidence(
         data_raw_file[col] = data_raw_file[col].astype('category')
     for col in ['Retention time', 'Mass', 'm/z', '1/K0', 'Uncalibrated mass error [ppm]', 'Mass error [ppm]']:
         data_raw_file[col] = data_raw_file[col].astype(float).round(4)
-    for col in ['MS/MS scan number', 'Acetylation (N-term)', 'Oxidation (M)', 'Length', 'Intensity', 'Andromeda score']:
+    for col in ['MS/MS scan number', 'Length', 'Intensity', 'Andromeda score']:
         data_raw_file[col] = pd.to_numeric(
             data_raw_file[col],
             downcast='integer'
