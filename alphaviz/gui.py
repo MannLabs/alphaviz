@@ -984,12 +984,13 @@ class MainTab(object):
             if self.analysis_software == 'maxquant':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
                 curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
-                self.peptides_table.value = alphaviz.preprocessing.filter_df(
-                    self.data.mq_evidence,
-                    pattern=self.gene_name.replace(';', '|'), # use the regex | character to try to match each of the substrings in the genes separated by ; in the "Gene names" column
-                    column='Gene names',
-                    software='maxquant',
-                )
+                # self.peptides_table.value = alphaviz.preprocessing.filter_df(
+                #     self.data.mq_evidence,
+                #     pattern=self.gene_name.replace(';', '|'), # use the regex | character to try to match each of the substrings in the genes separated by ; in the "Gene names" column
+                #     column='Gene names',
+                #     software='maxquant',
+                # )
+                self.peptides_table.value = self.data.mq_evidence[self.data.mq_evidence['Gene names'] == self.gene_name]
             elif self.analysis_software == 'diann':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
                 curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
