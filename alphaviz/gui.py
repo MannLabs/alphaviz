@@ -514,7 +514,7 @@ class HeatmapOptionsWidget(object):
         )
         self.precursor_target_size = pn.widgets.IntInput(
             name='Precursor target size',
-            value=15,
+            value=20,
             step=5,
             start=0,
             end=100,
@@ -523,7 +523,7 @@ class HeatmapOptionsWidget(object):
         )
         self.precursor_target_color = pn.widgets.Select(
             name='Precursor target color',
-            value='blue',
+            value='lime',
             options=list(matplotlib.colors.CSS4_COLORS.keys()),
             width=180,
             margin=(20, 20, 20, 10),
@@ -1025,7 +1025,7 @@ class MainTab(object):
                 self.peptides_table.value['Modified.Sequence'].tolist() if self.analysis_software == 'diann' else self.peptides_table.value['Modified sequence'].tolist(),
                 self.colorscale_qualitative.value,
                 self.colorscale_sequential.value,
-                r"\[([^]]+)\]|\((\w+)\)"
+                r"\[([^]]+)\]|\([\w\W]*([\w\W]*)[\w\W]*\)"
             )
             self.layout[6] = pn.Pane(
                 self.protein_coverage_plot,
@@ -1067,7 +1067,7 @@ class MainTab(object):
                     [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified.Sequence']] if self.analysis_software == 'diann' else [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified sequence']],
                     self.colorscale_qualitative.value,
                     self.colorscale_sequential.value,
-                    r"\[([^]]+)\]|\((\w+)\)"
+                    r"\[([^]]+)\]|\([\w\W]*([\w\W]*)[\w\W]*\)"
                 )
                 self.layout[6] = pn.Pane(
                     self.protein_coverage_plot,
@@ -1213,12 +1213,12 @@ class MainTab(object):
                             mz_tol=self.mz_tol.value,
                             rt_tol=self.rt_tol.value,
                             im_tol=self.im_tol.value,
-                            title=f"Precursor/fragments elution profile of {self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified.Sequence']} in RT dimension ({self.peptide['rt'] / 60: .2f} min)",
+                            title=f"Precursor and fragment elution profiles of {self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified.Sequence']} in RT dimension ({self.peptide['rt'] / 60:.2f} min)",
                             colorscale_qualitative=self.colorscale_qualitative.value,
                             colorscale_sequential=self.colorscale_sequential.value,
                         ),
                         sizing_mode='stretch_width',
-                        config=update_config('Precursor/fragments elution profile plot'),
+                        config=update_config('Precursor&fragment elution profile plot in RT dimension'),
                         loading=False,
                     ),
                     margin=(5, 10, 0, 10)
@@ -1242,7 +1242,6 @@ class MainTab(object):
                         ),
                         sizing_mode='stretch_width',
                         linked_axes=True,
-                        config=update_config('Precursor/fragments elution profile plot'),
                         loading=False,
                     ),
                     sizing_mode='stretch_width',
@@ -1327,7 +1326,8 @@ class MainTab(object):
                     config=update_config('Combined MS2 spectrum'),
                     margin=(10, 0, 0, 0),
                     sizing_mode='stretch_width',
-                    loading=False
+                    loading=False,
+                    height=600
                 )
 
     def display_previous_frame(self, *args):
