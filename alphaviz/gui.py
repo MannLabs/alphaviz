@@ -618,7 +618,7 @@ class ColorscaleOptionsWidget(object):
                 self.colorscale_qualitative,
                 self.colorscale_sequential,
             ),
-            title='Color scheme options',
+            title='Customization options',
             collapsed=False,
             sizing_mode='stretch_width',
             margin=(15, 8, 15, 8),
@@ -682,15 +682,15 @@ class MainTab(object):
             verbose=False,
         )
         self.analysis_software = ""
-        self.heatmap_x_axis = options.layout[0][0][0]
-        self.heatmap_y_axis = options.layout[0][0][1]
-        self.heatmap_colormap = options.layout[0][0][2]
-        self.heatmap_background_color = options.layout[0][0][3]
-        self.heatmap_precursor_size = options.layout[0][0][4]
-        self.heatmap_precursor_color = options.layout[0][0][5]
-        self.mz_tol = options.layout[1][0][0]
-        self.im_tol = options.layout[1][0][1]
-        self.rt_tol = options.layout[1][0][2]
+        self.mz_tol = options.layout[0][0][0]
+        self.im_tol = options.layout[0][0][1]
+        self.rt_tol = options.layout[0][0][2]
+        self.heatmap_x_axis = options.layout[1][0][0]
+        self.heatmap_y_axis = options.layout[1][0][1]
+        self.heatmap_colormap = options.layout[1][0][2]
+        self.heatmap_background_color = options.layout[1][0][3]
+        self.heatmap_precursor_size = options.layout[1][0][4]
+        self.heatmap_precursor_color = options.layout[1][0][5]
         self.colorscale_qualitative = options.layout[2][0][0]
         self.colorscale_sequential = options.layout[2][0][1]
         self.protein_seq = str()
@@ -818,8 +818,8 @@ class MainTab(object):
                 self.rt_tol: [self.display_line_spectra_plots, 'value'],
                 self.x_axis_label_mq: [self.display_line_spectra_plots, 'value'],
                 self.x_axis_label_diann: [self.display_elution_profile_plots, 'value'],
-                self.colorscale_qualitative: [self.run_after_protein_selection, 'value'],
-                self.colorscale_sequential: [self.run_after_protein_selection, 'value'],
+                self.colorscale_qualitative: [self.run_after_peptide_selection, 'value'],
+                self.colorscale_sequential: [self.run_after_peptide_selection, 'value'],
             }
             for k in dependances.keys():
                 k.param.watch(
@@ -1539,15 +1539,15 @@ class TargetModeTab(object):
     def __init__(self, data, options):
         self.name = "Targeted Mode"
         self.data = data
-        self.heatmap_x_axis = options.layout[0][0][0]
-        self.heatmap_y_axis = options.layout[0][0][1]
-        self.heatmap_colormap = options.layout[0][0][2]
-        self.heatmap_background_color = options.layout[0][0][3]
-        self.heatmap_precursor_size = options.layout[0][0][4]
-        self.heatmap_precursor_color = options.layout[0][0][5]
-        self.mz_tol = options.layout[1][0][0]
-        self.im_tol = options.layout[1][0][1]
-        self.rt_tol = options.layout[1][0][2]
+        self.mz_tol = options.layout[0][0][0]
+        self.im_tol = options.layout[0][0][1]
+        self.rt_tol = options.layout[0][0][2]
+        self.heatmap_x_axis = options.layout[1][0][0]
+        self.heatmap_y_axis = options.layout[1][0][1]
+        self.heatmap_colormap = options.layout[1][0][2]
+        self.heatmap_background_color = options.layout[1][0][3]
+        self.heatmap_precursor_size = options.layout[1][0][4]
+        self.heatmap_precursor_color = options.layout[1][0][5]
         self.colorscale_qualitative = options.layout[2][0][0]
         self.colorscale_sequential = options.layout[2][0][1]
         self.layout_target_mode = None
@@ -1718,7 +1718,7 @@ class TargetModeTab(object):
                                     mz_tol=self.mz_tol.value,
                                     rt_tol=self.rt_tol.value,
                                     im_tol=self.im_tol.value,
-                                    title=f"Precursor/fragments elution profile of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60: .2f} min)",
+                                    title=f"Precursor fragment elution profiles of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60: .2f} min)",
                                     colorscale_qualitative=self.colorscale_qualitative.value,
                                     colorscale_sequential=self.colorscale_sequential.value,
                                     height=500,
@@ -1849,8 +1849,8 @@ class AlphaVizGUI(GUI):
 
         self.data = DataImportWidget()
         self.options = OptionsWidget(self.data)
-        self.options.add_option(HeatmapOptionsWidget().create_layout())
         self.options.add_option(ToleranceOptionsWidget().create_layout())
+        self.options.add_option(HeatmapOptionsWidget().create_layout())
         self.options.add_option(ColorscaleOptionsWidget().create_layout())
         self.tabs = TabsWidget(self.data, self.options)
         self.layout += [
