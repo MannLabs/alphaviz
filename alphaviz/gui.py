@@ -1258,48 +1258,51 @@ class MainTab(object):
                 mz = self.peptide['mz']
                 im = self.peptide['im']
             data_ms1 = self.data.raw_data[ms1_frame].copy()
-            self.heatmap_ms1_plot = alphaviz.plotting.plot_heatmap(
-                data_ms1,
-                mz=mz,
-                im=im,
-                x_axis_label=self.heatmap_x_axis.value,
-                y_axis_label=self.heatmap_y_axis.value,
-                title=f'MS1 frame(s) #{ms1_frame}',
-                colormap=self.heatmap_colormap.value,
-                background_color=self.heatmap_background_color.value,
-                precursor_size=self.heatmap_precursor_size.value,
-                precursor_color=self.heatmap_precursor_color.value,
-                width=570,
-                height=450,
-                margin=(0, 10, 10, 0),
-                # shared_axes=True
-            )
-            data_ms2 = self.data.raw_data[ms2_frame].copy()
-            self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
-                data_ms2,
-                x_axis_label=self.heatmap_x_axis.value,
-                y_axis_label=self.heatmap_y_axis.value,
-                title=f'MS2 frame(s) #{ms2_frame}',
-                colormap=self.heatmap_colormap.value,
-                background_color=self.heatmap_background_color.value,
-                width=570,
-                height=450,
-                margin=(0, 10, 10, 0),
-                # shared_axes=True
-            )
+            try:
+                self.heatmap_ms1_plot = alphaviz.plotting.plot_heatmap(
+                    data_ms1,
+                    mz=mz,
+                    im=im,
+                    x_axis_label=self.heatmap_x_axis.value,
+                    y_axis_label=self.heatmap_y_axis.value,
+                    title=f'MS1 frame(s) #{ms1_frame}',
+                    colormap=self.heatmap_colormap.value,
+                    background_color=self.heatmap_background_color.value,
+                    precursor_size=self.heatmap_precursor_size.value,
+                    precursor_color=self.heatmap_precursor_color.value,
+                    width=570,
+                    height=450,
+                    margin=(0, 10, 10, 0),
+                    # shared_axes=True
+                )
+                data_ms2 = self.data.raw_data[ms2_frame].copy()
+                self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
+                    data_ms2,
+                    x_axis_label=self.heatmap_x_axis.value,
+                    y_axis_label=self.heatmap_y_axis.value,
+                    title=f'MS2 frame(s) #{ms2_frame}',
+                    colormap=self.heatmap_colormap.value,
+                    background_color=self.heatmap_background_color.value,
+                    width=570,
+                    height=450,
+                    margin=(0, 10, 10, 0),
+                    # shared_axes=True
+                )
 
-            self.layout[10][0] = pn.pane.HoloViews(
-                self.heatmap_ms1_plot,
-                margin=(15, 0, 0, 0),
-                linked_axes=False,
-                loading=False
-            )
-            self.layout[10][1] = pn.pane.HoloViews(
-                self.heatmap_ms2_plot,
-                margin=(15, 0, 0, 0),
-                linked_axes=False,
-                loading=False
-            )
+                self.layout[10][0] = pn.pane.HoloViews(
+                    self.heatmap_ms1_plot,
+                    margin=(15, 0, 0, 0),
+                    linked_axes=False,
+                    loading=False
+                )
+                self.layout[10][1] = pn.pane.HoloViews(
+                    self.heatmap_ms2_plot,
+                    margin=(15, 0, 0, 0),
+                    linked_axes=False,
+                    loading=False
+                )
+            except ValueError:
+                print('The x- and y-axis of the heatmaps should be different.')
             if self.analysis_software == 'diann':
                 if self.x_axis_label_diann.value == 'RT/IM dimension':
                     self.display_elution_profile_plots()
@@ -1367,42 +1370,45 @@ class MainTab(object):
         if self.plot_overlapped_frames.value == True:
             mz = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z'])
             im = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0'])
-            self.heatmap_ms1_plot = alphaviz.plotting.plot_heatmap(
-                self.data.raw_data[list(self.ms1_ms2_frames.keys())],
-                mz=mz,
-                im=im,
-                x_axis_label=self.heatmap_x_axis.value,
-                y_axis_label=self.heatmap_y_axis.value,
-                title=f'MS1 frame(s) #{list(self.ms1_ms2_frames.keys())}',
-                colormap=self.heatmap_colormap.value,
-                background_color=self.heatmap_background_color.value,
-                width=570,
-                height=450,
-                margin=(0, 10, 10, 0),
-            )
-            self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
-                self.data.raw_data[[val[0] for val in self.ms1_ms2_frames.values()]],
-                x_axis_label=self.heatmap_x_axis.value,
-                y_axis_label=self.heatmap_y_axis.value,
-                title=f'MS2 frame(s) #{[val[0] for val in self.ms1_ms2_frames.values()]}',
-                colormap=self.heatmap_colormap.value,
-                background_color=self.heatmap_background_color.value,
-                width=570,
-                height=450,
-                margin=(0, 10, 10, 0),
-            )
-            self.layout[10][0] = pn.pane.HoloViews(
-                self.heatmap_ms1_plot,
-                margin=(15, 0, 0, 0),
-                linked_axes=False,
-                loading=False
-            )
-            self.layout[10][1] = pn.pane.HoloViews(
-                self.heatmap_ms2_plot,
-                margin=(15, 0, 0, 0),
-                linked_axes=False,
-                loading=False
-            )
+            try:
+                self.heatmap_ms1_plot = alphaviz.plotting.plot_heatmap(
+                    self.data.raw_data[list(self.ms1_ms2_frames.keys())],
+                    mz=mz,
+                    im=im,
+                    x_axis_label=self.heatmap_x_axis.value,
+                    y_axis_label=self.heatmap_y_axis.value,
+                    title=f'MS1 frame(s) #{list(self.ms1_ms2_frames.keys())}',
+                    colormap=self.heatmap_colormap.value,
+                    background_color=self.heatmap_background_color.value,
+                    width=570,
+                    height=450,
+                    margin=(0, 10, 10, 0),
+                )
+                self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
+                    self.data.raw_data[[val[0] for val in self.ms1_ms2_frames.values()]],
+                    x_axis_label=self.heatmap_x_axis.value,
+                    y_axis_label=self.heatmap_y_axis.value,
+                    title=f'MS2 frame(s) #{[val[0] for val in self.ms1_ms2_frames.values()]}',
+                    colormap=self.heatmap_colormap.value,
+                    background_color=self.heatmap_background_color.value,
+                    width=570,
+                    height=450,
+                    margin=(0, 10, 10, 0),
+                )
+                self.layout[10][0] = pn.pane.HoloViews(
+                    self.heatmap_ms1_plot,
+                    margin=(15, 0, 0, 0),
+                    linked_axes=False,
+                    loading=False
+                )
+                self.layout[10][1] = pn.pane.HoloViews(
+                    self.heatmap_ms2_plot,
+                    margin=(15, 0, 0, 0),
+                    linked_axes=False,
+                    loading=False
+                )
+            except ValueError:
+                print('The x- and y-axis of the heatmaps should be different.')
             self.layout[12] = None
         else:
             self.display_heatmap_spectrum()

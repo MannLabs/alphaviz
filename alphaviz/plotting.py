@@ -227,7 +227,7 @@ def plot_chrom(
 
 def plot_heatmap(
     df: pd.DataFrame,
-    x_axis_label: str = "RT, min",
+    x_axis_label: str = "m/z, Th",
     y_axis_label: str = "Inversed IM, V·s·cm\u207B\u00B2",
     z_axis_label: str = "Intensity",
     mz: float = 0.0,
@@ -285,7 +285,6 @@ def plot_heatmap(
 
     """
     labels = {
-        'RT, min': "rt_values",
         'm/z, Th': "mz_values",
         'Inversed IM, V·s·cm\u207B\u00B2': "mobility_values",
         'Intensity': "intensity_values",
@@ -331,12 +330,18 @@ def plot_heatmap(
     ).opts(plot=opts_ms1)
 
     if mz and im:
-        precursor = hv.Points((mz, im)).opts(
-            marker='x',
-            size=precursor_size,
-            color=precursor_color,
-            # axiswise=True,
-        )
+        if x_dimension == 'mz_values' and y_dimension == 'mobility_values':
+            precursor = hv.Points((mz, im)).opts(
+                marker='x',
+                size=precursor_size,
+                color=precursor_color,
+            )
+        else:
+            precursor = hv.Points((im, mz)).opts(
+                marker='x',
+                size=precursor_size,
+                color=precursor_color,
+            )
         return fig * precursor
     return fig
 
