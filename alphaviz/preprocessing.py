@@ -199,16 +199,18 @@ def get_mq_ms2_scan_data(
 
     for row in msms_filtered_df.itertuples(): # inefficient implementation. Sorting both arrays by mz should allow you to do it much faster.
         ion_index = data.mz_values.sub(row.mz).abs().idxmin()
-        if not ion_index:
-            data.loc[np.isclose(data.mz_values, row.mz, atol=1e-03), ['ions', 'wrong_dev_value']] = row.ions, True
-        else:
-             data.loc[ion_index, 'ions'] = row.ions
+        mass_dev_ppm_calc = ((row.mz + row.mass_dev_Da - data.loc[ion_index, 'mz_values']) * 10**6) / data.loc[ion_index, 'mz_values']
+        # to think how not to set a fixed threshold?
+        ppm_threshold = 100
+        if abs(mass_dev_ppm_calc) < ppm_threshold:
+            data.loc[ion_index, 'ions'] = row.ions
+            msms_filtered_df.loc[msms_filtered_df.ions == row.ions, 'mass_dev_ppm'] = mass_dev_ppm_calc
 
     data.drop_duplicates('mz_values', inplace=True)
     data.sort_values(['ions', 'intensity_values'], ascending=True, inplace=True)
-    data = pd.merge(data, msms_filtered_df, on='ions', how='left')
+    data_merged = pd.merge(data, msms_filtered_df, on='ions', how='left')
 
-    return data.drop('mz', axis=1)
+    return data_merged.drop('mz', axis=1)
 
 
 def get_identified_ions(
