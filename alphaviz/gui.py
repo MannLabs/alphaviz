@@ -986,7 +986,7 @@ class MainTab(object):
             if self.analysis_software == 'maxquant':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
                 self.peptides_table.value = self.data.mq_evidence[self.data.mq_evidence['Gene names'] == self.gene_name]
-                curr_protein_ids = self.peptides_table.value['Leading razor protein'].values[0]
+                curr_protein_ids = [val for val in self.peptides_table.value['Leading razor protein'].sort_values(ascending=False).values if not val.startswith('CON__')][0]
             elif self.analysis_software == 'diann':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
                 curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
@@ -1022,8 +1022,28 @@ class MainTab(object):
                 self.peptides_table.value['Modified.Sequence'].tolist() if self.analysis_software == 'diann' else self.peptides_table.value['Modified sequence'].tolist(),
                 self.colorscale_qualitative.value,
                 self.colorscale_sequential.value,
-                r"\[(.*?)\]|\((.*?)\)\)?"
+                r"\[(.*?)\]|\((.*?)\)\)?",
+                curr_protein_ids
             )
+            if not self.protein_coverage_plot:
+                curr_protein_ids = sorted(self.peptides_table.value['Proteins'].values[0].split(';'), reverse=True)
+                for prot_id in curr_protein_ids:
+                    self.protein_seq = alphaviz.preprocessing.get_aa_seq(
+                        prot_id,
+                        self.data.fasta,
+                    )
+                    self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
+                        self.protein_seq,
+                        self.gene_name,
+                        self.peptides_table.value['Modified.Sequence'].tolist() if self.analysis_software == 'diann' else self.peptides_table.value['Modified sequence'].tolist(),
+                        self.colorscale_qualitative.value,
+                        self.colorscale_sequential.value,
+                        r"\[(.*?)\]|\((.*?)\)\)?",
+                        prot_id
+                    )
+                    if self.protein_coverage_plot:
+                        break
+
             self.layout[6] = pn.Pane(
                 self.protein_coverage_plot,
                 config=update_config(f"{self.gene_name}_coverage_plot"),

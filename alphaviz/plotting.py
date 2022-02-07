@@ -26,7 +26,8 @@ def plot_sequence_coverage(
     peptides_list: list,
     colorscale_qualitative: str,
     colorscale_sequential: str,
-    regex: str
+    regex: str,
+    prot_id: str = ""
 )-> go.Figure:
     """Create a protein sequence coverage plot.
 
@@ -52,8 +53,15 @@ def plot_sequence_coverage(
     """
     fig = go.Figure()
 
-    aa_position = list(range(1, len(sequence) + 1))
-    aa_list = list(sequence)
+    try:
+        aa_position = list(range(1, len(sequence) + 1))
+        aa_list = list(sequence)
+    except TypeError:
+        print(f"The AA sequence is not found in the fasta file for the selected protein_id {prot_id}.")
+        return None
+    else:
+        if prot_id:
+            print(f"The AA sequence is taken from the fasta file for the protein_id {prot_id}.")
 
     fig.add_trace(
         go.Bar(
@@ -85,7 +93,8 @@ def plot_sequence_coverage(
                     )
                 )
             else:
-                print(f'The peptide {peptide} is not located on the protein sequence.')
+                print(f'The peptide {peptide} is not found in the protein sequence of the protein_id {prot_id}.')
+                return None
     else:
         colorscale_sequential_colors = px.colors.sample_colorscale(colorscale_sequential, samplepoints=len(peptides_list))
         for ind, peptide_mod in enumerate(peptides_list):
@@ -106,7 +115,8 @@ def plot_sequence_coverage(
                     )
                 )
             else:
-                print(f'The peptide {peptide} is not located on the protein sequence.')
+                print(f'The peptide {peptide} is not found in the protein sequence of the protein_id {prot_id}.')
+                return None
     aa_coverage = round(np.sum(selected_peptide_cov) / len(selected_peptide_cov) * 100, 2)
     fig.update_layout(
         title=dict(
