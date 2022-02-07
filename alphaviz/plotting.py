@@ -59,9 +59,6 @@ def plot_sequence_coverage(
     except TypeError:
         print(f"The AA sequence is not found in the fasta file for the selected protein_id {prot_id}.")
         return None
-    else:
-        if prot_id:
-            print(f"The AA sequence for the 'Protein coverage diagram' plot is taken from the fasta file for the protein_id {prot_id}.")
 
     fig.add_trace(
         go.Bar(
@@ -120,7 +117,7 @@ def plot_sequence_coverage(
     aa_coverage = round(np.sum(selected_peptide_cov) / len(selected_peptide_cov) * 100, 2)
     fig.update_layout(
         title=dict(
-            text=f"Protein coverage diagram ({gene_name})" + '\n' + f"(AA coverage {aa_coverage}%)",
+            text=f"Protein coverage diagram (protein ID {prot_id})" + '\n' + f"(AA coverage {aa_coverage}%)",
             font=dict(
                 size=16,
             ),

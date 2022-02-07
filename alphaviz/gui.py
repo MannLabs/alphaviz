@@ -986,10 +986,12 @@ class MainTab(object):
             if self.analysis_software == 'maxquant':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
                 self.peptides_table.value = self.data.mq_evidence[self.data.mq_evidence['Gene names'] == self.gene_name]
-                curr_protein_ids = [val for val in self.peptides_table.value['Leading razor protein'].sort_values(ascending=False).values if not val.startswith('CON__')][0]
+                if self.peptides_table.value.empty:
+                    self.peptides_table.value = self.data.mq_evidence[self.data.mq_evidence['Gene names'].str.contains(self.gene_name)]
+                self.curr_protein_ids = [val.replace('CON__', '') if "|" not in val else val.split('|')[1].replace('CON__', '') for val in self.peptides_table.value['Leading razor protein'].sort_values(ascending=False).values][0]
             elif self.analysis_software == 'diann':
                 self.gene_name = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Gene names']
-                curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
+                self.curr_protein_ids = self.proteins_table.value.iloc[self.proteins_table.selection[0]]['Protein IDs']
                 self.peptides_table.value = alphaviz.preprocessing.filter_df(
                     self.data.diann_peptides,
                     pattern=self.gene_name,
@@ -1013,7 +1015,7 @@ class MainTab(object):
                 None, #Summed MS2 spectrum
             ]
             self.protein_seq = alphaviz.preprocessing.get_aa_seq(
-                curr_protein_ids,
+                self.curr_protein_ids,
                 self.data.fasta,
             )
             self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
@@ -1023,11 +1025,13 @@ class MainTab(object):
                 self.colorscale_qualitative.value,
                 self.colorscale_sequential.value,
                 r"\[(.*?)\]|\((.*?)\)\)?",
-                curr_protein_ids
+                self.curr_protein_ids
             )
-            if not self.protein_coverage_plot:
+            if not self.protein_coverage_plot and self.analysis_software == 'maxquant':
                 curr_protein_ids = sorted(self.peptides_table.value['Proteins'].values[0].split(';'), reverse=True)
                 for prot_id in curr_protein_ids:
+                    if '|' in prot_id:
+                        prot_id = prot_id.split('|')[1]
                     self.protein_seq = alphaviz.preprocessing.get_aa_seq(
                         prot_id,
                         self.data.fasta,
@@ -1042,6 +1046,7 @@ class MainTab(object):
                         prot_id
                     )
                     if self.protein_coverage_plot:
+                        self.curr_protein_ids = prot_id
                         break
 
             self.layout[6] = pn.Pane(
@@ -1084,7 +1089,8 @@ class MainTab(object):
                     [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified.Sequence']] if self.analysis_software == 'diann' else [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified sequence']],
                     self.colorscale_qualitative.value,
                     self.colorscale_sequential.value,
-                    r"\[(.*?)\]|\((.*?)\)\)?"
+                    r"\[(.*?)\]|\((.*?)\)\)?",
+                    self.curr_protein_ids
                 )
                 self.layout[6] = pn.Pane(
                     self.protein_coverage_plot,
