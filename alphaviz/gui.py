@@ -364,28 +364,34 @@ class DataImportWidget(BaseWidget):
         return self.layout
 
     def update_file_names(self, *args):
-        self.ms_file_name.options = alphaviz.preprocessing.sort_naturally(
-            alphaviz.io.get_filenames_from_directory(
-                self.path_raw_folder.value,
-                ['d', 'hdf']
+        try:
+            self.ms_file_name.options = alphaviz.preprocessing.sort_naturally(
+                alphaviz.io.get_filenames_from_directory(
+                    self.path_raw_folder.value,
+                    ['d', 'hdf']
+                )
             )
-        )
+        except OSError:
+            self.import_error.object = f"#### The selected directory is not found."
 
     def update_output_folder_and_fasta(self, *args):
-        data_folder = os.path.join(
-            self.path_raw_folder.value,
-            self.ms_file_name.value
-        )
-        for dirpath, dirnames, filenames in os.walk(data_folder):
-            for filename in filenames:
-                if filename.endswith(".fasta"):
-                    self.path_fasta_file.value = os.path.join(dirpath, filename)
-                elif filename == 'evidence.txt':
-                    self.path_output_folder.value = dirpath
-        if not self.path_fasta_file.value:
-            for filename in os.listdir(self.path_raw_folder.value):
-                if filename.endswith(".fasta"):
-                    self.path_fasta_file.value = os.path.join(self.path_raw_folder.value, filename)
+        try:
+            data_folder = os.path.join(
+                self.path_raw_folder.value,
+                self.ms_file_name.value
+            )
+            for dirpath, dirnames, filenames in os.walk(data_folder):
+                for filename in filenames:
+                    if filename.endswith(".fasta"):
+                        self.path_fasta_file.value = os.path.join(dirpath, filename)
+                    elif filename == 'evidence.txt':
+                        self.path_output_folder.value = dirpath
+            if not self.path_fasta_file.value:
+                for filename in os.listdir(self.path_raw_folder.value):
+                    if filename.endswith(".fasta"):
+                        self.path_fasta_file.value = os.path.join(self.path_raw_folder.value, filename)
+        except:
+            self.import_error.object = "#### The selected folder does not contain any .d or .hdf files."
 
     def load_data(self, *args):
         alphatims.utils.set_progress_callback(self.upload_progress)
