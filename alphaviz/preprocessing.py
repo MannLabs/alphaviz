@@ -198,11 +198,11 @@ def get_mq_ms2_scan_data(
     data['wrong_dev_value'] = False
 
     for row in msms_filtered_df.itertuples(): # inefficient implementation. Sorting both arrays by mz should allow you to do it much faster.
-        slice_data = data.loc[(data.mz_values > row.mz - row.mass_dev_Da) & (data.mz_values < row.mz + row.mass_dev_Da), 'ions']
-        if len(slice_data) == 0:
+        ion_index = data.mz_values.sub(row.mz).abs().idxmin()
+        if not ion_index:
             data.loc[np.isclose(data.mz_values, row.mz, atol=1e-03), ['ions', 'wrong_dev_value']] = row.ions, True
         else:
-            data.loc[(data.mz_values > row.mz - row.mass_dev_Da) & (data.mz_values < row.mz + row.mass_dev_Da), 'ions'] = row.ions
+             data.loc[ion_index, 'ions'] = row.ions
 
     data.drop_duplicates('mz_values', inplace=True)
     data.sort_values(['ions', 'intensity_values'], ascending=True, inplace=True)

@@ -61,7 +61,7 @@ def plot_sequence_coverage(
         return None
     else:
         if prot_id:
-            print(f"The AA sequence is taken from the fasta file for the protein_id {prot_id}.")
+            print(f"The AA sequence for the 'Protein coverage diagram' plot is taken from the fasta file for the protein_id {prot_id}.")
 
     fig.add_trace(
         go.Bar(
