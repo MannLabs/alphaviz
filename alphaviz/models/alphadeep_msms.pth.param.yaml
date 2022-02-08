@@ -1,0 +1,4 @@
+dropout: 0.1
+mask_modloss: false
+num_frag_types: 8
+num_modloss_types: 4
