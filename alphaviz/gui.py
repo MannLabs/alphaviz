@@ -255,6 +255,7 @@ class DataImportWidget(BaseWidget):
         self.diann_proteins = None
         self.diann_peptides = None
         self.diann_statist = None
+        self.predlib = None
         self.fasta = None
         self.layout = None
         self.settings = {
@@ -294,7 +295,6 @@ class DataImportWidget(BaseWidget):
         self.is_prediction = pn.widgets.Checkbox(
             name='Activate the prediction',
             margin=(5, 0, 5, 15),
-            disabled=True,
         )
         # UPLOAD DATA
         self.upload_button = pn.widgets.Button(
@@ -462,6 +462,57 @@ class DataImportWidget(BaseWidget):
                     self.import_error.object += "\n#### The DIA-NN output files necessary for the visualization are not found."
         else:
             self.import_error.object += "\n#### The output files of the supported software tools have not been provided."
+
+        if self.is_prediction.value:
+            from alphadeep.reader.psm_reader import psm_reader_provider
+            import alphadeep.reader.maxquant_reader
+
+            mq_reader = psm_reader_provider.get_reader('maxquant')
+            mq_reader.load(
+                os.path.join(self.path_output_folder.value, 'evidence.txt')
+            )
+
+            psm_df = mq_reader.psm_df.groupby(
+                ['sequence','mods','mod_sites','nAA','charge']
+            )['CCS'].median().reset_index()
+
+            from alphadeep.model.msms import pDeepModel
+            pdeep = pDeepModel()
+            pdeep.load(
+                os.path.join(
+                    alphaviz.utils.MODELS_PATH,
+                    'alphadeep_msms.pth'
+                )
+            )
+            pdeep.get_parameter_num()
+            from alphadeep.model.RT import AlphaRTModel
+            alphart = AlphaRTModel(dropout=0.2)
+            alphart.load(
+                os.path.join(
+                    alphaviz.utils.MODELS_PATH,
+                    'alphadeep_rt.pth'
+                )
+            )
+            alphart.get_parameter_num()
+            from alphadeep.model.CCS import AlphaCCSModel
+            alphaccs = AlphaCCSModel()
+            alphaccs.load(
+                os.path.join(
+                    alphaviz.utils.MODELS_PATH,
+                    'alphadeep_ccs.pth'
+                )
+            )
+            alphaccs.get_parameter_num()
+
+            from alphadeep.speclib.predict_lib import PredictLib
+            self.predlib = PredictLib(
+                pdeep.charged_frag_types, msms_model=pdeep,
+                rt_model=alphart, ccs_model=alphaccs
+            )
+            self.predlib.precursor_df = mq_reader.psm_df
+            self.predlib.precursor_df['instrument'] = 'timsTOF'
+            self.predlib.precursor_df['NCE'] = 30 # always set as 30 for timsTOF
+            self.predlib.load_fragment_inten_df()
 
         self.trigger_dependancy()
         self.upload_progress.active = False
@@ -1345,10 +1396,22 @@ class MainTab(object):
                     self.data.raw_data,
                     self.ms1_ms2_frames[self.current_frame][1]
                 )
+                predicted_df = pd.DataFrame(columns=['FragmentMz', 'RelativeIntensity','ions'])
+                if self.data.predlib:
+                    frag_start_idx, frag_end_idx = self.data.predlib.precursor_df.loc[self.data.predlib.precursor_df.scan_no == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number'], ['frag_start_idx', 'frag_end_idx']].values[0]
+                    mz_ions = self.data.predlib.fragment_mass_df.iloc[frag_start_idx:frag_end_idx]
+                    intensities_ions = self.data.predlib.fragment_inten_df.iloc[frag_start_idx:frag_end_idx]
+                    intensities_ions /= -100
+
+                    predicted_df['FragmentMz'] = mz_ions.b_1.values.tolist() + mz_ions.y_1.values.tolist()[::-1]
+                    predicted_df['RelativeIntensity'] = intensities_ions.b_1.values.tolist() + intensities_ions.y_1.values.tolist()[::-1]
+                    predicted_df['ions'] = [f"b{i}" for i in range(1, len(mz_ions.b_1)+1)] + [f"y{i}" for i in range(1, len(mz_ions.y_1)+1)]
+
                 self.ms_spectra_plot = alphaviz.plotting.plot_mass_spectra(
                     data_ions,
                     title=f'MS2 spectrum for Precursor: {self.ms1_ms2_frames[self.current_frame][1]}',
-                    sequence=self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Sequence']
+                    sequence=self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Sequence'],
+                    predicted=(predicted_df.FragmentMz, predicted_df.RelativeIntensity, predicted_df.ions) if not predicted_df.empty else ()
                 )
                 self.layout[9][0] = self.previous_frame
                 self.layout[9][1] = self.next_frame
