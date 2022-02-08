@@ -483,6 +483,7 @@ def plot_mass_spectra(
     data: pd.DataFrame,
     title: str,
     sequence: str,
+    predicted: tuple = (),
     spectrum_color: str = 'grey',
     template: str = "plotly_white",
     b_ion_color: str = 'red',
@@ -502,6 +503,9 @@ def plot_mass_spectra(
         The title of the plot.
     sequence: str
         The peptide sequence.
+    predicted : tuple
+        The tuple containing values of the predicted FragmentMz, RelativeIntensity and ions in the form of:
+        (predicted_df.FragmentMz, predicted_df.RelativeIntensity, predicted_df.ions). Default: empty tuple.
     spectrum_color : str
         The color of the mass spectrum. Default is 'grey'.
     b_ion_color : str
@@ -524,6 +528,11 @@ def plot_mass_spectra(
 
     """
     fig = go.Figure()
+
+    if predicted:
+        import sklearn.preprocessing
+        scaled_int = sklearn.preprocessing.MinMaxScaler((0, 100)).fit_transform(data.intensity_values.values.reshape(-1, 1))
+        data['intensity_values']= scaled_int.reshape(1, -1)[0]
 
     fig.add_trace(
         go.Scatter(
@@ -566,30 +575,76 @@ def plot_mass_spectra(
         )
     )
 
+    if predicted:
+        fig.add_trace(
+            go.Scatter(
+                x=predicted[0],
+                y=predicted[1],
+                mode='markers',
+                marker=dict(color='lightblue', size=1),
+                hovertext=predicted[2],
+                hovertemplate='<b>m/z:</b> %{x};<br><b>Intensity:</b> %{y};<br><b>Ion:</b> %{hovertext}.',
+                name='',
+                showlegend=False
+            )
+        )
+        combined_mz = list(data.mz_values.values) + list(predicted[0])
+        combined_int = list(data.intensity_values.values) + list(predicted[1])
+        combined_ions = list(data.ions.values) + list(predicted[2])
+        fig.update_layout(
+            shapes=[
+                dict(
+                    type='line',
+                    xref='x',
+                    yref='y',
+                    x0=combined_mz[i],
+                    y0=0,
+                    x1=combined_mz[i],
+                    y1=combined_int[i],
+                    line=dict(
+                        color = 'lightblue' if i > data.mz_values.shape[0] - 1 else \
+                        (neutral_losses_color if ('HPO3' in combined_ions[i]) or ('H3PO4' in combined_ions[i]) else \
+                        (b_ion_color if 'b' in combined_ions[i] else \
+                        (y_ion_color if 'y' in combined_ions[i] else spectrum_color))),
+                        width=spectrum_line_width
+                    )
+                ) for i in range(len(combined_mz))
+            ],
+            yaxis=dict(
+                title='Relative intensity, %',
+                ticktext=["100", "50", "0", "50", "100"],
+                tickvals=[-100, -50, 0, 50, 100],
+            ),
+        )
+
+    else:
     # Use the 'shapes' attribute from the layout to draw the vertical lines
+        fig.update_layout(
+            shapes=[
+                dict(
+                    type='line',
+                    xref='x',
+                    yref='y',
+                    x0=data.loc[i, 'mz_values'],
+                    y0=0,
+                    x1=data.loc[i, 'mz_values'],
+                    y1=data.loc[i, 'intensity_values'],
+                    line=dict(
+                        color = b_ion_color if 'b' in data.loc[i, 'ions'] else (y_ion_color if 'y' in data.loc[i, 'ions'] else spectrum_color),
+                        width=spectrum_line_width
+                    )
+                ) for i in data.index
+            ],
+            yaxis=dict(
+                title='Intensity',
+            ),
+        )
+
     fig.update_layout(
         template=template,
-        shapes=[
-            dict(
-                type='line',
-                xref='x',
-                yref='y',
-                x0=data.loc[i, 'mz_values'],
-                y0=0,
-                x1=data.loc[i, 'mz_values'],
-                y1=data.loc[i, 'intensity_values'],
-                line=dict(
-                    color = b_ion_color if 'b' in data.loc[i, 'ions'] else (y_ion_color if 'y' in data.loc[i, 'ions'] else spectrum_color),
-                    width=spectrum_line_width
-                )
-            ) for i in data.index
-        ],
         xaxis=dict(
             visible=True,
             title='m/z, Th',
-        ),
-        yaxis=dict(
-            title='Intensity',
         ),
         legend=dict(
             orientation="h",
