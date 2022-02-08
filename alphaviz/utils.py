@@ -6,6 +6,7 @@ IMG_PATH = os.path.join(BASE_PATH, "img")
 STYLE_PATH = os.path.join(BASE_PATH, "style")
 DOCS_PATH = os.path.join(BASE_PATH, "docs")
 DATA_PATH = os.path.join(BASE_PATH, "data")
+MODELS_PATH = os.path.join(BASE_PATH, "models")
 LATEST_GITHUB_INIT_FILE = "https://github.com/MannLabs/alphaviz/blob/main/alphaviz/__init__.py"
 
 def check_analysis_file(file):

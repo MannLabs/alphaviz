@@ -463,7 +463,7 @@ class DataImportWidget(BaseWidget):
         else:
             self.import_error.object += "\n#### The output files of the supported software tools have not been provided."
 
-        if self.is_prediction.value:
+        if self.is_prediction.value and self.settings['analysis_software'] == 'maxquant':
             from alphadeep.reader.psm_reader import psm_reader_provider
             import alphadeep.reader.maxquant_reader
 
@@ -849,6 +849,11 @@ class MainTab(object):
             button_type='default',
             sizing_mode='stretch_width',
         )
+        self.show_mirrored_plot = pn.widgets.Checkbox(
+            name='Show mirrored spectra',
+            value=True,
+            margin=(20, 0, -10, 10),
+        )
         self.layout = None
 
     def create_layout(self):
@@ -877,6 +882,7 @@ class MainTab(object):
                 self.x_axis_label_diann: [self.display_elution_profile_plots, 'value'],
                 self.colorscale_qualitative: [self.run_after_peptide_selection, 'value'],
                 self.colorscale_sequential: [self.run_after_peptide_selection, 'value'],
+                self.show_mirrored_plot: [self.display_mass_spectrum, 'value'],
             }
             for k in dependances.keys():
                 k.param.watch(
@@ -945,6 +951,7 @@ class MainTab(object):
                     align='center'
                 ),
                 None, #Overlap frames button
+                None, #Show mirrored spectra checkbox
                 None, #Summed MS2 spectrum
                 margin=(20, 10, 5, 10),
                 sizing_mode='stretch_width',
@@ -1069,6 +1076,7 @@ class MainTab(object):
                     align='center'
                 ),
                 None, #Overlap frames button
+                None, #Show mirrored spectra checkbox
                 None, #Summed MS2 spectrum
             ]
             self.protein_seq = alphaviz.preprocessing.get_aa_seq(
@@ -1132,6 +1140,7 @@ class MainTab(object):
                     align='center'
                 ),
                 None, #Overlap frames button
+                None, #Show mirrored spectra checkbox
                 None, #Summed MS2 spectrum
             ]
             self.peptides_table.loading = False
@@ -1211,6 +1220,7 @@ class MainTab(object):
                         align='center'
                     ),
                     None, #Overlap frames button
+                    None, #Show mirrored spectra checkbox
                     None, #Summed MS2 spectrum
                 ]
             self.peptides_table.loading = False
@@ -1390,40 +1400,45 @@ class MainTab(object):
                 if self.x_axis_label_diann.value == 'RT/IM dimension':
                     self.display_elution_profile_plots()
             if self.analysis_software == 'maxquant':
-                data_ions = alphaviz.preprocessing.get_mq_ms2_scan_data(
-                    self.data.mq_msms,
-                    self.scan_number[0],
-                    self.data.raw_data,
-                    self.ms1_ms2_frames[self.current_frame][1]
-                )
-                predicted_df = pd.DataFrame(columns=['FragmentMz', 'RelativeIntensity','ions'])
-                if self.data.predlib:
-                    frag_start_idx, frag_end_idx = self.data.predlib.precursor_df.loc[self.data.predlib.precursor_df.scan_no == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number'], ['frag_start_idx', 'frag_end_idx']].values[0]
-                    mz_ions = self.data.predlib.fragment_mass_df.iloc[frag_start_idx:frag_end_idx]
-                    intensities_ions = self.data.predlib.fragment_inten_df.iloc[frag_start_idx:frag_end_idx]
-                    intensities_ions /= -100
-
-                    predicted_df['FragmentMz'] = mz_ions.b_1.values.tolist() + mz_ions.y_1.values.tolist()[::-1]
-                    predicted_df['RelativeIntensity'] = intensities_ions.b_1.values.tolist() + intensities_ions.y_1.values.tolist()[::-1]
-                    predicted_df['ions'] = [f"b{i}" for i in range(1, len(mz_ions.b_1)+1)] + [f"y{i}" for i in range(1, len(mz_ions.y_1)+1)]
-
-                self.ms_spectra_plot = alphaviz.plotting.plot_mass_spectra(
-                    data_ions,
-                    title=f'MS2 spectrum for Precursor: {self.ms1_ms2_frames[self.current_frame][1]}',
-                    sequence=self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Sequence'],
-                    predicted=(predicted_df.FragmentMz, predicted_df.RelativeIntensity, predicted_df.ions) if not predicted_df.empty else ()
-                )
                 self.layout[9][0] = self.previous_frame
                 self.layout[9][1] = self.next_frame
                 self.layout[11] = self.plot_overlapped_frames
-                self.layout[12] = pn.Pane(
-                    self.ms_spectra_plot,
-                    config=update_config('Combined MS2 spectrum'),
-                    margin=(10, 0, 0, 0),
-                    sizing_mode='stretch_width',
-                    loading=False,
-                    height=600
-                )
+                self.display_mass_spectrum()
+
+    def display_mass_spectrum(self, *args):
+        data_ions = alphaviz.preprocessing.get_mq_ms2_scan_data(
+            self.data.mq_msms,
+            self.scan_number[0],
+            self.data.raw_data,
+            self.ms1_ms2_frames[self.current_frame][1]
+        )
+        predicted_df = pd.DataFrame(columns=['FragmentMz', 'RelativeIntensity','ions'])
+        if self.data.predlib and self.show_mirrored_plot.value:
+            frag_start_idx, frag_end_idx = self.data.predlib.precursor_df.loc[self.data.predlib.precursor_df.scan_no == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number'], ['frag_start_idx', 'frag_end_idx']].values[0]
+            mz_ions = self.data.predlib.fragment_mass_df.iloc[frag_start_idx:frag_end_idx]
+            intensities_ions = self.data.predlib.fragment_inten_df.iloc[frag_start_idx:frag_end_idx]
+            intensities_ions /= -100
+
+            predicted_df['FragmentMz'] = mz_ions.b_1.values.tolist() + mz_ions.y_1.values.tolist()[::-1]
+            predicted_df['RelativeIntensity'] = intensities_ions.b_1.values.tolist() + intensities_ions.y_1.values.tolist()[::-1]
+            predicted_df['ions'] = [f"b{i}" for i in range(1, len(mz_ions.b_1)+1)] + [f"y{i}" for i in range(1, len(mz_ions.y_1)+1)]
+
+        self.ms_spectra_plot = alphaviz.plotting.plot_mass_spectra(
+            data_ions,
+            title=f'MS2 spectrum for Precursor: {self.ms1_ms2_frames[self.current_frame][1]}',
+            sequence=self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Sequence'],
+            predicted=(predicted_df.FragmentMz, predicted_df.RelativeIntensity, predicted_df.ions) if not predicted_df.empty else ()
+        )
+        self.layout[12] = self.show_mirrored_plot
+        self.layout[13] = pn.Pane(
+            self.ms_spectra_plot,
+            config=update_config('Combined MS2 spectrum'),
+            margin=(10, 0, 0, 0),
+            sizing_mode='stretch_width',
+            loading=False,
+            height=600 if predicted_df.empty else 700
+        )
+
 
     def display_previous_frame(self, *args):
         try:
@@ -1842,7 +1857,7 @@ class TargetModeTab(object):
                                     mz_tol=self.mz_tol.value,
                                     rt_tol=self.rt_tol.value,
                                     im_tol=self.im_tol.value,
-                                    title=f"Precursor fragment elution profiles of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60: .2f} min)",
+                                    title=f"Precursor fragment elution profiles of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60:.2f} min)",
                                     colorscale_qualitative=self.colorscale_qualitative.value,
                                     colorscale_sequential=self.colorscale_sequential.value,
                                     height=500,
