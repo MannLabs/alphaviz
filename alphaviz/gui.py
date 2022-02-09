@@ -464,8 +464,13 @@ class DataImportWidget(BaseWidget):
             self.import_error.object += "\n#### The output files of the supported software tools have not been provided."
 
         if self.is_prediction.value and self.settings['analysis_software'] == 'maxquant':
-            from alphadeep.reader.psm_reader import psm_reader_provider
-            import alphadeep.reader.maxquant_reader
+            import peptdeep
+            from peptdeep.pretrained_models import ModelManager
+
+            model_mgr = ModelManager()
+            model_mgr.load_installed_models()
+
+            from alphabase.io.psm_reader import psm_reader_provider
 
             mq_reader = psm_reader_provider.get_reader('maxquant')
             mq_reader.load(
@@ -473,46 +478,17 @@ class DataImportWidget(BaseWidget):
             )
 
             psm_df = mq_reader.psm_df.groupby(
-                ['sequence','mods','mod_sites','nAA','charge']
-            )['CCS'].median().reset_index()
+                ['sequence','mods','mod_sites','nAA','charge','spec_idx']
+            )['ccs'].median().reset_index()
 
-            from alphadeep.model.msms import pDeepModel
-            pdeep = pDeepModel()
-            pdeep.load(
-                os.path.join(
-                    alphaviz.utils.MODELS_PATH,
-                    'alphadeep_msms.pth'
-                )
-            )
-            pdeep.get_parameter_num()
-            from alphadeep.model.RT import AlphaRTModel
-            alphart = AlphaRTModel(dropout=0.2)
-            alphart.load(
-                os.path.join(
-                    alphaviz.utils.MODELS_PATH,
-                    'alphadeep_rt.pth'
-                )
-            )
-            alphart.get_parameter_num()
-            from alphadeep.model.CCS import AlphaCCSModel
-            alphaccs = AlphaCCSModel()
-            alphaccs.load(
-                os.path.join(
-                    alphaviz.utils.MODELS_PATH,
-                    'alphadeep_ccs.pth'
-                )
-            )
-            alphaccs.get_parameter_num()
+            psm_df['nce'] = 0.3
+            psm_df['instrument'] = 'Lumos' #trained on more Lumos files therefore should work better than 'timsTOF'
 
-            from alphadeep.speclib.predict_lib import PredictLib
-            self.predlib = PredictLib(
-                pdeep.charged_frag_types, msms_model=pdeep,
-                rt_model=alphart, ccs_model=alphaccs
+            self.predlib = model_mgr.predict_all(
+                psm_df,
+                predict_items=['ms2'],
+                frag_types=['b_z1', 'y_z1']
             )
-            self.predlib.precursor_df = mq_reader.psm_df
-            self.predlib.precursor_df['instrument'] = 'timsTOF'
-            self.predlib.precursor_df['NCE'] = 30 # always set as 30 for timsTOF
-            self.predlib.load_fragment_inten_df()
 
         self.trigger_dependancy()
         self.upload_progress.active = False
@@ -1414,14 +1390,14 @@ class MainTab(object):
         )
         predicted_df = pd.DataFrame(columns=['FragmentMz', 'RelativeIntensity','ions'])
         if self.data.predlib and self.show_mirrored_plot.value:
-            frag_start_idx, frag_end_idx = self.data.predlib.precursor_df.loc[self.data.predlib.precursor_df.scan_no == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number'], ['frag_start_idx', 'frag_end_idx']].values[0]
-            mz_ions = self.data.predlib.fragment_mass_df.iloc[frag_start_idx:frag_end_idx]
-            intensities_ions = self.data.predlib.fragment_inten_df.iloc[frag_start_idx:frag_end_idx]
-            intensities_ions /= -100
+            frag_start_idx, frag_end_idx = self.data.predlib['precursor_df'].loc[self.data.predlib['precursor_df'].spec_idx == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number'], ['frag_start_idx', 'frag_end_idx']].values[0]
+            mz_ions = self.data.predlib['fragment_mz_df'].iloc[frag_start_idx:frag_end_idx]
+            intensities_ions = self.data.predlib['fragment_intensity_df'].iloc[frag_start_idx:frag_end_idx]
+            intensities_ions *= -100
 
-            predicted_df['FragmentMz'] = mz_ions.b_1.values.tolist() + mz_ions.y_1.values.tolist()[::-1]
-            predicted_df['RelativeIntensity'] = intensities_ions.b_1.values.tolist() + intensities_ions.y_1.values.tolist()[::-1]
-            predicted_df['ions'] = [f"b{i}" for i in range(1, len(mz_ions.b_1)+1)] + [f"y{i}" for i in range(1, len(mz_ions.y_1)+1)]
+            predicted_df['FragmentMz'] = mz_ions.b_z1.values.tolist() + mz_ions.y_z1.values.tolist()[::-1]
+            predicted_df['RelativeIntensity'] = intensities_ions.b_z1.values.tolist() + intensities_ions.y_z1.values.tolist()[::-1]
+            predicted_df['ions'] = [f"b{i}" for i in range(1, len(mz_ions.b_z1)+1)] + [f"y{i}" for i in range(1, len(mz_ions.y_z1)+1)]
 
         self.ms_spectra_plot = alphaviz.plotting.plot_mass_spectra(
             data_ions,
