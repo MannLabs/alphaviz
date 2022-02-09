@@ -1665,7 +1665,8 @@ class TargetModeTab(object):
         self.heatmap_precursor_color = options.layout[1][0][5]
         self.colorscale_qualitative = options.layout[2][0][0]
         self.colorscale_sequential = options.layout[2][0][1]
-        self.layout_target_mode = None
+        self.layout_target_mode_manual = None
+        self.layout_target_mode_predicted = None
         self.analysis_software = self.data.settings.get('analysis_software')
         self.targeted_peptides_table = pn.widgets.Tabulator(
             value=pd.DataFrame(
@@ -1711,6 +1712,39 @@ class TargetModeTab(object):
             width=60,
             margin=(25, 12, 10, 18)
         )
+        self.targeted_peptides_table_prediction = pn.widgets.Tabulator(
+            value=pd.DataFrame(
+                columns=['sequence', 'mods', 'mod_sites', 'charge']
+            ),
+            widths={'index': 70},
+            layout='fit_columns',
+            selectable=1,
+            height=250,
+            show_index=True,
+            width=570,
+            margin=(25, 12, 10, 18)
+        )
+        self.peptides_count_prediction = pn.widgets.IntInput(
+            name='Add N empty row(s)',
+            value=0,
+            step=1,
+            start=0,
+            end=1000
+        )
+        self.peptides_table_text_prediction = pn.pane.Markdown(
+            'Load a table of targeted peptides:',
+            margin=(5, 0, 0, 10),
+        )
+        self.peptides_table_file_prediction = pn.widgets.FileInput(
+            accept='.tsv,.csv,.txt',
+            margin=(-10,0,0,10)
+        )
+        self.clear_peptides_table_button_prediction = pn.widgets.Button(
+            name='Clear table',
+            button_type='default',
+            width=60,
+            margin=(25, 12, 10, 18)
+        )
 
     def create_layout(self):
         experiment = self.data.ms_file_name.value.split('.')[0]
@@ -1737,7 +1771,7 @@ class TargetModeTab(object):
             )
 
         if 'dia' in self.data.raw_data.acquisition_mode:
-            self.layout_target_mode = pn.Column(
+            self.layout_target_mode_manual = pn.Card(
                 pn.Row(
                     pn.Column(
                         self.peptides_count,
@@ -1752,9 +1786,33 @@ class TargetModeTab(object):
                 margin=(15, 10, 5, 10),
                 sizing_mode='stretch_width',
                 align='start',
+                title='Manual input',
+            )
+            self.layout_target_mode_predicted = pn.Card(
+                pn.Row(
+                    pn.Column(
+                        self.peptides_count_prediction,
+                        self.peptides_table_text_prediction,
+                        self.peptides_table_file_prediction,
+                    ),
+                    self.targeted_peptides_table_prediction,
+                    self.clear_peptides_table_button_prediction,
+                ),
+                None,
+                None,
+                margin=(15, 10, 5, 10),
+                sizing_mode='stretch_width',
+                align='start',
+                title='Prediction',
+                collapsed=True,
+            )
+            return pn.Column(
+                self.layout_target_mode_manual,
+                self.layout_target_mode_predicted,
+                sizing_mode='stretch_width',
             )
         else:
-            self.layout_target_mode = pn.Column(
+            self.layout_target_mode_manual = pn.Column(
                 pn.pane.Markdown(
                     'To use this functionality please load DIA data.',
                     margin=(5, 0, 0, 10),
@@ -1762,7 +1820,7 @@ class TargetModeTab(object):
                 None,
                 None,
             )
-        return self.layout_target_mode
+            return self.layout_target_mode_manual
 
     def clear_peptide_table(self, *args):
         if not self.targeted_peptides_table.value.empty:
@@ -1825,7 +1883,7 @@ class TargetModeTab(object):
                     else:
                         peptide['rt'] *= 60 # to convert to seconds
                         try:
-                            self.layout_target_mode[1] = pn.Pane(
+                            self.layout_target_mode_manual[1] = pn.Pane(
                                 alphaviz.plotting.plot_elution_profile(
                                     self.data.raw_data,
                                     peptide,
@@ -1843,9 +1901,9 @@ class TargetModeTab(object):
                                 loading=False,
                             )
                         except:
-                            self.layout_target_mode[1] = None
+                            self.layout_target_mode_manual[1] = None
                         try:
-                            self.layout_target_mode[2] = pn.pane.HoloViews(
+                            self.layout_target_mode_manual[2] = pn.pane.HoloViews(
                                 alphaviz.plotting.plot_elution_profile_heatmap(
                                     self.data.raw_data,
                                     peptide,
@@ -1863,15 +1921,16 @@ class TargetModeTab(object):
                                 linked_axes=True,
                                 loading=False,
                                 align='center',
+                                margin=(0, 10, 10, 10)
                             )
                         except AttibuteError:
-                            self.layout_target_mode[2] = None
+                            self.layout_target_mode_manual[2] = None
                     finally:
                         self.targeted_peptides_table.loading = False
                 else:
-                    self.layout_target_mode[1], self.layout_target_mode[2] = None, None
+                    self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
             else:
-                self.layout_target_mode[1], self.layout_target_mode[2] = None, None
+                self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
 
 
 class GUI(object):
