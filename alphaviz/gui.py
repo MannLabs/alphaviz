@@ -256,6 +256,7 @@ class DataImportWidget(BaseWidget):
         self.diann_peptides = None
         self.diann_statist = None
         self.predlib = None
+        self.model_mgr = None
         self.fasta = None
         self.layout = None
         self.settings = {
@@ -463,32 +464,33 @@ class DataImportWidget(BaseWidget):
         else:
             self.import_error.object += "\n#### The output files of the supported software tools have not been provided."
 
-        if self.is_prediction.value and self.settings['analysis_software'] == 'maxquant':
+        if self.is_prediction.value:
             import peptdeep
             from peptdeep.pretrained_models import ModelManager
 
-            model_mgr = ModelManager()
-            model_mgr.load_installed_models()
+            self.model_mgr = ModelManager()
+            self.model_mgr.load_installed_models()
 
-            from alphabase.io.psm_reader import psm_reader_provider
+            if self.settings['analysis_software'] == 'maxquant':
+                from alphabase.io.psm_reader import psm_reader_provider
 
-            mq_reader = psm_reader_provider.get_reader('maxquant')
-            mq_reader.load(
-                os.path.join(self.path_output_folder.value, 'evidence.txt')
-            )
+                mq_reader = psm_reader_provider.get_reader('maxquant')
+                mq_reader.load(
+                    os.path.join(self.path_output_folder.value, 'evidence.txt')
+                )
 
-            psm_df = mq_reader.psm_df.groupby(
-                ['sequence','mods','mod_sites','nAA','charge','spec_idx']
-            )['ccs'].median().reset_index()
+                psm_df = mq_reader.psm_df.groupby(
+                    ['sequence','mods','mod_sites','nAA','charge','spec_idx']
+                )['ccs'].median().reset_index()
 
-            psm_df['nce'] = 0.3
-            psm_df['instrument'] = 'Lumos' #trained on more Lumos files therefore should work better than 'timsTOF'
+                psm_df['nce'] = 0.3
+                psm_df['instrument'] = 'Lumos' #trained on more Lumos files therefore should work better than 'timsTOF'
 
-            self.predlib = model_mgr.predict_all(
-                psm_df,
-                predict_items=['ms2'],
-                frag_types=['b_z1', 'y_z1']
-            )
+                self.predlib = model_mgr.predict_all(
+                    psm_df,
+                    predict_items=['ms2'],
+                    frag_types=['b_z1', 'y_z1']
+                )
 
         self.trigger_dependancy()
         self.upload_progress.active = False
@@ -1716,12 +1718,13 @@ class TargetModeTab(object):
             value=pd.DataFrame(
                 columns=['sequence', 'mods', 'mod_sites', 'charge']
             ),
+            hidden_columns=['frag_end_idx','frag_start_idx'],
             widths={'index': 70},
-            layout='fit_columns',
+            sizing_mode='stretch_width',
+            layout='fit_data_table',
             selectable=1,
             height=250,
             show_index=True,
-            width=570,
             margin=(25, 12, 10, 18)
         )
         self.peptides_count_prediction = pn.widgets.IntInput(
@@ -1742,8 +1745,22 @@ class TargetModeTab(object):
         self.clear_peptides_table_button_prediction = pn.widgets.Button(
             name='Clear table',
             button_type='default',
-            width=60,
-            margin=(25, 12, 10, 18)
+            width=300,
+            margin=(25, 0, 0, 10),
+        )
+        self.run_prediction_button = pn.widgets.Button(
+            name='Run prediction',
+            button_type='default',
+            width=250,
+            margin=(25, 0, 0, 10),
+        )
+        self.run_prediction_spinner = pn.indicators.LoadingSpinner(
+            value=False,
+            bgcolor='light',
+            color='secondary',
+            margin=(25,0,0,15),
+            width=30,
+            height=30
         )
 
     def create_layout(self):
@@ -1760,9 +1777,13 @@ class TargetModeTab(object):
             self.rt_tol: [self.visualize_elution_plots, 'value'],
             self.colorscale_qualitative: [self.visualize_elution_plots, 'value'],
             self.colorscale_sequential: [self.visualize_elution_plots, 'value'],
-            self.clear_peptides_table_button: [
-            self.clear_peptide_table, 'clicks'
-            ]
+            self.clear_peptides_table_button: [self.clear_peptide_table, 'clicks'],
+
+            self.clear_peptides_table_button_prediction: [self.clear_peptide_table_prediction, 'clicks'],
+            self.peptides_count_prediction: [self.update_row_count_prediction, 'value'],
+            self.peptides_table_file_prediction: [self.read_peptides_table_prediction, 'value'],
+            self.run_prediction_button: [self.run_prediction, 'clicks'],
+            self.targeted_peptides_table_prediction: [self.visualize_elution_plots_prediction, ['selection', 'value']],
         }
         for k in dependances.keys():
             k.param.watch(
@@ -1786,7 +1807,9 @@ class TargetModeTab(object):
                 margin=(15, 10, 5, 10),
                 sizing_mode='stretch_width',
                 align='start',
-                title='Manual input',
+                title='Manual Input',
+                collapsed=True,
+                header_background='lightblue',
             )
             self.layout_target_mode_predicted = pn.Card(
                 pn.Row(
@@ -1794,9 +1817,14 @@ class TargetModeTab(object):
                         self.peptides_count_prediction,
                         self.peptides_table_text_prediction,
                         self.peptides_table_file_prediction,
+                        pn.Row(
+                            self.run_prediction_button,
+                            self.run_prediction_spinner,
+                        ),
+                        self.clear_peptides_table_button_prediction,
                     ),
                     self.targeted_peptides_table_prediction,
-                    self.clear_peptides_table_button_prediction,
+                    sizing_mode='stretch_width',
                 ),
                 None,
                 None,
@@ -1804,7 +1832,8 @@ class TargetModeTab(object):
                 sizing_mode='stretch_width',
                 align='start',
                 title='Prediction',
-                collapsed=True,
+                header_background='lightblue',
+                # collapsed=True,
             )
             return pn.Column(
                 self.layout_target_mode_manual,
@@ -1824,12 +1853,14 @@ class TargetModeTab(object):
 
     def clear_peptide_table(self, *args):
         if not self.targeted_peptides_table.value.empty:
+            self.targeted_peptides_table.selection = []
             self.targeted_peptides_table.value = pd.DataFrame(
                 columns=['name', 'sequence', 'charge', 'im', 'rt'],
             )
 
     def update_row_count(self, *args):
         if self.targeted_peptides_table.value.empty:
+            self.targeted_peptides_table.selection = []
             self.targeted_peptides_table.value = pd.DataFrame(
                 columns=['name', 'sequence', 'charge', 'im', 'rt'],
                 index=range(self.peptides_count.value),
@@ -1931,6 +1962,142 @@ class TargetModeTab(object):
                     self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
             else:
                 self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
+
+
+    def clear_peptide_table_prediction(self, *args):
+        if not self.targeted_peptides_table_prediction.value.empty:
+            self.targeted_peptides_table_prediction.selection = []
+            self.targeted_peptides_table_prediction.value = pd.DataFrame(
+                columns=['sequence', 'mods', 'mod_sites', 'charge'],
+            )
+
+    def update_row_count_prediction(self, *args):
+        if self.targeted_peptides_table_prediction.value.empty:
+            self.targeted_peptides_table_prediction.selection = []
+            self.targeted_peptides_table_prediction.value = pd.DataFrame(
+                columns=['sequence', 'mods', 'mod_sites', 'charge'],
+                index=range(self.peptides_count_prediction.value),
+            )
+        else:
+            self.targeted_peptides_table_prediction.value = self.targeted_peptides_table_prediction.value.append(
+                pd.DataFrame(
+                    columns=self.targeted_peptides_table_prediction.value.columns,
+                    index=range(self.peptides_count_prediction.value),
+                ),
+                ignore_index=True
+            )
+
+
+    def read_peptides_table_prediction(self, *args):
+        file_ext = os.path.splitext(self.peptides_table_file_prediction.filename)[-1]
+        if file_ext=='.csv':
+            sep=','
+        else:
+            sep='\t'
+        self.targeted_peptides_table_prediction.selection = []
+        self.targeted_peptides_table_prediction.value = pd.read_csv(
+            StringIO(str(self.peptides_table_file_prediction.value, "utf-8")),
+            sep=sep,
+        )
+
+    def run_prediction(self, *args):
+        if self.data.model_mgr:
+            self.run_prediction_spinner.value = True
+            df = self.targeted_peptides_table_prediction.value.loc[:, ['sequence', 'mods', 'mod_sites', 'charge']]
+            df.fillna(0, inplace=True)
+            df.mod_sites = df.mod_sites.astype(int)
+            df.mod_sites.replace(0, "", inplace=True)
+            df.mods.replace(0, "", inplace=True)
+            for col in ['sequence', 'mods', 'mod_sites']:
+                df[col] = df[col].astype('str')
+            df.charge = df.charge.astype('int')
+            df['nce'] = 0.3
+            df['instrument'] = 'timsTOF'
+            self.predicted_dict = self.data.model_mgr.predict_all(
+                df,
+                predict_items=['rt', 'ms2', 'mobility'],
+                frag_types=['b_z1', 'y_z1'],
+            )
+            self.predicted_dict['precursor_df']['rt_pred'] *= self.data.raw_data.rt_max_value / 60
+            self.targeted_peptides_table_prediction.value = self.predicted_dict['precursor_df'].drop(['instrument', 'nce', 'rt_norm_pred'], axis=1)
+            self.run_prediction_spinner.value = False
+
+    def visualize_elution_plots_prediction(self, *args):
+        if 'dia' in self.data.raw_data.acquisition_mode:
+            if self.targeted_peptides_table_prediction.selection and self.predicted_dict:
+                print('test')
+            #     try:
+            #         peptide = self.targeted_peptides_table.value.iloc[self.targeted_peptides_table.selection[0]].to_dict()
+            #     except IndexError:
+            #         peptide = {}
+            #     if peptide and not any(pd.isna(val) for val in peptide.values()):
+            #         self.targeted_peptides_table.loading = True
+            #         try:
+            #             peptide['charge'] = int(peptide['charge'])
+            #             for val in ['im', 'rt']:
+            #                 peptide[val] = float(peptide[val])
+            #             for val in ['name', 'sequence']:
+            #                 peptide[val] = str(peptide[val])
+            #             peptide['mz'] = alphaviz.utils.calculate_mz(
+            #                 prec_mass=alphaviz.utils.get_precmass(
+            #                     alphaviz.utils.parse(peptide['sequence']),
+            #                     self.mass_dict
+            #                 ),
+            #                 charge=peptide['charge']
+            #             )
+            #         except:
+            #             print('The current peptide cannot be loaded.')
+            #         else:
+            #             peptide['rt'] *= 60 # to convert to seconds
+            #             try:
+            #                 self.layout_target_mode_manual[1] = pn.Pane(
+            #                     alphaviz.plotting.plot_elution_profile(
+            #                         self.data.raw_data,
+            #                         peptide,
+            #                         self.mass_dict,
+            #                         mz_tol=self.mz_tol.value,
+            #                         rt_tol=self.rt_tol.value,
+            #                         im_tol=self.im_tol.value,
+            #                         title=f"Precursor fragment elution profiles of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60:.2f} min)",
+            #                         colorscale_qualitative=self.colorscale_qualitative.value,
+            #                         colorscale_sequential=self.colorscale_sequential.value,
+            #                         height=500,
+            #                     ),
+            #                     sizing_mode='stretch_width',
+            #                     config=update_config('Precursor/fragments elution profile plot'),
+            #                     loading=False,
+            #                 )
+            #             except:
+            #                 self.layout_target_mode_manual[1] = None
+            #             try:
+            #                 self.layout_target_mode_manual[2] = pn.pane.HoloViews(
+            #                     alphaviz.plotting.plot_elution_profile_heatmap(
+            #                         self.data.raw_data,
+            #                         peptide,
+            #                         self.mass_dict,
+            #                         mz_tol=self.mz_tol.value,
+            #                         rt_tol=self.rt_tol.value,
+            #                         im_tol=self.im_tol.value,
+            #                         n_cols=8,
+            #                         width=180,
+            #                         height=180,
+            #                         colormap=self.heatmap_colormap.value,
+            #                         background_color=self.heatmap_background_color.value,
+            #                     ),
+            #                     sizing_mode='stretch_width',
+            #                     linked_axes=True,
+            #                     loading=False,
+            #                     align='center',
+            #                     margin=(0, 10, 10, 10)
+            #                 )
+            #             except AttibuteError:
+            #                 self.layout_target_mode_manual[2] = None
+            #         finally:
+            #             self.targeted_peptides_table.loading = False
+            #     else:
+            #         self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
+            # else:
+            #     self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
 
 
 class GUI(object):
