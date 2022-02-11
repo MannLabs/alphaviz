@@ -1675,11 +1675,11 @@ class TargetModeTab(object):
                 columns=['name','sequence', 'charge', 'im', 'rt']
             ),
             widths={'index': 70},
-            layout='fit_columns',
+            sizing_mode='stretch_width',
+            layout='fit_data_table',
             selectable=1,
             height=250,
             show_index=True,
-            width=570,
             margin=(25, 12, 10, 18)
         )
         self.peptides_count = pn.widgets.IntInput(
@@ -1711,8 +1711,8 @@ class TargetModeTab(object):
         self.clear_peptides_table_button = pn.widgets.Button(
             name='Clear table',
             button_type='default',
-            width=60,
-            margin=(25, 12, 10, 18)
+            width=300,
+            margin=(25, 0, 0, 10),
         )
         self.targeted_peptides_table_prediction = pn.widgets.Tabulator(
             value=pd.DataFrame(
@@ -1784,6 +1784,13 @@ class TargetModeTab(object):
             self.peptides_table_file_prediction: [self.read_peptides_table_prediction, 'value'],
             self.run_prediction_button: [self.run_prediction, 'clicks'],
             self.targeted_peptides_table_prediction: [self.visualize_elution_plots_prediction, ['selection', 'value']],
+            self.heatmap_colormap: [self.visualize_elution_plots_prediction, 'value'],
+            self.heatmap_background_color: [self.visualize_elution_plots_prediction, 'value'],
+            self.mz_tol: [self.visualize_elution_plots_prediction, 'value'],
+            self.im_tol: [self.visualize_elution_plots_prediction, 'value'],
+            self.rt_tol: [self.visualize_elution_plots_prediction, 'value'],
+            self.colorscale_qualitative: [self.visualize_elution_plots_prediction, 'value'],
+            self.colorscale_sequential: [self.visualize_elution_plots_prediction, 'value'],
         }
         for k in dependances.keys():
             k.param.watch(
@@ -1798,9 +1805,9 @@ class TargetModeTab(object):
                         self.peptides_count,
                         self.peptides_table_text,
                         self.peptides_table_file,
+                        self.clear_peptides_table_button,
                     ),
                     self.targeted_peptides_table,
-                    self.clear_peptides_table_button,
                 ),
                 None,
                 None,
@@ -1809,7 +1816,7 @@ class TargetModeTab(object):
                 align='start',
                 title='Manual Input',
                 collapsed=True,
-                header_background='lightblue',
+                header_background='#dbf0fe',
             )
             self.layout_target_mode_predicted = pn.Card(
                 pn.Row(
@@ -1832,7 +1839,7 @@ class TargetModeTab(object):
                 sizing_mode='stretch_width',
                 align='start',
                 title='Prediction',
-                header_background='lightblue',
+                header_background='#dbf0fe',
                 # collapsed=True,
             )
             return pn.Column(
@@ -1922,7 +1929,7 @@ class TargetModeTab(object):
                                     mz_tol=self.mz_tol.value,
                                     rt_tol=self.rt_tol.value,
                                     im_tol=self.im_tol.value,
-                                    title=f"Precursor fragment elution profiles of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60:.2f} min)",
+                                    title=f"Precursor and fragment elution profiles of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60:.2f} min)",
                                     colorscale_qualitative=self.colorscale_qualitative.value,
                                     colorscale_sequential=self.colorscale_sequential.value,
                                     height=500,
@@ -2015,8 +2022,7 @@ class TargetModeTab(object):
             df['instrument'] = 'timsTOF'
             self.predicted_dict = self.data.model_mgr.predict_all(
                 df,
-                predict_items=['rt', 'ms2', 'mobility'],
-                frag_types=['b_z1', 'y_z1'],
+                predict_items=['rt', 'mobility'],
             )
             self.predicted_dict['precursor_df']['rt_pred'] *= self.data.raw_data.rt_max_value / 60
             self.targeted_peptides_table_prediction.value = self.predicted_dict['precursor_df'].drop(['instrument', 'nce', 'rt_norm_pred'], axis=1)
@@ -2025,79 +2031,64 @@ class TargetModeTab(object):
     def visualize_elution_plots_prediction(self, *args):
         if 'dia' in self.data.raw_data.acquisition_mode:
             if self.targeted_peptides_table_prediction.selection and self.predicted_dict:
-                print('test')
-            #     try:
-            #         peptide = self.targeted_peptides_table.value.iloc[self.targeted_peptides_table.selection[0]].to_dict()
-            #     except IndexError:
-            #         peptide = {}
-            #     if peptide and not any(pd.isna(val) for val in peptide.values()):
-            #         self.targeted_peptides_table.loading = True
-            #         try:
-            #             peptide['charge'] = int(peptide['charge'])
-            #             for val in ['im', 'rt']:
-            #                 peptide[val] = float(peptide[val])
-            #             for val in ['name', 'sequence']:
-            #                 peptide[val] = str(peptide[val])
-            #             peptide['mz'] = alphaviz.utils.calculate_mz(
-            #                 prec_mass=alphaviz.utils.get_precmass(
-            #                     alphaviz.utils.parse(peptide['sequence']),
-            #                     self.mass_dict
-            #                 ),
-            #                 charge=peptide['charge']
-            #             )
-            #         except:
-            #             print('The current peptide cannot be loaded.')
-            #         else:
-            #             peptide['rt'] *= 60 # to convert to seconds
-            #             try:
-            #                 self.layout_target_mode_manual[1] = pn.Pane(
-            #                     alphaviz.plotting.plot_elution_profile(
-            #                         self.data.raw_data,
-            #                         peptide,
-            #                         self.mass_dict,
-            #                         mz_tol=self.mz_tol.value,
-            #                         rt_tol=self.rt_tol.value,
-            #                         im_tol=self.im_tol.value,
-            #                         title=f"Precursor fragment elution profiles of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60:.2f} min)",
-            #                         colorscale_qualitative=self.colorscale_qualitative.value,
-            #                         colorscale_sequential=self.colorscale_sequential.value,
-            #                         height=500,
-            #                     ),
-            #                     sizing_mode='stretch_width',
-            #                     config=update_config('Precursor/fragments elution profile plot'),
-            #                     loading=False,
-            #                 )
-            #             except:
-            #                 self.layout_target_mode_manual[1] = None
-            #             try:
-            #                 self.layout_target_mode_manual[2] = pn.pane.HoloViews(
-            #                     alphaviz.plotting.plot_elution_profile_heatmap(
-            #                         self.data.raw_data,
-            #                         peptide,
-            #                         self.mass_dict,
-            #                         mz_tol=self.mz_tol.value,
-            #                         rt_tol=self.rt_tol.value,
-            #                         im_tol=self.im_tol.value,
-            #                         n_cols=8,
-            #                         width=180,
-            #                         height=180,
-            #                         colormap=self.heatmap_colormap.value,
-            #                         background_color=self.heatmap_background_color.value,
-            #                     ),
-            #                     sizing_mode='stretch_width',
-            #                     linked_axes=True,
-            #                     loading=False,
-            #                     align='center',
-            #                     margin=(0, 10, 10, 10)
-            #                 )
-            #             except AttibuteError:
-            #                 self.layout_target_mode_manual[2] = None
-            #         finally:
-            #             self.targeted_peptides_table.loading = False
-            #     else:
-            #         self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
-            # else:
-            #     self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
+                try:
+                    peptide = self.targeted_peptides_table_prediction.value.loc[self.targeted_peptides_table_prediction.selection[0],['sequence', 'charge', 'precursor_mz', 'rt_pred', 'mobility_pred']].to_dict()
+                    peptide['mz'] = peptide.pop('precursor_mz')
+                    peptide['rt'] = peptide.pop('rt_pred')
+                    peptide['im'] = peptide.pop('mobility_pred')
+                except IndexError:
+                    peptide = {}
+                if peptide and not any(pd.isna(val) for val in peptide.values()):
+                    self.targeted_peptides_table_prediction.loading = True
+                    peptide['rt'] *= 60 # to convert to seconds
+                    try:
+                        self.layout_target_mode_predicted[1] = pn.Pane(
+                            alphaviz.plotting.plot_elution_profile(
+                                self.data.raw_data,
+                                peptide,
+                                self.mass_dict,
+                                mz_tol=self.mz_tol.value,
+                                rt_tol=self.rt_tol.value,
+                                im_tol=self.im_tol.value,
+                                title=f"Precursor and fragment elution profiles of peptide {peptide['sequence']} in RT and RT/IM dimensions ({peptide['rt'] / 60:.2f} min)",
+                                colorscale_qualitative=self.colorscale_qualitative.value,
+                                colorscale_sequential=self.colorscale_sequential.value,
+                                height=500,
+                            ),
+                            sizing_mode='stretch_width',
+                            config=update_config('Precursor/fragments elution profile plot'),
+                            loading=False,
+                        )
+                    except:
+                        self.layout_target_mode_predicted[1] = None
+                    try:
+                        self.layout_target_mode_predicted[2] = pn.pane.HoloViews(
+                            alphaviz.plotting.plot_elution_profile_heatmap(
+                                self.data.raw_data,
+                                peptide,
+                                self.mass_dict,
+                                mz_tol=self.mz_tol.value,
+                                rt_tol=self.rt_tol.value,
+                                im_tol=self.im_tol.value,
+                                n_cols=8,
+                                width=180,
+                                height=180,
+                                colormap=self.heatmap_colormap.value,
+                                background_color=self.heatmap_background_color.value,
+                            ),
+                            sizing_mode='stretch_width',
+                            linked_axes=True,
+                            loading=False,
+                            align='center',
+                            margin=(0, 10, 10, 10)
+                        )
+                    except AttibuteError:
+                        self.layout_target_mode_predicted[2] = None
+                    self.targeted_peptides_table_prediction.loading = False
+                else:
+                    self.layout_target_mode_predicted[1], self.layout_target_mode_predicted[2] = None, None
+            else:
+                self.layout_target_mode_predicted[1], self.layout_target_mode_predicted[2] = None, None
 
 
 class GUI(object):
