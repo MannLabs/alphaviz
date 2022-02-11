@@ -44,7 +44,7 @@ def init_panel():
     pn.extension('tabulator')
 
 
-def update_config(filename, height=500, width=1500, ext='svg'):
+def update_config(filename, height=300, width=400, ext='svg'):
     config = {
         'displaylogo': False,
         'toImageButtonOptions': {
@@ -486,7 +486,7 @@ class DataImportWidget(BaseWidget):
                 psm_df['nce'] = 0.3
                 psm_df['instrument'] = 'Lumos' #trained on more Lumos files therefore should work better than 'timsTOF'
 
-                self.predlib = model_mgr.predict_all(
+                self.predlib = self.model_mgr.predict_all(
                     psm_df,
                     predict_items=['ms2'],
                     frag_types=['b_z1', 'y_z1']
@@ -629,7 +629,7 @@ class ToleranceOptionsWidget(object):
         )
         return layout
 
-class ColorscaleOptionsWidget(object):
+class CustomizationOptionsWidget(object):
 
     def __init__(self):
         self.colorscale_qualitative = pn.widgets.Select(
@@ -646,12 +646,36 @@ class ColorscaleOptionsWidget(object):
             width=190,
             margin=(20, 20, 20, 10),
         )
+        self.image_save_size = pn.widgets.LiteralInput(
+            type=list,
+            name='The size of the saved plot (h, w):',
+            value=[400, 900],
+            width=200,
+            margin=(20, 20, 20, 10),
+        )
+        self.image_save_format = pn.widgets.Select(
+            name='The format of the saved plot:',
+            value='svg',
+            options=['png', 'svg', 'jpeg', 'webp'],
+            width=190,
+            margin=(20, 20, 20, 10),
+        )
 
     def create_layout(self, *args):
+        dependances = {
+            self.image_save_size: [self.set_image_size, 'value'],
+        }
+        for k in dependances.keys():
+            k.param.watch(
+                dependances[k][0],
+                dependances[k][1]
+            )
         layout = pn.Card(
             pn.Row(
                 self.colorscale_qualitative,
                 self.colorscale_sequential,
+                self.image_save_size,
+                self.image_save_format,
             ),
             title='Customization options',
             collapsed=False,
@@ -660,6 +684,15 @@ class ColorscaleOptionsWidget(object):
             css_classes=['background']
         )
         return layout
+
+    def set_image_size(self, *args):
+        global update_config
+        from functools import partial
+        update_config = partial(
+            update_config,
+            height=self.image_save_size.value[0], width=self.image_save_size.value[1],
+            ext=self.image_save_format.value
+        )
 
 
 class TabsWidget(object):
@@ -884,18 +917,9 @@ class MainTab(object):
             self.proteins_table.value = self.data.diann_proteins
             self.peptides_table.value = self.data.diann_peptides.iloc[0:0]
 
-        # plots
-        self.chromatograms_plot = alphaviz.plotting.plot_chrom(
-            self.data.raw_data
-        )
         if self.analysis_software:
             self.layout = pn.Column(
-                pn.Pane(
-                    self.chromatograms_plot,
-                    config=update_config('Chromatograms'),
-                    sizing_mode='stretch_width',
-                    margin=(0, 10)
-                ),
+                self.display_chromatogram(),
                 pn.Row(
                     self.gene_name_filter,
                     self.gene_name_reset,
@@ -936,16 +960,22 @@ class MainTab(object):
             )
         else:
             self.layout = pn.Column(
-                pn.Pane(
-                    self.chromatograms_plot,
-                    config=update_config('Chromatograms'),
-                    sizing_mode='stretch_width',
-                    margin=(0, 10)
-                ),
+                self.display_chromatogram(),
                 margin=(20, 10, 5, 10),
                 sizing_mode='stretch_width',
             )
         return self.layout
+
+    def display_chromatogram(self, *args):
+        chromatograms_plot = alphaviz.plotting.plot_chrom(
+            self.data.raw_data
+        )
+        return pn.Pane(
+            chromatograms_plot,
+            config=update_config('Chromatograms'),
+            sizing_mode='stretch_width',
+            margin=(0, 10)
+        )
 
     def update_gene_name_filter(self):
         if self.analysis_software == 'maxquant':
@@ -1580,9 +1610,18 @@ class QCTab(object):
                     align='center'
                 ),
                 pn.Row(
-                    peptide_per_protein_distr,
-                    peptide_mz_distr,
-                    peptide_length_distr,
+                    pn.Pane(
+                        peptide_per_protein_distr,
+                        config=update_config('Peptides per protein plot'),
+                    ),
+                    pn.Pane(
+                        peptide_mz_distr,
+                        config=update_config('Peptide m/z distribution plot'),
+                    ),
+                    pn.Pane(
+                        peptide_length_distr,
+                        config=update_config('Peptide length distribution'),
+                    ),
                     align='center',
                 ),
                 margin=(0, 10, 5, 10),
@@ -1622,9 +1661,18 @@ class QCTab(object):
                     margin=(15, 10, -5, 10)
                 ),
                 pn.Row(
-                    peptide_per_protein_distr,
-                    peptide_charge_distr,
-                    peptide_length_distr,
+                    pn.Pane(
+                        peptide_per_protein_distr,
+                        config=update_config('Peptides per protein plot'),
+                    ),
+                    pn.Pane(
+                        peptide_charge_distr,
+                        config=update_config('Peptide charge plot'),
+                    ),
+                    pn.Pane(
+                        peptide_length_distr,
+                        config=update_config('Peptide length distribution'),
+                    ),
                     align='center',
                 ),
                 margin=(0, 10, 5, 10),
@@ -2183,7 +2231,7 @@ class AlphaVizGUI(GUI):
         self.options = OptionsWidget(self.data)
         self.options.add_option(ToleranceOptionsWidget().create_layout())
         self.options.add_option(HeatmapOptionsWidget().create_layout())
-        self.options.add_option(ColorscaleOptionsWidget().create_layout())
+        self.options.add_option(CustomizationOptionsWidget().create_layout())
         self.tabs = TabsWidget(self.data, self.options)
         self.layout += [
             self.main_widget.create_layout(),
