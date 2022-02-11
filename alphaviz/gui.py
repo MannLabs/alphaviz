@@ -44,7 +44,7 @@ def init_panel():
     pn.extension('tabulator')
 
 
-def update_config(filename, height=300, width=400, ext='svg'):
+def update_config(filename, height=400, width=900, ext='svg'):
     config = {
         'displaylogo': False,
         'toImageButtonOptions': {
@@ -558,7 +558,7 @@ class HeatmapOptionsWidget(object):
         )
         self.precursor_target_color = pn.widgets.Select(
             name='Precursor target color',
-            value='lime',
+            value='darkblue',
             options=list(matplotlib.colors.CSS4_COLORS.keys()),
             width=180,
             margin=(20, 20, 20, 10),
@@ -634,7 +634,7 @@ class CustomizationOptionsWidget(object):
     def __init__(self):
         self.colorscale_qualitative = pn.widgets.Select(
             name='Qualitative color scale',
-            value='Alphabet',
+            value='Pastel',
             options=list(set([each['y'][0] for each in px.colors.qualitative.swatches()['data']])),
             width=180,
             margin=(20, 20, 20, 10),
@@ -892,6 +892,7 @@ class MainTab(object):
                 self.x_axis_label_mq: [self.display_line_spectra_plots, 'value'],
                 self.x_axis_label_diann: [self.display_elution_profile_plots, 'value'],
                 self.colorscale_qualitative: [self.run_after_peptide_selection, 'value'],
+                self.colorscale_qualitative: [self.display_chromatogram, 'value'],
                 self.colorscale_sequential: [self.run_after_peptide_selection, 'value'],
                 self.show_mirrored_plot: [self.display_mass_spectrum, 'value'],
             }
@@ -967,15 +968,20 @@ class MainTab(object):
         return self.layout
 
     def display_chromatogram(self, *args):
-        chromatograms_plot = alphaviz.plotting.plot_chrom(
-            self.data.raw_data
+        chromatograms = alphaviz.plotting.plot_chrom(
+            self.data.raw_data,
+            self.colorscale_qualitative.value,
         )
-        return pn.Pane(
-            chromatograms_plot,
+        chrom_widget = pn.Pane(
+            chromatograms,
             config=update_config('Chromatograms'),
             sizing_mode='stretch_width',
             margin=(0, 10)
         )
+        if self.layout:
+            self.layout[0] = chrom_widget
+        else:
+            return chrom_widget
 
     def update_gene_name_filter(self):
         if self.analysis_software == 'maxquant':
@@ -1279,6 +1285,7 @@ class MainTab(object):
                         self.data.raw_data,
                         precursor_indices,
                         conversion_dict[self.x_axis_label_mq.value],
+                        colorscale_qualitative=self.colorscale_qualitative.value,
                     ),
                     sizing_mode='stretch_width',
                     config=update_config('Extracted Ion Chromatogram'),
@@ -1421,6 +1428,7 @@ class MainTab(object):
             self.ms1_ms2_frames[self.current_frame][1]
         )
         predicted_df = pd.DataFrame(columns=['FragmentMz', 'RelativeIntensity','ions'])
+        self.show_mirrored_plot.disabled = True
         if self.data.predlib and self.show_mirrored_plot.value:
             frag_start_idx, frag_end_idx = self.data.predlib['precursor_df'].loc[self.data.predlib['precursor_df'].spec_idx == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number'], ['frag_start_idx', 'frag_end_idx']].values[0]
             mz_ions = self.data.predlib['fragment_mz_df'].iloc[frag_start_idx:frag_end_idx]
@@ -1430,6 +1438,7 @@ class MainTab(object):
             predicted_df['FragmentMz'] = mz_ions.b_z1.values.tolist() + mz_ions.y_z1.values.tolist()[::-1]
             predicted_df['RelativeIntensity'] = intensities_ions.b_z1.values.tolist() + intensities_ions.y_z1.values.tolist()[::-1]
             predicted_df['ions'] = [f"b{i}" for i in range(1, len(mz_ions.b_z1)+1)] + [f"y{i}" for i in range(1, len(mz_ions.y_z1)+1)]
+            self.show_mirrored_plot.disabled = False
 
         self.ms_spectra_plot = alphaviz.plotting.plot_mass_spectra(
             data_ions,
@@ -1614,14 +1623,14 @@ class QCTab(object):
                         peptide_per_protein_distr,
                         config=update_config('Peptides per protein plot'),
                     ),
-                    pn.Pane(
-                        peptide_mz_distr,
-                        config=update_config('Peptide m/z distribution plot'),
-                    ),
-                    pn.Pane(
-                        peptide_length_distr,
-                        config=update_config('Peptide length distribution'),
-                    ),
+                    # pn.Pane(
+                    #     peptide_mz_distr,
+                    #     config=update_config('Peptide m/z distribution plot'),
+                    # ),
+                    # pn.Pane(
+                    #     peptide_length_distr,
+                    #     config=update_config('Peptide length distribution'),
+                    # ),
                     align='center',
                 ),
                 margin=(0, 10, 5, 10),
