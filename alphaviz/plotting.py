@@ -300,10 +300,6 @@ def plot_heatmap(
     y_dimension = labels[y_axis_label]
     z_dimension = labels[z_axis_label]
 
-    # def hook(plot, element):
-    #     plot.handles['layout']['xaxis']['gridcolor'] = background_color
-    #     plot.handles['layout']['yaxis']['gridcolor'] = background_color
-
     opts_ms1 = dict(
         width=width,
         height=height,
@@ -311,9 +307,7 @@ def plot_heatmap(
         xlabel=x_axis_label,
         ylabel=y_axis_label,
         bgcolor=background_color,
-        # hooks=[hook],
         hooks=[_change_plot],
-        tools=['save', 'wheel_zoom', 'box_zoom', 'reset'],
         **kwargs
     )
     dmap = hv.DynamicMap(
@@ -355,7 +349,7 @@ def plot_heatmap(
 def _change_plot(plot, element):
     plot.state.toolbar.logo = None
     plot.state.toolbar.tools = [
-        BoxZoomTool(match_aspect=True),
+        BoxZoomTool(),
         WheelZoomTool(),
         ResetTool(),
         SaveTool()
