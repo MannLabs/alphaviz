@@ -148,7 +148,8 @@ def plot_sequence_coverage(
 
 
 def plot_chrom(
-    data #alphatims.bruker.TimsTOF object
+    data, #alphatims.bruker.TimsTOF object
+    colorscale_qualitative: str,
 )-> go.Figure:
     """Create a plot showing 4 chromatogram types: total ion chromatogram (TIC) and base peak chromatogram (BPC) for MS1 and MS2 raw data.
 
@@ -174,7 +175,7 @@ def plot_chrom(
     total_ion_col = ['RT', 'SummedIntensities']
     base_peak_col = ['RT', 'MaxIntensity']
 
-    for chrom_type in ['Total Ion Chromatogram - MS1', 'Base Peak Chromatogram - MS1', 'Total Ion Chromatogram - MS2','Base Peak Chromatogram - MS2']:
+    for i, chrom_type in enumerate(['Total Ion Chromatogram - MS1', 'Base Peak Chromatogram - MS1', 'Total Ion Chromatogram - MS2','Base Peak Chromatogram - MS2']):
         if chrom_type == 'Total Ion Chromatogram - MS1':
             data = chrom_ms1[total_ion_col]
         elif chrom_type == 'Total Ion Chromatogram - MS2':
@@ -189,6 +190,7 @@ def plot_chrom(
                 y=data.iloc[:, 1],
                 name=chrom_type,
                 hovertemplate='<b>RT:</b> %{x};<br><b>Intensity:</b> %{y}.',
+                marker=dict(dict(color=getattr(px.colors.qualitative, colorscale_qualitative)[i])),
             )
         )
 
