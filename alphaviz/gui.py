@@ -635,14 +635,14 @@ class CustomizationOptionsWidget(object):
         self.colorscale_qualitative = pn.widgets.Select(
             name='Qualitative color scale',
             value='Pastel',
-            options=list(set([each['y'][0] for each in px.colors.qualitative.swatches()['data']])),
+            options=sorted(list(set([each['y'][0] for each in px.colors.qualitative.swatches()['data']]))),
             width=180,
             margin=(20, 20, 20, 10),
         )
         self.colorscale_sequential = pn.widgets.Select(
             name='Sequential color scale',
             value='Viridis',
-            options=list(set([each['y'][0] for each in px.colors.sequential.swatches()['data']])),
+            options=sorted(list(set([each['y'][0] for each in px.colors.sequential.swatches()['data']]))),
             width=190,
             margin=(20, 20, 20, 10),
         )
@@ -1170,13 +1170,9 @@ class MainTab(object):
             self.peptides_table.loading = False
 
     def run_after_peptide_selection(self, *args):
-        print('inside')
         if self.proteins_table.selection:
-            print("inside if self.proteins_table.selection:")
             self.peptides_table.loading = True
             if self.peptides_table.selection:
-                print("inside if self.peptides_table.selection:")
-                print(self.peptides_table.selection)
                 self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                     self.protein_seq,
                     self.gene_name,
@@ -1395,7 +1391,6 @@ class MainTab(object):
                     width=570,
                     height=450,
                     margin=(0, 10, 10, 0),
-                    # shared_axes=True
                 )
                 data_ms2 = self.data.raw_data[ms2_frame].copy()
                 self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
@@ -1408,19 +1403,18 @@ class MainTab(object):
                     width=570,
                     height=450,
                     margin=(0, 10, 10, 0),
-                    # shared_axes=True
                 )
 
                 self.layout[10][0] = pn.pane.HoloViews(
                     self.heatmap_ms1_plot,
                     margin=(15, 0, 0, 0),
-                    linked_axes=False,
+                    linked_axes=False if self.analysis_software == 'diann' else True,
                     loading=False
                 )
                 self.layout[10][1] = pn.pane.HoloViews(
                     self.heatmap_ms2_plot,
                     margin=(15, 0, 0, 0),
-                    linked_axes=False,
+                    linked_axes=False if self.analysis_software == 'diann' else True,
                     loading=False
                 )
             except ValueError:
@@ -1454,7 +1448,7 @@ class MainTab(object):
             predicted_df['ions'] = [f"b{i}" for i in range(1, len(mz_ions.b_z1)+1)] + [f"y{i}" for i in range(1, len(mz_ions.y_z1)+1)]
             self.show_mirrored_plot.disabled = False
 
-        self.ms_spectra_plot = alphaviz.plotting.plot_mass_spectra(
+        self.ms_spectra_plot = alphaviz.plotting.plot_complex_ms_plot(
             data_ions,
             title=f'MS2 spectrum for Precursor: {self.ms1_ms2_frames[self.current_frame][1]}',
             sequence=self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Sequence'],
@@ -1539,13 +1533,13 @@ class MainTab(object):
                 self.layout[10][0] = pn.pane.HoloViews(
                     self.heatmap_ms1_plot,
                     margin=(15, 0, 0, 0),
-                    linked_axes=False,
+                    linked_axes=False if self.analysis_software == 'diann' else True,
                     loading=False
                 )
                 self.layout[10][1] = pn.pane.HoloViews(
                     self.heatmap_ms2_plot,
                     margin=(15, 0, 0, 0),
-                    linked_axes=False,
+                    linked_axes=False if self.analysis_software == 'diann' else True,
                     loading=False
                 )
             except ValueError:
