@@ -1548,10 +1548,16 @@ class QCTab(object):
         self.mz_tol = options.layout[0][0][0]
         self.layout_qc = None
         self.analysis_software = self.data.settings.get('analysis_software')
+        self.distribution_axis = pn.widgets.Select(
+            name='Select the variable:',
+            width=190,
+            margin=(-10, 0, -5, 70),
+        )
 
     def create_layout(self):
         dependances = {
             self.mz_tol: [self.update_tol_range_mass_density, 'value'],
+            self.distribution_axis: [self.display_distribution_plot, 'value'],
         }
         for k in dependances.keys():
             k.param.watch(
@@ -1579,16 +1585,9 @@ class QCTab(object):
                 '(EXP) # peptides',
                 'Peptides per protein',
             )
-            peptide_mz_distr = alphaviz.plotting.plot_peptide_distr(
-                self.data.mq_evidence,
-                'm/z',
-                'Peptide m/z distribution',
-            )
-            peptide_length_distr = alphaviz.plotting.plot_peptide_distr(
-                self.data.mq_evidence,
-                'Length',
-                'Peptide length distribution',
-            )
+
+            self.distribution_axis.options = ['m/z', 'Charge', 'Length']
+            self.distribution_axis.value = ['Charge']
 
             self.layout_qc = pn.Column(
                 pn.widgets.Tabulator(
@@ -1622,15 +1621,13 @@ class QCTab(object):
                     pn.Pane(
                         peptide_per_protein_distr,
                         config=update_config('Peptides per protein plot'),
+                        margin=(42, 0, 0, 0),
                     ),
-                    # pn.Pane(
-                    #     peptide_mz_distr,
-                    #     config=update_config('Peptide m/z distribution plot'),
-                    # ),
-                    # pn.Pane(
-                    #     peptide_length_distr,
-                    #     config=update_config('Peptide length distribution'),
-                    # ),
+                    pn.Column(
+                        self.distribution_axis,
+                        self.display_distribution_plot(),
+                        align='center',
+                    ),
                     align='center',
                 ),
                 margin=(0, 10, 5, 10),
@@ -1638,21 +1635,8 @@ class QCTab(object):
                 align='start',
             )
         elif self.analysis_software == 'diann':
-            peptide_per_protein_distr = alphaviz.plotting.plot_pept_per_protein_barplot(
-                self.data.diann_proteins,
-                '(EXP) # peptides',
-                'Peptides per protein',
-            )
-            peptide_charge_distr = alphaviz.plotting.plot_peptide_distr(
-                self.data.diann_peptides,
-                'Charge',
-                'Peptide charge distribution'
-            )
-            peptide_length_distr = alphaviz.plotting.plot_peptide_distr(
-                self.data.diann_peptides,
-                'Length',
-                'Peptide length distribution'
-            )
+            self.distribution_axis.options = ['Charge', 'Length']
+            self.distribution_axis.value = ['Charge']
             self.layout_qc = pn.Column(
                 pn.widgets.Tabulator(
                     self.data.diann_statist,
@@ -1671,16 +1655,18 @@ class QCTab(object):
                 ),
                 pn.Row(
                     pn.Pane(
-                        peptide_per_protein_distr,
+                        alphaviz.plotting.plot_pept_per_protein_barplot(
+                            self.data.diann_proteins,
+                            '(EXP) # peptides',
+                            'Peptides per protein',
+                        ),
                         config=update_config('Peptides per protein plot'),
+                        margin=(42, 0, 0, 0),
                     ),
-                    pn.Pane(
-                        peptide_charge_distr,
-                        config=update_config('Peptide charge plot'),
-                    ),
-                    pn.Pane(
-                        peptide_length_distr,
-                        config=update_config('Peptide length distribution'),
+                    pn.Column(
+                        self.distribution_axis,
+                        self.display_distribution_plot(),
+                        align='center',
                     ),
                     align='center',
                 ),
@@ -1708,6 +1694,28 @@ class QCTab(object):
                 config=update_config('Uncalibrated mass density plot'),
             )
 
+    def display_distribution_plot(self, *args):
+        if self.analysis_software == 'maxquant':
+            data = self.data.mq_evidence
+        elif self.analysis_software == 'diann':
+            data = self.data.diann_peptides
+
+        plot = pn.Pane(
+            alphaviz.plotting.plot_peptide_distr(
+                data,
+                self.distribution_axis.value,
+                f'Peptide {self.distribution_axis.value.lower()} distribution'
+            ),
+            config=update_config(f'Peptide {self.distribution_axis.value.lower()} distribution'),
+        )
+
+        if self.layout_qc:
+            if self.analysis_software == 'maxquant':
+                self.layout_qc[3][1][1] = plot
+            elif self.analysis_software == 'diann':
+                self.layout_qc[2][1][1] = plot
+        else:
+            return plot
 
 class TargetModeTab(object):
     def __init__(self, data, options):
