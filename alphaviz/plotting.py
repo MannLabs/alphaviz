@@ -480,16 +480,13 @@ def plot_line(
 def plot_mass_spectra(
     data: pd.DataFrame,
     title: str,
-    sequence: str,
     predicted: tuple = (),
-    spectrum_color: str = 'grey',
     template: str = "plotly_white",
+    spectrum_color: str = 'grey',
     b_ion_color: str = 'red',
     y_ion_color: str = 'blue',
     spectrum_line_width: float = 1.5,
-    font_size_seq: int = 14,
-    font_size_ion: int = 10,
-    height: int = 520
+    height: int = 520,
 )-> go.Figure:
     """Plot the mass spectrum with a mass error plot for each ion and annotated peptide sequence as subplots.
 
@@ -499,8 +496,6 @@ def plot_mass_spectra(
         The dataframe containing spectrum information such as 'mz_values', 'intensity_values', 'ions'.
     title : str
         The title of the plot.
-    sequence: str
-        The peptide sequence.
     predicted : tuple
         The tuple containing values of the predicted FragmentMz, RelativeIntensity and ions in the form of:
         (predicted_df.FragmentMz, predicted_df.RelativeIntensity, predicted_df.ions). Default: empty tuple.
@@ -512,12 +507,6 @@ def plot_mass_spectra(
         The color of the y-ions. Default is 'blue'.
     spectrum_line_width: float
         The width of the spectrum peaks. Default is 1.5.
-    font_size_seq: int
-        The font size of the peptide sequence letters. Default is 14.
-    font_size_ion: int
-        The font size of the ion letters. Default is 10.
-    height: int
-        The height of the plot. Default is 520.
 
     Returns
     -------
@@ -559,7 +548,7 @@ def plot_mass_spectra(
         )
     )
     # b-ions
-    data_b_ions = data[data.ions.str.contains('b')] # Can this include modlosses?
+    data_b_ions = data[data.ions.str.contains('b')] 
     fig.add_trace(
         go.Scatter(
             x=data_b_ions.mz_values,
@@ -658,6 +647,57 @@ def plot_mass_spectra(
             yanchor='bottom'
         )
     )
+    return fig
+
+def plot_complex_ms_plot(
+    data: pd.DataFrame,
+    title: str,
+    sequence: str,
+    predicted: tuple = (),
+    spectrum_color: str = 'grey',
+    template: str = "plotly_white",
+    b_ion_color: str = 'red',
+    y_ion_color: str = 'blue',
+    spectrum_line_width: float = 1.5,
+    font_size_seq: int = 14,
+    font_size_ion: int = 10,
+    height: int = 520
+)-> go.Figure:
+    """Plot the mass spectrum with a mass error plot for each ion and annotated peptide sequence as subplots.
+
+    Parameters
+    ----------
+    data : pd.DataFrame
+        The dataframe containing spectrum information such as 'mz_values', 'intensity_values', 'ions'.
+    title : str
+        The title of the plot.
+    sequence: str
+        The peptide sequence.
+    predicted : tuple
+        The tuple containing values of the predicted FragmentMz, RelativeIntensity and ions in the form of:
+        (predicted_df.FragmentMz, predicted_df.RelativeIntensity, predicted_df.ions). Default: empty tuple.
+    spectrum_color : str
+        The color of the mass spectrum. Default is 'grey'.
+    b_ion_color : str
+        The color of the b-ions. Default is 'red'.
+    y_ion_color : str
+        The color of the y-ions. Default is 'blue'.
+    spectrum_line_width: float
+        The width of the spectrum peaks. Default is 1.5.
+    font_size_seq: int
+        The font size of the peptide sequence letters. Default is 14.
+    font_size_ion: int
+        The font size of the ion letters. Default is 10.
+    height: int
+        The height of the plot. Default is 520.
+
+    Returns
+    -------
+    plotly.graph_objects.Figure object
+        The ms2 spectum plot with the mass error plot for each ion and the annotated peptide sequence as subplots.
+
+    """
+    fig = plot_mass_spectra(data=data, title=title, predicted=predicted, spectrum_color=spectrum_color, template=template, b_ion_color=b_ion_color, y_ion_color=y_ion_color, spectrum_line_width=spectrum_line_width, height=height)
 
     fig_common = plotly.subplots.make_subplots(
         rows=6, cols=3, shared_xaxes=True,
@@ -675,6 +715,7 @@ def plot_mass_spectra(
     )
 
     # add a second plot
+    data_b_ions = data[data.ions.str.contains('b')]
     fig_common.add_trace(
         go.Scatter(
             x=data_b_ions.mz_values,
@@ -690,6 +731,7 @@ def plot_mass_spectra(
         ),
         row=4, col=1
     )
+    data_y_ions = data[data.ions.str.contains('y')]
     fig_common.add_trace(
         go.Scatter(
             x=data_y_ions.mz_values,
@@ -793,8 +835,7 @@ def plot_mass_spectra(
         col=1
     )
     fig_common.update_xaxes(matches='x')
-    return fig_common # this function is quite long. Can it be split in smaller chunks?
-
+    return fig_common
 
 def plot_mass_error(
     df: pd.DataFrame,
