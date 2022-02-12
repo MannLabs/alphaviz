@@ -663,7 +663,8 @@ class CustomizationOptionsWidget(object):
 
     def create_layout(self, *args):
         dependances = {
-            self.image_save_size: [self.set_image_size, 'value'],
+            self.image_save_size: [self.set_image_settings, 'value'],
+            self.image_save_format: [self.set_image_settings, 'value'],
         }
         for k in dependances.keys():
             k.param.watch(
@@ -685,7 +686,7 @@ class CustomizationOptionsWidget(object):
         )
         return layout
 
-    def set_image_size(self, *args):
+    def set_image_settings(self, *args):
         global update_config
         from functools import partial
         update_config = partial(
@@ -711,6 +712,7 @@ class TabsWidget(object):
 
     def return_layout(self, *args):
         if self.data.raw_data is not None:
+            del self.layout
             self.layout = pn.Tabs(
                 tabs_location='above',
                 margin=(10, 10, 5, 8),
@@ -730,7 +732,7 @@ class TabsWidget(object):
                 TargetModeTab(self.data, self.options).create_layout()
             )
             self.active = 0
-            self.data.layout.collapsed = True
+            # self.data.layout.collapsed = True
         return self.layout
 
 
@@ -891,9 +893,8 @@ class MainTab(object):
                 self.rt_tol: [self.display_line_spectra_plots, 'value'],
                 self.x_axis_label_mq: [self.display_line_spectra_plots, 'value'],
                 self.x_axis_label_diann: [self.display_elution_profile_plots, 'value'],
-                self.colorscale_qualitative: [self.run_after_peptide_selection, 'value'],
-                self.colorscale_qualitative: [self.display_chromatogram, 'value'],
-                self.colorscale_sequential: [self.run_after_peptide_selection, 'value'],
+                self.colorscale_qualitative: [self.update_plots_color, 'value'],
+                self.colorscale_sequential: [self.update_plots_color, 'value'],
                 self.show_mirrored_plot: [self.display_mass_spectrum, 'value'],
             }
             for k in dependances.keys():
@@ -915,6 +916,8 @@ class MainTab(object):
                 self.proteins_table.formatters['(EXP) Seq coverage, %'] = {"type": "progress", "max": 100, "legend": True}
 
         elif self.analysis_software == 'diann':
+            self.proteins_table.selection = []
+            self.peptides_table.selection = []
             self.proteins_table.value = self.data.diann_proteins
             self.peptides_table.value = self.data.diann_peptides.iloc[0:0]
 
@@ -967,6 +970,10 @@ class MainTab(object):
             )
         return self.layout
 
+    def update_plots_color(self, *args):
+        self.display_chromatogram()
+        self.run_after_protein_selection()
+
     def display_chromatogram(self, *args):
         chromatograms = alphaviz.plotting.plot_chrom(
             self.data.raw_data,
@@ -984,6 +991,9 @@ class MainTab(object):
             return chrom_widget
 
     def update_gene_name_filter(self):
+        self.proteins_table.selection = []
+        self.peptides_table.selection = []
+        self.layout = None
         if self.analysis_software == 'maxquant':
             self.gene_name_filter.options = self.data.mq_protein_groups['Gene names'].str.split(';').explode().unique().tolist()
         elif self.analysis_software == 'diann':
@@ -1160,9 +1170,13 @@ class MainTab(object):
             self.peptides_table.loading = False
 
     def run_after_peptide_selection(self, *args):
+        print('inside')
         if self.proteins_table.selection:
+            print("inside if self.proteins_table.selection:")
             self.peptides_table.loading = True
             if self.peptides_table.selection:
+                print("inside if self.peptides_table.selection:")
+                print(self.peptides_table.selection)
                 self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                     self.protein_seq,
                     self.gene_name,
@@ -1586,7 +1600,7 @@ class QCTab(object):
                 'Peptides per protein',
             )
 
-            self.distribution_axis.options = ['m/z', 'Charge', 'Length']
+            self.distribution_axis.options = ['m/z', 'Charge', 'Length', 'Mass', '1/K0', 'CCS', 'Missed cleavages', 'Andromeda score', 'Intensity', 'Mass error [ppm]', 'Mass error [Da]']
             self.distribution_axis.value = ['Charge']
 
             self.layout_qc = pn.Column(
@@ -1635,7 +1649,7 @@ class QCTab(object):
                 align='start',
             )
         elif self.analysis_software == 'diann':
-            self.distribution_axis.options = ['Charge', 'Length']
+            self.distribution_axis.options = ['Charge', 'Length', 'IM']
             self.distribution_axis.value = ['Charge']
             self.layout_qc = pn.Column(
                 pn.widgets.Tabulator(
@@ -2031,9 +2045,11 @@ class TargetModeTab(object):
                     finally:
                         self.targeted_peptides_table.loading = False
                 else:
-                    self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
+                    if self.layout_target_mode_manual:
+                        self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
             else:
-                self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
+                if self.layout_target_mode_manual:
+                    self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
 
 
     def clear_peptide_table_prediction(self, *args):
@@ -2151,9 +2167,11 @@ class TargetModeTab(object):
                         self.layout_target_mode_predicted[2] = None
                     self.targeted_peptides_table_prediction.loading = False
                 else:
-                    self.layout_target_mode_predicted[1], self.layout_target_mode_predicted[2] = None, None
+                    if self.layout_target_mode_predicted:
+                        self.layout_target_mode_predicted[1], self.layout_target_mode_predicted[2] = None, None
             else:
-                self.layout_target_mode_predicted[1], self.layout_target_mode_predicted[2] = None, None
+                if self.layout_target_mode_predicted:
+                    self.layout_target_mode_predicted[1], self.layout_target_mode_predicted[2] = None, None
 
 
 class GUI(object):
