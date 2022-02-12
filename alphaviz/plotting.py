@@ -190,7 +190,7 @@ def plot_chrom(
                 y=data.iloc[:, 1],
                 name=chrom_type,
                 hovertemplate='<b>RT:</b> %{x};<br><b>Intensity:</b> %{y}.',
-                marker=dict(dict(color=getattr(px.colors.qualitative, colorscale_qualitative)[i])),
+                marker=dict(color=getattr(px.colors.qualitative, colorscale_qualitative)[i]),
             )
         )
 
@@ -362,6 +362,7 @@ def plot_line(
     timstof_data, #alphatims.bruker.TimsTOF object
     selected_indices: np.ndarray,
     x_axis_label: str,
+    colorscale_qualitative: str,
     title: str = "",
     y_axis_label: str = "intensity",
     remove_zeros: bool = False,
@@ -444,7 +445,8 @@ def plot_line(
             mode='lines',
             text = [f'{x_axis_label}'.format(i + 1) for i in range(len(x_ticks))],
             hovertemplate='<b>%{text}:</b> %{x};<br><b>Intensity:</b> %{y}.',
-            name=" "
+            name=" ",
+            marker=dict(color=getattr(px.colors.qualitative, colorscale_qualitative)[0])
         )
     )
 
@@ -826,7 +828,7 @@ def plot_mass_error(
             x = df[x_axis_label].values,
             y = df[y_axis_label].values,
             colorscale = 'Blues',
-            ncontours = 6,
+            ncontours = 5,
             xaxis = 'x',
             yaxis = 'y',
             name=" ",
@@ -834,6 +836,7 @@ def plot_mass_error(
                 showlabels = False,
                 coloring = 'fill'
             ),
+            hoverinfo='none',
         )
     )
     fig.add_trace(
@@ -848,27 +851,30 @@ def plot_mass_error(
                 size = 3,
                 opacity = 0.2
             ),
-            name=" "
+            name=" ",
+            # hoverinfo='none',
         )
     )
     fig.add_trace(
         go.Histogram(
             y = df[y_axis_label].values,
             xaxis = 'x2',
-            nbinsy=50,
+            nbinsy=100,
             marker = dict(
                 color = 'rgb(198,219,239)'
-            )
+            ),
+            hoverinfo='none',
         )
     )
     fig.add_trace(
         go.Histogram(
             x = df[x_axis_label].values,
             yaxis = 'y2',
-            nbinsx=50,
+            nbinsx=100,
             marker = dict(
                 color = 'rgb(198,219,239)'
-            )
+            ),
+            hoverinfo='none',
         )
     )
     if mz_tol:
