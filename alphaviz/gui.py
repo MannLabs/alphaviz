@@ -834,7 +834,7 @@ class MainTab(object):
         self.x_axis_label_mq = pn.widgets.Select(
             name='Select X label:',
             value='Retention time',
-            options=['Retention time', 'Ion mobility'],
+            options=['Retention time', 'Ion mobility', 'm/z'],
             width=150,
             align='center'
         )
@@ -1269,12 +1269,17 @@ class MainTab(object):
                     prec_mono_low_mz : prec_mono_high_mz,
                     'raw'
                 ]
-            else:
+            elif self.x_axis_label_mq.value == 'Ion mobility':
                 precursor_indices = self.data.raw_data[
                     :,
                     :,
                     :,
                     prec_mono_low_mz : prec_mono_high_mz,
+                    'raw'
+                ]
+            else:
+                precursor_indices = self.data.raw_data[
+                    self.current_frame,
                     'raw'
                 ]
             self.layout[7] = pn.panel(
@@ -1286,7 +1291,8 @@ class MainTab(object):
             )
             conversion_dict = {
                 'Retention time': 'rt',
-                'Ion mobility': 'mobility'
+                'Ion mobility': 'mobility',
+                'm/z': 'mz'
             }
             self.layout[8] = pn.Row(
                 self.x_axis_label_mq,
