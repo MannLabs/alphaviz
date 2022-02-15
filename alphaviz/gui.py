@@ -1484,6 +1484,8 @@ class MainTab(object):
             self.current_frame = list(self.ms1_ms2_frames.keys())[-1]
         else:
             self.current_frame = list(self.ms1_ms2_frames.keys())[current_frame_index - 1]
+        if self.x_axis_label_mq.value == 'm/z':
+            self.display_line_spectra_plots()
         self.display_heatmap_spectrum()
 
     def display_next_frame(self, *args):
@@ -1499,6 +1501,8 @@ class MainTab(object):
             self.current_frame = list(self.ms1_ms2_frames.keys())[0]
         else:
             self.current_frame = list(self.ms1_ms2_frames.keys())[current_frame_index + 1]
+        if self.x_axis_label_mq.value == 'm/z':
+            self.display_line_spectra_plots()
         self.display_heatmap_spectrum()
 
     def display_overlapped_frames(self, *args):
