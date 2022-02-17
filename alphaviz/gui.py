@@ -1611,7 +1611,7 @@ class QCTab(object):
                 'Peptides per protein',
             )
 
-            self.distribution_axis.options = ['m/z', 'Charge', 'Length', 'Mass', '1/K0', 'CCS', 'Missed cleavages', 'Andromeda score', 'Intensity', 'Mass error [ppm]', 'Mass error [Da]']
+            self.distribution_axis.options = ['m/z', 'Charge', 'Length', 'Mass', '1/K0', 'CCS', 'Missed cleavages', 'Andromeda score', 'Intensity', 'Mass error [ppm]', 'Mass error [Da]', 'Uncalibrated mass error [ppm]', 'Uncalibrated mass error [Da]']
             self.distribution_axis.value = ['Charge']
 
             self.layout_qc = pn.Column(
