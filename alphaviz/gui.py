@@ -1294,6 +1294,11 @@ class MainTab(object):
                 'Ion mobility': 'mobility',
                 'm/z': 'mz'
             }
+            title_renaming = {
+                'Retention time': 'Extracted ion chromatogram',
+                'Ion mobility': 'Ion mobility line plot',
+                'm/z': 'MS1 spectrum'
+            }
             self.layout[8] = pn.Row(
                 self.x_axis_label_mq,
                 pn.Pane(
@@ -1304,7 +1309,7 @@ class MainTab(object):
                         colorscale_qualitative=self.colorscale_qualitative.value,
                     ),
                     sizing_mode='stretch_width',
-                    config=update_config('Extracted Ion Chromatogram'),
+                    config=update_config(title_renaming[self.x_axis_label_mq.value]),
                     loading=False
                 ),
                 sizing_mode='stretch_width',
@@ -1444,7 +1449,8 @@ class MainTab(object):
         predicted_df = pd.DataFrame(columns=['FragmentMz', 'RelativeIntensity','ions'])
         self.show_mirrored_plot.disabled = True
         if self.data.predlib and self.show_mirrored_plot.value:
-            frag_start_idx, frag_end_idx = self.data.predlib['precursor_df'].loc[self.data.predlib['precursor_df'].spec_idx == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number'], ['frag_start_idx', 'frag_end_idx']].values[0]
+            print('inside')
+            frag_start_idx, frag_end_idx = self.data.predlib['precursor_df'].loc[(self.data.predlib['precursor_df'].spec_idx == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number']) & (self.data.predlib['precursor_df'].sequence == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Sequence']), ['frag_start_idx', 'frag_end_idx']].values[0]
             mz_ions = self.data.predlib['fragment_mz_df'].iloc[frag_start_idx:frag_end_idx]
             intensities_ions = self.data.predlib['fragment_intensity_df'].iloc[frag_start_idx:frag_end_idx]
             intensities_ions *= -100
@@ -1453,6 +1459,7 @@ class MainTab(object):
             predicted_df['RelativeIntensity'] = intensities_ions.b_z1.values.tolist() + intensities_ions.y_z1.values.tolist()[::-1]
             predicted_df['ions'] = [f"b{i}" for i in range(1, len(mz_ions.b_z1)+1)] + [f"y{i}" for i in range(1, len(mz_ions.y_z1)+1)]
             self.show_mirrored_plot.disabled = False
+            print(self.show_mirrored_plot.disabled)
 
         self.ms_spectra_plot = alphaviz.plotting.plot_complex_ms_plot(
             data_ions,

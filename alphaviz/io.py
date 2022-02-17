@@ -313,7 +313,7 @@ def import_mq_summary(
     pd.DataFrame
         The output data frame contains summary information of all the experiments.
     """
-    data_common = pd.read_csv(filepath, sep='\t')
+    data_common = pd.read_csv(filepath, sep='\t', low_memory=False)
     data_common.dropna(subset=['MS'], axis=0, inplace=True)
     return data_common
 
@@ -424,7 +424,7 @@ def import_diann_stats(
     pd.DataFrame
         The output data frame contains summary information about the whole experiment.
     """
-    diann_overview = pd.read_csv(filepath, sep='\t')
+    diann_overview = pd.read_csv(filepath, sep='\t', low_memory=False)
     return diann_overview
 
 
@@ -527,7 +527,7 @@ def import_diann_output(
     diann_output_file, diann_stats_file = sorted(get_filenames_from_directory(
         path_diann_output_folder, 'tsv'), key=len)[:2]
 
-    diann_df = pd.read_csv(os.path.join(path_diann_output_folder, diann_output_file), sep='\t')
+    diann_df = pd.read_csv(os.path.join(path_diann_output_folder, diann_output_file), sep='\t', low_memory=False)
     diann_df = diann_df[diann_df.Run == experiment]
 
     diann_proteins = create_diann_proteins_table(diann_df, fasta)

@@ -548,7 +548,7 @@ def plot_mass_spectra(
         )
     )
     # b-ions
-    data_b_ions = data[data.ions.str.contains('b')] 
+    data_b_ions = data[data.ions.str.contains('b')]
     fig.add_trace(
         go.Scatter(
             x=data_b_ions.mz_values,
@@ -757,7 +757,7 @@ def plot_complex_ms_plot(
 
     sl = len(sequence)
     distance_from_side = (data.mz_values.max() - data.mz_values.min()) * 2/8
-    distance = np.linspace(data.mz_values.min()+distance_from_side, data.mz_values.max()-distance_from_side, sl)
+    distance = np.linspace(data.mz_values.min()+distance_from_side, data.mz_values.max()-distance_from_side, sl+1)
     for i, aa in enumerate(sequence):
         fig_common.add_annotation(
             dict(
