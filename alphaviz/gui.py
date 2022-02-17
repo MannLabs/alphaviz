@@ -1259,6 +1259,9 @@ class MainTab(object):
             prec_mono_mz = self.merged_precursor_data.MonoisotopicMz.median()
             prec_mono_low_mz = prec_mono_mz / (1 + mz_tol_value / 10**6)
             prec_mono_high_mz = prec_mono_mz * (1 + mz_tol_value / 10**6)
+            prec_rt = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Retention time'])
+            prec_rt_start_sec = prec_rt*60 - self.rt_tol.value
+            prec_rt_end_sec = prec_rt*60 + self.rt_tol.value
             if self.x_axis_label_mq.value == 'Retention time':
                 one_over_k0 = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0'])
                 one_over_k0_low, one_over_k0_high = one_over_k0 - self.im_tol.value, one_over_k0 + self.im_tol.value
@@ -1271,7 +1274,7 @@ class MainTab(object):
                 ]
             elif self.x_axis_label_mq.value == 'Ion mobility':
                 precursor_indices = self.data.raw_data[
-                    :,
+                    prec_rt_start_sec:prec_rt_end_sec,
                     :,
                     :,
                     prec_mono_low_mz : prec_mono_high_mz,
