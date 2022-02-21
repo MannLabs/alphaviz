@@ -1460,9 +1460,14 @@ def plot_elution_profile(
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=-0.6,
+            y=-1,
             xanchor="right",
-            x=0.95
+            x=0.95,
+            font=dict(
+                # family="Courier",
+                size=11,
+                color="black"
+            ),
         ),
         template = "plotly_white",
         # width=width,
