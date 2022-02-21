@@ -1205,7 +1205,7 @@ class MainTab(object):
                     self.ms2_frame = self.data.raw_data.fragment_frames[self.data.raw_data.fragment_frames.index.isin(self.scan_number)].Frame.values[0]
                     if self.data.ms_file_name.value.split('.')[-1] == 'hdf':
                         self.ms2_frame -= 1
-                    self.ms1_frame = self.data.raw_data.frames[(self.data.raw_data.frames.MsMsType == 0) & (self.data.raw_data.frames.Id < self.ms2_frame)].iloc[-1, 0]
+                    self.ms1_frame = self.data.raw_data.frames.loc[(self.data.raw_data.frames.MsMsType == 0) & (self.data.raw_data.frames.Id < self.ms2_frame), 'Id'].values[-1]
                     self.peptide = {
                         "sequence":
                         self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Sequence_AP_mod'],
@@ -1656,7 +1656,7 @@ class QCTab(object):
                 align='start',
             )
         elif self.analysis_software == 'diann':
-            self.distribution_axis.options = ['Charge', 'Length', 'IM']
+            self.distribution_axis.options = ['Charge', 'Length', 'IM', 'CScore', 'Decoy.CScore', 'Decoy.Evidence', 'Evidence', 'Global.Q.Value', 'Q.Value', 'Quantity.Quality', 'Spectrum.Similarity']
             self.distribution_axis.value = ['Charge']
             self.layout_qc = pn.Column(
                 pn.widgets.Tabulator(
