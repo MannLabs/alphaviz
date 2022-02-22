@@ -113,6 +113,7 @@ def get_mass_dict(modfile:str="data/modifications.tsv", aasfile: str="data/amino
     mass_dict["NH3"] = 17.03052
     mass_dict["delta_M"] = 1.00286864
     mass_dict["delta_S"] = 0.0109135
+    mass_dict['a'] = 42.01056469
 
     if verbose:
 
@@ -135,8 +136,11 @@ def parse(peptide:str)->List:
     parsed = List()
     string = ""
 
-    for i in peptide:
+    for ind, i in enumerate(peptide):
         string += i
+        if ind == 0 and i == 'a': # protein N-term modification
+            parsed.append(string)
+            string = ""
         if i.isupper():
             parsed.append(string)
             string = ""
