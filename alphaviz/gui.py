@@ -321,6 +321,17 @@ class DataImportWidget(BaseWidget):
             sizing_mode='stretch_width',
             margin=(10, 0, 5, 0),
         )
+        self.mass_dict = alphaviz.utils.get_mass_dict(
+            modfile=os.path.join(
+                alphaviz.utils.DATA_PATH,
+                'modifications.tsv'
+            ),
+            aasfile=os.path.join(
+                alphaviz.utils.DATA_PATH,
+                'amino_acids.tsv'
+            ),
+            verbose=False,
+        )
 
     def create_layout(self):
         dependances = {
@@ -457,6 +468,14 @@ class DataImportWidget(BaseWidget):
                         self.path_output_folder.value,
                         self.ms_file_name.value.split('.')[0],
                         self.fasta
+                    )
+                    self.diann_peptides['m/z'] = self.diann_peptides.apply(
+                        lambda x: alphaviz.utils.calculate_mz(
+                            prec_mass=alphaviz.utils.get_precmass(
+                                alphaviz.utils.parse(x['Sequence_AP_mod']), self.mass_dict),
+                            charge=x['Charge']
+                        ),
+                        axis=1
                     )
                     self.settings['analysis_software'] = 'diann'
                 except:
@@ -735,17 +754,6 @@ class MainTab(object):
 
     def __init__(self, data, options):
         self.data = data
-        self.mass_dict = alphaviz.utils.get_mass_dict(
-            modfile=os.path.join(
-                alphaviz.utils.DATA_PATH,
-                'modifications.tsv'
-            ),
-            aasfile=os.path.join(
-                alphaviz.utils.DATA_PATH,
-                'amino_acids.tsv'
-            ),
-            verbose=False,
-        )
         self.analysis_software = ""
         self.mz_tol = options.layout[0][0][0]
         self.im_tol = options.layout[0][0][1]
@@ -1213,15 +1221,9 @@ class MainTab(object):
                         self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Charge'],
                         "im":
                         self.peptides_table.value.iloc[self.peptides_table.selection[0]]['IM'],
-                        "rt": self.peptides_table.value.iloc[self.peptides_table.selection[0]]['RT'] * 60
+                        "rt": self.peptides_table.value.iloc[self.peptides_table.selection[0]]['RT'] * 60,
+                        "mz": self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z'],
                     }
-                    self.peptide['mz'] = alphaviz.utils.calculate_mz(
-                        prec_mass=alphaviz.utils.get_precmass(
-                            alphaviz.utils.parse(self.peptide['sequence']),
-                            self.mass_dict
-                        ),
-                        charge=self.peptide['charge']
-                    )
                     self.display_elution_profile_plots()
                     self.display_heatmap_spectrum()
             else:
@@ -1334,7 +1336,7 @@ class MainTab(object):
                         alphaviz.plotting.plot_elution_profile(
                             self.data.raw_data,
                             self.peptide,
-                            self.mass_dict,
+                            self.data.mass_dict,
                             mz_tol=self.mz_tol.value,
                             rt_tol=self.rt_tol.value,
                             im_tol=self.im_tol.value,
@@ -1355,7 +1357,7 @@ class MainTab(object):
                         alphaviz.plotting.plot_elution_profile_heatmap(
                             self.data.raw_data,
                             self.peptide,
-                            self.mass_dict,
+                            self.data.mass_dict,
                             mz_tol=self.mz_tol.value,
                             rt_tol=self.rt_tol.value,
                             im_tol=self.im_tol.value,
@@ -1656,7 +1658,7 @@ class QCTab(object):
                 align='start',
             )
         elif self.analysis_software == 'diann':
-            self.distribution_axis.options = ['Charge', 'Length', 'IM', 'CScore', 'Decoy.CScore', 'Decoy.Evidence', 'Evidence', 'Global.Q.Value', 'Q.Value', 'Quantity.Quality', 'Spectrum.Similarity']
+            self.distribution_axis.options = ['m/z', 'Charge', 'Length', 'IM', 'CScore', 'Decoy.CScore', 'Decoy.Evidence', 'Evidence', 'Global.Q.Value', 'Q.Value', 'Quantity.Quality', 'Spectrum.Similarity']
             self.distribution_axis.value = ['Charge']
             self.layout_qc = pn.Column(
                 pn.widgets.Tabulator(
@@ -1782,17 +1784,6 @@ class TargetModeTab(object):
         self.peptides_table_file = pn.widgets.FileInput(
             accept='.tsv,.csv,.txt',
             margin=(-10,0,0,10)
-        )
-        self.mass_dict = alphaviz.utils.get_mass_dict(
-            modfile=os.path.join(
-                alphaviz.utils.DATA_PATH,
-                'modifications.tsv'
-            ),
-            aasfile=os.path.join(
-                alphaviz.utils.DATA_PATH,
-                'amino_acids.tsv'
-            ),
-            verbose=False,
         )
         self.clear_peptides_table_button = pn.widgets.Button(
             name='Clear table',
@@ -1998,7 +1989,7 @@ class TargetModeTab(object):
                         peptide['mz'] = alphaviz.utils.calculate_mz(
                             prec_mass=alphaviz.utils.get_precmass(
                                 alphaviz.utils.parse(peptide['sequence']),
-                                self.mass_dict
+                                self.data.mass_dict
                             ),
                             charge=peptide['charge']
                         )
@@ -2011,7 +2002,7 @@ class TargetModeTab(object):
                                 alphaviz.plotting.plot_elution_profile(
                                     self.data.raw_data,
                                     peptide,
-                                    self.mass_dict,
+                                    self.data.mass_dict,
                                     mz_tol=self.mz_tol.value,
                                     rt_tol=self.rt_tol.value,
                                     im_tol=self.im_tol.value,
@@ -2031,7 +2022,7 @@ class TargetModeTab(object):
                                 alphaviz.plotting.plot_elution_profile_heatmap(
                                     self.data.raw_data,
                                     peptide,
-                                    self.mass_dict,
+                                    self.data.mass_dict,
                                     mz_tol=self.mz_tol.value,
                                     rt_tol=self.rt_tol.value,
                                     im_tol=self.im_tol.value,
@@ -2134,7 +2125,7 @@ class TargetModeTab(object):
                             alphaviz.plotting.plot_elution_profile(
                                 self.data.raw_data,
                                 peptide,
-                                self.mass_dict,
+                                self.data.mass_dict,
                                 mz_tol=self.mz_tol.value,
                                 rt_tol=self.rt_tol.value,
                                 im_tol=self.im_tol.value,
@@ -2154,7 +2145,7 @@ class TargetModeTab(object):
                             alphaviz.plotting.plot_elution_profile_heatmap(
                                 self.data.raw_data,
                                 peptide,
-                                self.mass_dict,
+                                self.data.mass_dict,
                                 mz_tol=self.mz_tol.value,
                                 rt_tol=self.rt_tol.value,
                                 im_tol=self.im_tol.value,
