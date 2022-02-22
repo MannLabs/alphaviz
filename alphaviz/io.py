@@ -499,7 +499,8 @@ def create_diann_peptides_table(
 
     peptides['Sequence_AP_mod'] = peptides['Modified.Sequence'].apply(alphaviz.preprocessing.convert_diann_ap_mod)
     peptides['Modified.Sequence'] = peptides['Modified.Sequence'].apply(alphaviz.preprocessing.convert_diann_mq_mod)
-    first_columns = ['Modified.Sequence', 'Length', 'RT', 'Predicted.RT', 'Charge', 'IM', 'Predicted.IM']
+    peptides['m/z'] = 0.0
+    first_columns = ['Modified.Sequence', 'Length', 'm/z', 'RT', 'Predicted.RT', 'Charge', 'IM', 'Predicted.IM']
     peptides = peptides[first_columns + sorted(list(set(peptides.columns).difference(first_columns)))]
     return peptides
 
