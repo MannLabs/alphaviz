@@ -1353,7 +1353,10 @@ class MainTab(object):
                 align='center',
                 margin=(0, 10, 0, -10)
             )
-
+            try:
+                self.layout[8][1][0].loading = True
+            except IndexError:
+                pass
             if self.x_axis_label_diann.value == 'RT dimension':
                 self.layout[8] = pn.Row(
                     self.x_axis_label_diann,
