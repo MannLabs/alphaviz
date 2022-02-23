@@ -15,6 +15,7 @@ import plotly.express as px
 import holoviews as hv
 from holoviews.operation.datashader import dynspread, rasterize, shade
 from bokeh.models import BoxZoomTool, WheelZoomTool, ResetTool, SaveTool
+from bokeh.io import export_svgs
 
 import alphaviz.preprocessing
 import alphaviz.utils
@@ -354,7 +355,7 @@ def _change_plot(plot, element):
         BoxZoomTool(),
         WheelZoomTool(),
         ResetTool(),
-        SaveTool()
+        SaveTool(description='Save as .png')
     ]
 
 
@@ -1546,3 +1547,8 @@ def plot_pept_per_protein_barplot(
         width = 400,
     )
     return fig
+
+def export_svg(obj, filename='test', width=500, height=500):
+    plot_state = hv.renderer('bokeh').get_plot(obj).state
+    plot_state.output_backend = 'svg'
+    export_svgs(plot_state, filename=filename, width=width, height=height)
