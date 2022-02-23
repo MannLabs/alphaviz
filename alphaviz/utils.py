@@ -138,7 +138,7 @@ def parse(peptide:str)->List:
 
     for ind, i in enumerate(peptide):
         string += i
-        if ind == 0 and i == 'a': # protein N-term modification
+        if ind == 0 and i == 'a' and peptide[1].islower(): # protein N-term modification
             parsed.append(string)
             string = ""
         if i.isupper():

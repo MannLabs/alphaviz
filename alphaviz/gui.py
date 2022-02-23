@@ -764,6 +764,7 @@ class MainTab(object):
         self.heatmap_precursor_color = options.layout[1][0][5]
         self.colorscale_qualitative = options.layout[2][0][0]
         self.colorscale_sequential = options.layout[2][0][1]
+        self.image_save_size = options.layout[2][0][2]
         self.protein_seq = str()
         self.gene_name = str()
         self.ms1_ms2_frames = dict()
@@ -869,6 +870,20 @@ class MainTab(object):
             value=True,
             margin=(20, 0, -10, 10),
         )
+        self.export_svg_ms1_button = pn.widgets.Button(
+            name='Export as .svg',
+            button_type='default',
+            width=250,
+            align='center',
+            margin=(25, 0, 0, 10),
+        )
+        self.export_svg_ms2_button = pn.widgets.Button(
+            name='Export as .svg',
+            button_type='default',
+            align='center',
+            width=250,
+            margin=(25, 0, 0, 10),
+        )
         self.layout = None
 
     def create_layout(self):
@@ -898,6 +913,8 @@ class MainTab(object):
                 self.colorscale_qualitative: [self.update_plots_color, 'value'],
                 self.colorscale_sequential: [self.update_plots_color, 'value'],
                 self.show_mirrored_plot: [self.display_mass_spectrum, 'value'],
+                self.export_svg_ms1_button: [self.export_svg_ms1, 'clicks'],
+                self.export_svg_ms2_button: [self.export_svg_ms2, 'clicks'],
             }
             for k in dependances.keys():
                 k.param.watch(
@@ -953,8 +970,14 @@ class MainTab(object):
                     None, #Next frame button
                 ),
                 pn.Row(
-                    self.heatmap_ms1_plot,
-                    self.heatmap_ms2_plot,
+                    pn.Column(
+                        self.heatmap_ms1_plot,
+                        None,
+                    ),
+                    pn.Column(
+                        self.heatmap_ms2_plot,
+                        None,
+                    ),
                     sizing_mode='stretch_width',
                     align='center'
                 ),
@@ -971,10 +994,6 @@ class MainTab(object):
                 sizing_mode='stretch_width',
             )
         return self.layout
-
-    def update_plots_color(self, *args):
-        self.display_chromatogram()
-        self.run_after_protein_selection()
 
     def display_chromatogram(self, *args):
         chromatograms = alphaviz.plotting.plot_chrom(
@@ -1415,17 +1434,25 @@ class MainTab(object):
                     margin=(0, 10, 10, 0),
                 )
 
-                self.layout[10][0] = pn.pane.HoloViews(
-                    self.heatmap_ms1_plot,
-                    margin=(15, 0, 0, 0),
-                    linked_axes=False if self.analysis_software == 'diann' else True,
-                    loading=False
+                self.layout[10][0] = pn.Column(
+                    pn.pane.HoloViews(
+                        self.heatmap_ms1_plot,
+                        margin=(15, 0, 0, 0),
+                        linked_axes=False if self.analysis_software == 'diann' else True,
+                        loading=False
+                    ),
+                    self.export_svg_ms1_button,
+                    align='center',
                 )
-                self.layout[10][1] = pn.pane.HoloViews(
-                    self.heatmap_ms2_plot,
-                    margin=(15, 0, 0, 0),
-                    linked_axes=False if self.analysis_software == 'diann' else True,
-                    loading=False
+                self.layout[10][1] = pn.Column(
+                    pn.pane.HoloViews(
+                        self.heatmap_ms2_plot,
+                        margin=(15, 0, 0, 0),
+                        linked_axes=False if self.analysis_software == 'diann' else True,
+                        loading=False
+                    ),
+                    self.export_svg_ms2_button,
+                    align='center',
                 )
             except ValueError:
                 print('The x- and y-axis of the heatmaps should be different.')
@@ -1476,8 +1503,8 @@ class MainTab(object):
 
     def display_previous_frame(self, *args):
         try:
-            self.layout[10][0].loading = True
-            self.layout[10][1].loading = True
+            self.layout[10][0][0].loading = True
+            self.layout[10][1][0].loading = True
             self.layout[12].loading = True
         except IndexError:
             pass
@@ -1493,8 +1520,8 @@ class MainTab(object):
 
     def display_next_frame(self, *args):
         try:
-            self.layout[10][0].loading = True
-            self.layout[10][1].loading = True
+            self.layout[10][0][0].loading = True
+            self.layout[10][1][0].loading = True
             self.layout[12].loading = True
         except IndexError:
             pass
@@ -1510,8 +1537,8 @@ class MainTab(object):
 
     def display_overlapped_frames(self, *args):
         try:
-            self.layout[10][0].loading = True
-            self.layout[10][1].loading = True
+            self.layout[10][0][0].loading = True
+            self.layout[10][1][0].loading = True
             self.layout[12].loading = True
         except IndexError:
             pass
@@ -1543,23 +1570,57 @@ class MainTab(object):
                     height=450,
                     margin=(0, 10, 10, 0),
                 )
-                self.layout[10][0] = pn.pane.HoloViews(
-                    self.heatmap_ms1_plot,
-                    margin=(15, 0, 0, 0),
-                    linked_axes=False if self.analysis_software == 'diann' else True,
-                    loading=False
+                self.layout[10][0] = pn.Column(
+                    pn.pane.HoloViews(
+                        self.heatmap_ms1_plot,
+                        margin=(15, 0, 0, 0),
+                        linked_axes=False if self.analysis_software == 'diann' else True,
+                        loading=False
+                    ),
+                    self.export_svg_ms1_button,
+                    align='center',
                 )
-                self.layout[10][1] = pn.pane.HoloViews(
-                    self.heatmap_ms2_plot,
-                    margin=(15, 0, 0, 0),
-                    linked_axes=False if self.analysis_software == 'diann' else True,
-                    loading=False
+                self.layout[10][1] = pn.Column(
+                    pn.pane.HoloViews(
+                        self.heatmap_ms2_plot,
+                        margin=(15, 0, 0, 0),
+                        linked_axes=False if self.analysis_software == 'diann' else True,
+                        loading=False
+                    ),
+                    self.export_svg_ms2_button,
+                    align='center',
                 )
+
             except ValueError:
                 print('The x- and y-axis of the heatmaps should be different.')
             self.layout[12] = None
         else:
             self.display_heatmap_spectrum()
+
+    def export_svg_ms1(self, *args):
+        return alphaviz.plotting.export_svg(
+            self.heatmap_ms1_plot,
+            filename=os.path.join(
+                self.data.path_raw_folder.value,
+                f'{self.gene_name}_ms1_heatmap.svg'
+            ),
+            width=int(self.image_save_size.value[0]), height=int(self.image_save_size.value[1])
+        )
+
+    def export_svg_ms2(self, *args):
+        return alphaviz.plotting.export_svg(
+            self.heatmap_ms2_plot,
+            filename=os.path.join(
+                self.data.path_raw_folder.value,
+                f'{self.gene_name}_ms2_heatmap.svg'
+            ),
+            width=int(self.image_save_size.value[0]), height=int(self.image_save_size.value[1])
+        )
+
+    def update_plots_color(self, *args):
+        self.display_chromatogram()
+        self.run_after_protein_selection()
+
 
 class QCTab(object):
 
