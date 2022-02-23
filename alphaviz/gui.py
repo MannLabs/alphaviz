@@ -554,10 +554,9 @@ class HeatmapOptionsWidget(object):
             width=180,
             margin=(20, 20, 20, 10),
         )
-        self.heatmap_background = pn.widgets.Select(
+        self.heatmap_background = pn.widgets.ColorPicker(
             name='Background color',
-            value='black',
-            options=list(matplotlib.colors.CSS4_COLORS.keys()),
+            value='#000000',
             width=180,
             margin=(20, 20, 20, 10),
         )
@@ -570,10 +569,9 @@ class HeatmapOptionsWidget(object):
             width=180,
             margin=(20, 20, 20, 10),
         )
-        self.precursor_target_color = pn.widgets.Select(
+        self.precursor_target_color = pn.widgets.ColorPicker(
             name='Precursor target color',
-            value='darkblue',
-            options=list(matplotlib.colors.CSS4_COLORS.keys()),
+            value='#00008b',
             width=180,
             margin=(20, 20, 20, 10),
         )
