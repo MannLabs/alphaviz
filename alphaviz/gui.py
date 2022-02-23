@@ -884,6 +884,13 @@ class MainTab(object):
             width=250,
             margin=(25, 0, 0, 10),
         )
+        self.export_svg_elprofiles_button = pn.widgets.Button(
+            name='Export as .svg',
+            button_type='default',
+            align='center',
+            width=250,
+            margin=(25, 0, 0, 10),
+        )
         self.layout = None
 
     def create_layout(self):
@@ -915,6 +922,7 @@ class MainTab(object):
                 self.show_mirrored_plot: [self.display_mass_spectrum, 'value'],
                 self.export_svg_ms1_button: [self.export_svg_ms1, 'clicks'],
                 self.export_svg_ms2_button: [self.export_svg_ms2, 'clicks'],
+                self.export_svg_elprofiles_button: [self.export_svg_elprofiles, 'clicks'],
             }
             for k in dependances.keys():
                 k.param.watch(
@@ -1370,23 +1378,27 @@ class MainTab(object):
             else:
                 self.layout[8] = pn.Row(
                     self.x_axis_label_diann,
-                    pn.pane.HoloViews(
-                        alphaviz.plotting.plot_elution_profile_heatmap(
-                            self.data.raw_data,
-                            self.peptide,
-                            self.data.mass_dict,
-                            mz_tol=self.mz_tol.value,
-                            rt_tol=self.rt_tol.value,
-                            im_tol=self.im_tol.value,
-                            n_cols=8,
-                            width=180,
-                            height=180,
-                            colormap=self.heatmap_colormap.value,
-                            background_color=self.heatmap_background_color.value,
+                    pn.Column(
+                        pn.pane.HoloViews(
+                            alphaviz.plotting.plot_elution_profile_heatmap(
+                                self.data.raw_data,
+                                self.peptide,
+                                self.data.mass_dict,
+                                mz_tol=self.mz_tol.value,
+                                rt_tol=self.rt_tol.value,
+                                im_tol=self.im_tol.value,
+                                n_cols=8,
+                                width=180,
+                                height=180,
+                                colormap=self.heatmap_colormap.value,
+                                background_color=self.heatmap_background_color.value,
+                            ),
+                            sizing_mode='stretch_width',
+                            linked_axes=True,
+                            loading=False,
                         ),
-                        sizing_mode='stretch_width',
-                        linked_axes=True,
-                        loading=False,
+                        self.export_svg_elprofiles_button,
+                        align='center',
                     ),
                     sizing_mode='stretch_width',
                     margin=(5, 10, 0, 10)
@@ -1616,6 +1628,17 @@ class MainTab(object):
             ),
             width=int(self.image_save_size.value[0]), height=int(self.image_save_size.value[1])
         )
+
+    def export_svg_elprofiles(self, *args):
+        for i, subplot in enumerate(self.layout[8][1][0].object):
+            alphaviz.plotting.export_svg(
+                subplot,
+                filename=os.path.join(
+                    self.data.path_raw_folder.value,
+                    f'{self.gene_name}_mzim_heatmap_{i}.svg'
+                ),
+                width=int(self.image_save_size.value[0]), height=int(self.image_save_size.value[1])
+            )
 
     def update_plots_color(self, *args):
         self.display_chromatogram()
