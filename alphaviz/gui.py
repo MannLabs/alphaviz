@@ -257,6 +257,7 @@ class DataImportWidget(BaseWidget):
         self.diann_statist = None
         self.predlib = None
         self.model_mgr = None
+        self.psm_df = pd.DataFrame()
         self.fasta = None
         self.layout = None
         self.settings = {
@@ -1619,7 +1620,7 @@ class MainTab(object):
                 self.data.path_raw_folder.value,
                 f'{self.gene_name}_ms1_heatmap.svg'
             ),
-            width=int(self.image_save_size.value[0]), height=int(self.image_save_size.value[1])
+            height=int(self.image_save_size.value[0]), width=int(self.image_save_size.value[1])
         )
 
     def export_svg_ms2(self, *args):
@@ -1629,7 +1630,7 @@ class MainTab(object):
                 self.data.path_raw_folder.value,
                 f'{self.gene_name}_ms2_heatmap.svg'
             ),
-            width=int(self.image_save_size.value[0]), height=int(self.image_save_size.value[1])
+            height=int(self.image_save_size.value[0]), width=int(self.image_save_size.value[1])
         )
 
     def export_svg_elprofiles(self, *args):
@@ -1640,7 +1641,7 @@ class MainTab(object):
                     self.data.path_raw_folder.value,
                     f'{self.gene_name}_mzim_heatmap_{i}.svg'
                 ),
-                width=int(self.image_save_size.value[0]), height=int(self.image_save_size.value[1])
+                height=int(self.image_save_size.value[0]), width=int(self.image_save_size.value[1])
             )
 
     def update_plots_color(self, *args):
@@ -2042,6 +2043,7 @@ class TargetModeTab(object):
                 ),
                 ignore_index=True
             )
+        self.peptides_count.value = 0
 
 
     def read_peptides_table(self, *args):
@@ -2157,7 +2159,7 @@ class TargetModeTab(object):
                 ),
                 ignore_index=True
             )
-
+        self.peptides_count_prediction.value = 0
 
     def read_peptides_table_prediction(self, *args):
         file_ext = os.path.splitext(self.peptides_table_file_prediction.filename)[-1]
