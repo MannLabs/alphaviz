@@ -180,11 +180,15 @@ class RawFile(alphatims.bruker.TimsTOF):
         summed_intensities = -summed_intensities_[self._push_indptr[:-1]]
         summed_intensities[:-1] += summed_intensities_[self._push_indptr[1:-1]]
         summed_intensities[-1] += summed_intensities_[-1]
+        max_intensities = [np.max(self._intensity_values[
+            self._push_indptr[i]:self._push_indptr[i+1]
+        ]) for i in range(len(self._rt_values))]
         self._frames = pd.DataFrame(
             {
                 'MsMsType': msmstype,
                 'Time': self._rt_values,
                 'SummedIntensities': summed_intensities,
+                'MaxIntensity': max_intensities,
                 'Id': np.arange(len(self._rt_values)),
             }
         )
