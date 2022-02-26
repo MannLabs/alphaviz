@@ -538,7 +538,7 @@ def import_diann_output(
         The function returns three pandas data frame with the extracted information about proteins, peptides, and summary information about the whole experiment.
     """
     diann_output_file, diann_stats_file = sorted(get_filenames_from_directory(
-        path_diann_output_folder, 'tsv'), key=len)[:2]
+        path_diann_output_folder, ['tsv']), key=len)[:2]
 
     diann_df = pd.read_csv(os.path.join(path_diann_output_folder, diann_output_file), sep='\t')
     diann_df = diann_df[diann_df.Run == experiment]

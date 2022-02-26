@@ -36,6 +36,8 @@ def load_thermo_raw(
     rt_values = []
     quad_mz_values = []
     precursor_indices = []
+    isolation_center_mzs = []
+    isolation_widths = []
     for i in tqdm.tqdm(
         range(
             rawfile.FirstSpectrumNumber,
@@ -55,10 +57,14 @@ def load_thermo_raw(
         if ms_order == 1:
             precursor = 0
             quad_mz_values.append((-1, -1))
+            isolation_center_mzs.append(-1)
+            isolation_widths.append(-1)
         elif ms_order == 2:
             precursor += 1
             isolation_center = rawfile.GetPrecursorMassForScanNum(i)
             DIA_width = rawfile.GetIsolationWidthForScanNum(i)
+            isolation_center_mzs.append(isolation_center)
+            isolation_widths.append(DIA_width)
             quad_mz_values.append(
                 (
                     isolation_center - DIA_width / 2,
@@ -66,6 +72,7 @@ def load_thermo_raw(
                 )
             )
         precursor_indices.append(precursor)
+        
     rawfile.Close()
     push_indices = np.empty(rawfile.LastSpectrumNumber + 1, np.int64)
     push_indices[0] = 0
@@ -76,6 +83,8 @@ def load_thermo_raw(
         np.concatenate(intensity_values),
         np.array(rt_values) * 60,
         np.array(quad_mz_values),
+        np.array(isolation_center_mzs),
+        np.array(isolation_widths),
         np.array(precursor_indices),
     )
 
@@ -138,6 +147,8 @@ class RawFile(alphatims.bruker.TimsTOF):
             self._intensity_values,
             self._rt_values,
             self._quad_mz_values,
+            isolation_centers,
+            isolation_widths,
             self._precursor_indices,
         ) = load_thermo_raw(thermo_raw_file_name)
         self.thermo_raw_file_name = thermo_raw_file_name
@@ -158,7 +169,7 @@ class RawFile(alphatims.bruker.TimsTOF):
         )
         self._quad_max_mz_value = float(np.max(self._quad_mz_values))
         self._precursor_max_index = int(np.max(self._precursor_indices)) + 1
-        self._acquisition_mode = "ddaPASEF" # TODO
+        self._acquisition_mode = "Thermo" # TODO
         self._mz_min_value = int(np.min(mz_values))
         self._mz_max_value = int(np.max(mz_values)) + 1
         self._decimals = 4
@@ -180,9 +191,11 @@ class RawFile(alphatims.bruker.TimsTOF):
         summed_intensities = -summed_intensities_[self._push_indptr[:-1]]
         summed_intensities[:-1] += summed_intensities_[self._push_indptr[1:-1]]
         summed_intensities[-1] += summed_intensities_[-1]
-        max_intensities = [np.max(self._intensity_values[
-            self._push_indptr[i]:self._push_indptr[i+1]
-        ]) for i in range(len(self._rt_values))]
+        max_intensities = [
+            np.max(self._intensity_values[
+                self._push_indptr[i]:self._push_indptr[i+1]
+            ]) for i in range(len(self._rt_values))
+        ]
         self._frames = pd.DataFrame(
             {
                 'MsMsType': msmstype,
@@ -192,6 +205,18 @@ class RawFile(alphatims.bruker.TimsTOF):
                 'Id': np.arange(len(self._rt_values)),
             }
         )
+
+        frame_numbers = np.arange(len(self._rt_values), dtype=np.int32)
+        self._fragment_frames = pd.DataFrame(
+                {
+                    "Frame": frame_numbers[msmstype==1],
+                    "ScanNumBegin": 0,
+                    "ScanNumEnd": 0,
+                    "IsolationWidth": isolation_widths[msmstype==1],
+                    "IsolationMz": isolation_centers[msmstype==1],
+                    "Precursor": self._precursor_indices[msmstype==1],
+                }
+            )
         self._zeroth_frame = False
         offset = int(self.zeroth_frame)
         cycle_index = np.searchsorted(
