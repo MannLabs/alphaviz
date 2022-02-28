@@ -409,6 +409,7 @@ class DataImportWidget(BaseWidget):
     def load_data(self, *args):
         alphatims.utils.set_progress_callback(self.upload_progress)
         self.settings['analysis_software'] = ''
+        self.model_mgr = None
         self.import_error.object = ''
         self.upload_progress.value = 0
         try:
@@ -1491,7 +1492,12 @@ class MainTab(object):
         predicted_df = pd.DataFrame(columns=['FragmentMz', 'RelativeIntensity','ions'])
         if not self.data.psm_df.empty and self.show_mirrored_plot.value:
             data_slice = self.data.psm_df.loc[(self.data.psm_df.spec_idx == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number']) & (self.data.psm_df.sequence == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Sequence'])].copy()
-            predlib = self.data.model_mgr.predict_all(data_slice, predict_items=['ms2'], frag_types=['b_z1', 'y_z1'])
+            predlib = self.data.model_mgr.predict_all(
+                data_slice,
+                predict_items=['ms2'],
+                frag_types=['b_z1', 'y_z1'],
+                multiprocessing=False,
+            )
             mz_ions = predlib['fragment_mz_df']
             intensities_ions = predlib['fragment_intensity_df']
             intensities_ions *= -100
@@ -1830,6 +1836,7 @@ class TargetModeTab(object):
     def __init__(self, data, options):
         self.name = "Targeted Mode"
         self.data = data
+        self.predicted_dict = None
         self.mz_tol = options.layout[0][0][0]
         self.im_tol = options.layout[0][0][1]
         self.rt_tol = options.layout[0][0][2]
@@ -2120,7 +2127,7 @@ class TargetModeTab(object):
                                     background_color=self.heatmap_background_color.value,
                                 ),
                                 sizing_mode='stretch_width',
-                                linked_axes=True,
+                                linked_axes=False,
                                 loading=False,
                                 align='center',
                                 margin=(0, 10, 10, 10)
@@ -2178,7 +2185,7 @@ class TargetModeTab(object):
             self.run_prediction_spinner.value = True
             df = self.targeted_peptides_table_prediction.value.loc[:, ['sequence', 'mods', 'mod_sites', 'charge']]
             df.fillna(0, inplace=True)
-            df.mod_sites = df.mod_sites.astype(int)
+            # df.mod_sites = df.mod_sites.astype(int)
             df.mod_sites.replace(0, "", inplace=True)
             df.mods.replace(0, "", inplace=True)
             for col in ['sequence', 'mods', 'mod_sites']:
@@ -2189,6 +2196,7 @@ class TargetModeTab(object):
             self.predicted_dict = self.data.model_mgr.predict_all(
                 df,
                 predict_items=['rt', 'mobility'],
+                multiprocessing=False,
             )
             self.predicted_dict['precursor_df']['rt_pred'] *= self.data.raw_data.rt_max_value / 60
             self.targeted_peptides_table_prediction.value = self.predicted_dict['precursor_df'].drop(['instrument', 'nce', 'rt_norm_pred'], axis=1)
@@ -2243,7 +2251,7 @@ class TargetModeTab(object):
                                 background_color=self.heatmap_background_color.value,
                             ),
                             sizing_mode='stretch_width',
-                            linked_axes=True,
+                            linked_axes=False,
                             loading=False,
                             align='center',
                             margin=(0, 10, 10, 10)
