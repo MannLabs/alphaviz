@@ -53,7 +53,9 @@ def update_config(filename, height=400, width=900, ext='svg'):
             'height': height,
             'width': width,
             'scale': 1 # Multiply title/legend/axis/canvas sizes by this factor
-        }
+        },
+        'modeBarButtonsToRemove': ['select2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines'],
+        # 'scrollZoom': True,
     }
     return config
 
@@ -767,6 +769,7 @@ class MainTab(object):
         self.colorscale_qualitative = options.layout[2][0][0]
         self.colorscale_sequential = options.layout[2][0][1]
         self.image_save_size = options.layout[2][0][2]
+        self.image_save_format = options.layout[2][0][3]
         self.protein_seq = str()
         self.gene_name = str()
         self.ms1_ms2_frames = dict()
@@ -921,6 +924,8 @@ class MainTab(object):
                 self.x_axis_label_diann: [self.display_elution_profile_plots, 'value'],
                 self.colorscale_qualitative: [self.update_plots_color, 'value'],
                 self.colorscale_sequential: [self.update_plots_color, 'value'],
+                self.image_save_size: [self.update_plots_color, 'value'],
+                self.image_save_format: [self.update_plots_color, 'value'],
                 self.show_mirrored_plot: [self.display_mass_spectrum, 'value'],
                 self.export_svg_ms1_button: [self.export_svg_ms1, 'clicks'],
                 self.export_svg_ms2_button: [self.export_svg_ms2, 'clicks'],
