@@ -200,11 +200,13 @@ def import_mq_protein_groups(
     except KeyError:
         pass
 
+    data_common.Score = data_common.Score.apply(lambda x: float(x) if x.replace('.','',1).isdigit() else None)
+
     if 'Gene names' not in data_common.columns:
         data_common[['Protein names', 'Protein IDs', 'Gene names']] = data_common.apply(lambda x: alphaviz.preprocessing.get_protein_info_from_fastaheader(x['Fasta headers']), axis=1, result_type ='expand')
     data_common.dropna(
         axis=0,
-        subset=['Gene names', 'Protein IDs'],
+        subset=['Gene names', 'Protein IDs', 'Score'],
         inplace=True
     )
 
