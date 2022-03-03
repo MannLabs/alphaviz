@@ -634,7 +634,7 @@ def plot_mass_spectra(
         row=4, col=1
     )
 
-    fig_common.update_yaxes(title_text="Error, ppm", row=4, col=1)
+    fig_common.update_yaxes(title_text=r"$\Delta ppm$", row=4, col=1)
 
     bions = alphaviz.preprocessing.get_identified_ions(data.ions, sequence, 'b')
     yions = alphaviz.preprocessing.get_identified_ions(data.ions, sequence, 'y')
@@ -722,7 +722,6 @@ def plot_mass_spectra(
     )
 
     return fig_common # this function is quite long. Can it be split in smaller chunks?
-
 
 def plot_mass_error(
     df: pd.DataFrame,
@@ -1306,7 +1305,7 @@ def plot_elution_profile(
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=-0.6,
+            y=-0.8,
             xanchor="right",
             x=0.95
         ),
@@ -1314,6 +1313,132 @@ def plot_elution_profile(
         # width=width,
         height=height,
         hovermode="x unified",
+        showlegend=True
+    )
+    return fig
+
+def plot_elution_profile_no_mass_dict(
+    raw_data,
+    peptide_info: dict,
+    colorscale_qualitative: str,
+    colorscale_sequential: str,
+    mz_tol: float = 50,
+    rt_tol: float = 30,
+    im_tol: float = 0.05,
+    title: str = "",
+    # width: int = 900,
+    height: int = 400,
+):
+    """Plot an elution profile plot for the specified precursor and all his identified fragments.
+
+    Parameters
+    ----------
+    raw_data : alphatims.bruker.TimsTOF
+        An alphatims.bruker.TimsTOF data object.
+    peptide_info : dict
+        Peptide information including sequence, fragments' patterns, rt, mz and im values.
+    mass_dict : dict
+        The basic mass dictionaty with the masses of all amino acids and modifications.
+    mz_tol: float
+        The mz tolerance value. Default: 50 ppm.
+    rt_tol: float
+        The rt tolerance value. Default: 30 ppm.
+    im_tol: float
+        The im tolerance value. Default: 0.05 ppm.
+    title : str
+        The title of the plot.
+    # width : int
+    #     The width of the plot. Default: 900.
+    # height : int
+    #     The height of the plot. Default: 400.
+
+    Returns
+    -------
+    a Plotly line plot
+        The elution profile plot in retention time dimension for the specified peptide and all his fragments.
+    """
+
+    x_axis_label = "rt"
+    y_axis_label = "intensity"
+
+    # slice the data using the rt_tol, im_tol and mz_tol values
+    rt_slice = slice(peptide_info['rt'] - rt_tol, peptide_info['rt'] + rt_tol)
+    im_slice = slice(peptide_info['im'] - im_tol, peptide_info['im'] + im_tol)
+    prec_mz_slice = slice(peptide_info['mz'] / (1 + mz_tol / 10**6), peptide_info['mz'] * (1 + mz_tol / 10**6))
+
+    if len(peptide_info['fragments'].values()) + 1 <= len(getattr(px.colors.qualitative, colorscale_qualitative)):
+        colors_set = getattr(px.colors.qualitative, colorscale_qualitative)
+    else:
+        colors_set = px.colors.sample_colorscale(colorscale_sequential, samplepoints=len(peptide_info['fragments'].values()) + 1)
+
+    # create an elution profile for the precursor
+    precursor_indices = raw_data[
+        rt_slice,
+        im_slice,
+        0,
+        prec_mz_slice,
+        'raw'
+    ]
+    fig = go.Figure()
+    fig.add_trace(
+        plot_elution_line(
+            raw_data,
+            precursor_indices,
+            remove_zeros=True,
+            label='precursor',
+            marker_color=dict(color=colors_set[0])
+        )
+    )
+    # create elution profiles for all fragments
+    for ind, (frag, frag_mz) in enumerate(peptide_info['fragments'].items()):
+        fragment_data_indices = raw_data[
+            rt_slice,
+            im_slice,
+            prec_mz_slice,
+            slice(frag_mz / (1 + mz_tol / 10**6), frag_mz * (1 + mz_tol / 10**6)),
+            'raw'
+        ]
+        if len(fragment_data_indices) > 0:
+            fig.add_trace(
+                plot_elution_line(
+                    raw_data,
+                    fragment_data_indices,
+                    remove_zeros=True,
+                    label=frag,
+                    marker_color=dict(color=colors_set[ind+1])
+                )
+            )
+
+    fig.update_layout(
+        title=dict(
+            text=title,
+            font=dict(
+                size=16,
+            ),
+            x=0.5,
+            xanchor='center',
+            yanchor='top'
+        ),
+        xaxis=dict(
+            title=x_axis_label,
+            titlefont_size=14,
+            tickmode = 'auto',
+            tickfont_size=14,
+        ),
+        yaxis=dict(
+            title=y_axis_label
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=-0.8,
+            xanchor="right",
+            x=0.95
+        ),
+        template = "plotly_white",
+        # width=width,
+        height=height,
+        hovermode="closest",
         showlegend=True
     )
     return fig
