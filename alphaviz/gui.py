@@ -1354,7 +1354,7 @@ class MainTab(object):
     def display_elution_profile_plots(self, *args):
         if self.analysis_software == 'diann' and self.peptide:
             self.layout[7] = pn.panel(
-                f"## The selected peptide: m/z: {round(self.peptide['mz'], 3)}, charge: {self.peptide['charge']}, 1/K0: {round(self.peptide['im'], 3)}, Quantity.Quality score: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Quantity.Quality']), 2)}.",
+                f"## The selected peptide has: rt: {round(self.peptide['rt']/60, 3)}, m/z: {round(self.peptide['mz'], 3)}, charge: {self.peptide['charge']}, 1/K0: {round(self.peptide['im'], 3)}, Quantity.Quality score: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Quantity.Quality']), 2)}.",
                 css_classes=['main-part'],
                 sizing_mode='stretch_width',
                 align='center',
@@ -1771,43 +1771,45 @@ class QCTab(object):
         return self.layout_qc
 
     def display_mass_density_plot(self, *args):
-        if self.analysis_software == 'maxquant' and self.layout_qc:
-            self.layout_qc[2][0][1].loading = True
+        if self.analysis_software == 'maxquant':
+            if self.layout_qc:
+                self.layout_qc[2][0][1].loading = True
 
-        mass_dens_plot_title = 'Uncalibrated mass density plot' if 'Uncalibrated' in self.mass_density_axis.value else 'Calibrated mass density plot'
-        if self.mass_density_axis.value == 'Uncalibrated mass error [ppm]':
-            mass_dens_plot = pn.Pane(
-                alphaviz.plotting.plot_mass_error(
-                    self.data.mq_evidence,
-                    'm/z',
-                    self.mass_density_axis.value,
-                    mass_dens_plot_title,
-                    self.mz_tol.value,
-                ),
-                loading=False,
-                config=update_config(f'{mass_dens_plot_title} plot'),
-                margin=(0, 0, 0, 30),
-            )
-        else:
-            mass_dens_plot = pn.Pane(
-                alphaviz.plotting.plot_mass_error(
-                    self.data.mq_evidence,
-                    'm/z',
-                    self.mass_density_axis.value,
-                    mass_dens_plot_title,
-                ),
-                loading=False,
-                config=update_config(f'{mass_dens_plot_title} plot'),
-                margin=(0, 0, 0, 30),
-            )
-        if self.layout_qc and self.analysis_software == 'maxquant':
-                self.layout_qc[2][0][1] = mass_dens_plot
-        else:
-            return mass_dens_plot
+            mass_dens_plot_title = 'Uncalibrated mass density plot' if 'Uncalibrated' in self.mass_density_axis.value else 'Calibrated mass density plot'
+            if self.mass_density_axis.value == 'Uncalibrated mass error [ppm]':
+                mass_dens_plot = pn.Pane(
+                    alphaviz.plotting.plot_mass_error(
+                        self.data.mq_evidence,
+                        'm/z',
+                        self.mass_density_axis.value,
+                        mass_dens_plot_title,
+                        self.mz_tol.value,
+                    ),
+                    loading=False,
+                    config=update_config(f'{mass_dens_plot_title} plot'),
+                    margin=(0, 0, 0, 30),
+                )
+            else:
+                mass_dens_plot = pn.Pane(
+                    alphaviz.plotting.plot_mass_error(
+                        self.data.mq_evidence,
+                        'm/z',
+                        self.mass_density_axis.value,
+                        mass_dens_plot_title,
+                    ),
+                    loading=False,
+                    config=update_config(f'{mass_dens_plot_title} plot'),
+                    margin=(0, 0, 0, 30),
+                )
+            if self.layout_qc:
+                    self.layout_qc[2][0][1] = mass_dens_plot
+            else:
+                return mass_dens_plot
 
     def display_distribution_plot(self, *args):
         if self.layout_qc:
             self.layout_qc[2][1][1].loading = True
+            print(self.layout_qc)
 
         if self.analysis_software == 'maxquant':
             if self.distribution_axis.value in ['Score', '(EXP) # peptides']:
