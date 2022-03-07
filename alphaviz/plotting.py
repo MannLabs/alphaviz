@@ -14,7 +14,6 @@ import plotly.express as px
 
 import holoviews as hv
 from holoviews.operation.datashader import dynspread, rasterize, shade
-from bokeh.models import BoxZoomTool, WheelZoomTool, ResetTool, SaveTool
 from bokeh.io import export_svgs
 
 import alphaviz.preprocessing
@@ -351,12 +350,6 @@ def plot_heatmap(
 
 def _change_plot(plot, element):
     plot.state.toolbar.logo = None
-    plot.state.toolbar.tools = [
-        BoxZoomTool(),
-        WheelZoomTool(),
-        ResetTool(),
-        SaveTool(description='Save as .png')
-    ]
 
 
 def plot_line(
@@ -876,8 +869,6 @@ def plot_mass_error(
             y = df[y_axis_label].values,
             colorscale = 'Blues',
             ncontours = 5,
-            xaxis = 'x',
-            yaxis = 'y',
             name=" ",
             contours = dict(
                 showlabels = False,
@@ -890,8 +881,6 @@ def plot_mass_error(
         go.Scatter(
             x = df[x_axis_label].values,
             y = df[y_axis_label].values,
-            xaxis = 'x',
-            yaxis = 'y',
             mode = 'markers',
             marker = dict(
                 color = 'rgba(0,0,0,0.3)',
@@ -900,28 +889,6 @@ def plot_mass_error(
             ),
             name=" ",
             # hoverinfo='none',
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            y = df[y_axis_label].values,
-            xaxis = 'x2',
-            nbinsy=100,
-            marker = dict(
-                color = 'rgb(198,219,239)'
-            ),
-            hoverinfo='none',
-        )
-    )
-    fig.add_trace(
-        go.Histogram(
-            x = df[x_axis_label].values,
-            yaxis = 'y2',
-            nbinsx=100,
-            marker = dict(
-                color = 'rgb(198,219,239)'
-            ),
-            hoverinfo='none',
         )
     )
     if mz_tol:
@@ -956,29 +923,6 @@ def plot_mass_error(
 
     fig.update_layout(
         autosize = False,
-        xaxis = dict(
-            zeroline = True,
-            domain = [0,0.85],
-            showgrid = True,
-            title=x_axis_label,
-
-        ),
-        yaxis = dict(
-            zeroline = True,
-            domain = [0,0.85],
-            showgrid = True,
-            title=y_axis_label,
-        ),
-        xaxis2 = dict(
-            zeroline = True,
-            domain = [0.85,1],
-            showgrid = True
-        ),
-        yaxis2 = dict(
-            zeroline = True,
-            domain = [0.85,1],
-            showgrid = True
-        ),
         title=dict(
             text=plot_title,
             font=dict(
@@ -988,8 +932,8 @@ def plot_mass_error(
             xanchor='center',
             yanchor='top'
         ),
-        height = 600,
-        width = 600,
+        height = 500,
+        width = 500,
         bargap = 0,
         hovermode = 'closest',
         showlegend = False,
