@@ -1316,7 +1316,7 @@ class MainTab(object):
                     'raw'
                 ]
             self.layout[7] = pn.panel(
-                f"## The selected peptide: m/z: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z']), 3)}, charge: {float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Charge'])}, 1/K0: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0']), 3)}, andromeda score: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Andromeda score']), 1)}.",
+                f"## The selected peptide has rt: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Retention time']), 3)}, m/z: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z']), 3)}, charge: {float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Charge'])}, 1/K0: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0']), 3)}, andromeda score: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Andromeda score']), 1)}.",
                 css_classes=['main-part'],
                 sizing_mode='stretch_width',
                 align='center',
@@ -1671,13 +1671,19 @@ class QCTab(object):
         self.distribution_axis = pn.widgets.Select(
             name='Select the variable:',
             width=190,
-            margin=(-10, 0, -5, 70),
+            margin=(0, 0, 0, 80),
+        )
+        self.mass_density_axis = pn.widgets.Select(
+            name='Select the variable:',
+            width=220,
+            margin=(0, 0, 0, 90),
         )
 
     def create_layout(self):
         dependances = {
-            self.mz_tol: [self.update_tol_range_mass_density, 'value'],
+            self.mz_tol: [self.display_mass_density_plot, 'value'],
             self.distribution_axis: [self.display_distribution_plot, 'value'],
+            self.mass_density_axis: [self.display_mass_density_plot, 'value'],
         }
         for k in dependances.keys():
             k.param.watch(
@@ -1687,27 +1693,9 @@ class QCTab(object):
 
         experiment = self.data.ms_file_name.value.split('.')[0]
         if self.analysis_software == 'maxquant':
-            uncalb_mass_dens_plot = alphaviz.plotting.plot_mass_error(
-                self.data.mq_evidence,
-                'm/z',
-                'Uncalibrated mass error [ppm]',
-                'Uncalibrated mass density plot',
-                self.mz_tol.value,
-            )
-            calb_mass_dens_plot = alphaviz.plotting.plot_mass_error(
-                self.data.mq_evidence,
-                'm/z',
-                'Mass error [ppm]',
-                'Calibrated mass density plot',
-            )
-            peptide_per_protein_distr = alphaviz.plotting.plot_pept_per_protein_barplot(
-                self.data.mq_protein_groups,
-                '(EXP) # peptides',
-                'Peptides per protein',
-            )
-
-            self.distribution_axis.options = ['m/z', 'Charge', 'Length', 'Mass', '1/K0', 'CCS', 'Missed cleavages', 'Andromeda score', 'Intensity', 'Mass error [ppm]', 'Mass error [Da]', 'Uncalibrated mass error [ppm]', 'Uncalibrated mass error [Da]']
-            self.distribution_axis.value = ['Charge']
+            self.mass_density_axis.options = ['Uncalibrated mass error [ppm]', 'Mass error [ppm]']
+            self.distribution_axis.options = ['m/z', 'Charge', 'Length', 'Mass', '1/K0', 'CCS', 'K0 length', 'Missed cleavages', 'Andromeda score', 'Intensity', 'Mass error [ppm]', 'Mass error [Da]', 'Uncalibrated mass error [ppm]', 'Uncalibrated mass error [Da]', 'Score', '(EXP) # peptides']
+            self.distribution_axis.value = ['m/z']
 
             self.layout_qc = pn.Column(
                 pn.widgets.Tabulator(
@@ -1727,26 +1715,15 @@ class QCTab(object):
                     margin=(15, 10, -5, 10)
                 ),
                 pn.Row(
-                    pn.Pane(
-                        uncalb_mass_dens_plot,
-                        config=update_config('Uncalibrated mass density plot'),
-                    ),
-                    pn.Pane(
-                        calb_mass_dens_plot,
-                        config=update_config('Calibrated mass density plot'),
-                    ),
-                    align='center'
-                ),
-                pn.Row(
-                    pn.Pane(
-                        peptide_per_protein_distr,
-                        config=update_config('Peptides per protein plot'),
-                        margin=(42, 0, 0, 0),
+                    pn.Column(
+                        self.mass_density_axis,
+                        self.display_mass_density_plot(),
+                        align='start',
                     ),
                     pn.Column(
                         self.distribution_axis,
                         self.display_distribution_plot(),
-                        align='center',
+                        align='start',
                     ),
                     align='center',
                 ),
@@ -1755,8 +1732,8 @@ class QCTab(object):
                 align='start',
             )
         elif self.analysis_software == 'diann':
-            self.distribution_axis.options = ['m/z', 'Charge', 'Length', 'IM', 'CScore', 'Decoy.CScore', 'Decoy.Evidence', 'Evidence', 'Global.Q.Value', 'Q.Value', 'Quantity.Quality', 'Spectrum.Similarity']
-            self.distribution_axis.value = ['Charge']
+            self.distribution_axis.options = ['m/z', 'Charge', 'Length', 'IM', 'CScore', 'Decoy.CScore', 'Decoy.Evidence', 'Evidence', 'Global.Q.Value', 'Q.Value', 'Quantity.Quality', 'Spectrum.Similarity', '(EXP) # peptides']
+            self.distribution_axis.value = ['m/z']
             self.layout_qc = pn.Column(
                 pn.widgets.Tabulator(
                     self.data.diann_statist,
@@ -1774,15 +1751,7 @@ class QCTab(object):
                     margin=(15, 10, -5, 10)
                 ),
                 pn.Row(
-                    pn.Pane(
-                        alphaviz.plotting.plot_pept_per_protein_barplot(
-                            self.data.diann_proteins,
-                            '(EXP) # peptides',
-                            'Peptides per protein',
-                        ),
-                        config=update_config('Peptides per protein plot'),
-                        margin=(42, 0, 0, 0),
-                    ),
+                    None,
                     pn.Column(
                         self.distribution_axis,
                         self.display_distribution_plot(),
@@ -1801,39 +1770,88 @@ class QCTab(object):
             )
         return self.layout_qc
 
-    def update_tol_range_mass_density(self, *args):
+    def display_mass_density_plot(self, *args):
         if self.analysis_software == 'maxquant' and self.layout_qc:
-            self.layout_qc[2][0] = pn.Pane(
+            self.layout_qc[2][0][1].loading = True
+
+        mass_dens_plot_title = 'Uncalibrated mass density plot' if 'Uncalibrated' in self.mass_density_axis.value else 'Calibrated mass density plot'
+        if self.mass_density_axis.value == 'Uncalibrated mass error [ppm]':
+            mass_dens_plot = pn.Pane(
                 alphaviz.plotting.plot_mass_error(
                     self.data.mq_evidence,
                     'm/z',
-                    'Uncalibrated mass error [ppm]',
-                    'Uncalibrated mass density plot',
+                    self.mass_density_axis.value,
+                    mass_dens_plot_title,
                     self.mz_tol.value,
                 ),
-                config=update_config('Uncalibrated mass density plot'),
+                loading=False,
+                config=update_config(f'{mass_dens_plot_title} plot'),
+                margin=(0, 0, 0, 30),
             )
+        else:
+            mass_dens_plot = pn.Pane(
+                alphaviz.plotting.plot_mass_error(
+                    self.data.mq_evidence,
+                    'm/z',
+                    self.mass_density_axis.value,
+                    mass_dens_plot_title,
+                ),
+                loading=False,
+                config=update_config(f'{mass_dens_plot_title} plot'),
+                margin=(0, 0, 0, 30),
+            )
+        if self.layout_qc and self.analysis_software == 'maxquant':
+                self.layout_qc[2][0][1] = mass_dens_plot
+        else:
+            return mass_dens_plot
 
     def display_distribution_plot(self, *args):
-        if self.analysis_software == 'maxquant':
-            data = self.data.mq_evidence
-        elif self.analysis_software == 'diann':
-            data = self.data.diann_peptides
+        if self.layout_qc:
+            self.layout_qc[2][1][1].loading = True
 
-        plot = pn.Pane(
-            alphaviz.plotting.plot_peptide_distr(
-                data,
-                self.distribution_axis.value,
-                f'Peptide {self.distribution_axis.value.lower()} distribution'
-            ),
-            config=update_config(f'Peptide {self.distribution_axis.value.lower()} distribution'),
-        )
+        if self.analysis_software == 'maxquant':
+            if self.distribution_axis.value in ['Score', '(EXP) # peptides']:
+                data = self.data.mq_protein_groups
+            else:
+                data = self.data.mq_evidence
+        elif self.analysis_software == 'diann':
+            if self.distribution_axis.value in ['(EXP) # peptides']:
+                data = self.data.diann_proteins
+            else:
+                data = self.data.diann_peptides
+
+        if self.distribution_axis.value == 'Score':
+            title = f'Protein {self.distribution_axis.value.lower()} distribution'
+        elif self.distribution_axis.value == '(EXP) # peptides':
+            title = 'Number of peptides per protein'
+        else:
+            title = f'Peptide {self.distribution_axis.value.lower()} distribution'
+
+        if self.distribution_axis.value == '(EXP) # peptides':
+            plot = pn.Pane(
+                alphaviz.plotting.plot_pept_per_protein_barplot(
+                    data,
+                    self.distribution_axis.value,
+                    title,
+                ),
+                loading=False,
+                config=update_config(f'{title} plot'),
+                margin=(0, 0, 0, 30),
+            )
+        else:
+            plot = pn.Pane(
+                alphaviz.plotting.plot_peptide_distr(
+                    data,
+                    self.distribution_axis.value,
+                    title
+                ),
+                loading=False,
+                config=update_config(title),
+                margin=(0, 0, 0, 30),
+            )
 
         if self.layout_qc:
-            if self.analysis_software == 'maxquant':
-                self.layout_qc[3][1][1] = plot
-            elif self.analysis_software == 'diann':
-                self.layout_qc[2][1][1] = plot
+            self.layout_qc[2][1][1] = plot
         else:
             return plot
 
