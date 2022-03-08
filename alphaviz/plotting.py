@@ -6,7 +6,6 @@ import re
 
 import numpy as np
 import pandas as pd
-from itertools import chain
 
 import plotly.graph_objects as go
 import plotly.subplots
@@ -28,7 +27,7 @@ def plot_sequence_coverage(
     colorscale_sequential: str,
     regex: str,
     prot_id: str = ""
-)-> go.Figure:
+) -> go.Figure:
     """Create a protein sequence coverage plot.
 
     Parameters
@@ -128,15 +127,15 @@ def plot_sequence_coverage(
         ),
         yaxis=dict(
             tickfont_size=1,
-            showticklabels = False,
-            nticks = 0,
+            showticklabels=False,
+            nticks=0,
             visible=False
         ),
         barmode='overlay',
-        bargap=0, # gap between bars of adjacent location coordinates.
-        bargroupgap=0, # gap between bars of the same location coordinate.
+        bargap=0,  # gap between bars of adjacent location coordinates.
+        bargroupgap=0,  # gap between bars of the same location coordinate.
         hovermode="x",
-        template = "plotly_white", #"plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "simple_white"
+        template="plotly_white",  # "plotly", "plotly_white", "plotly_dark", "ggplot2", "seaborn", "simple_white"
         # width=1000,
         height=200
     )
@@ -148,9 +147,9 @@ def plot_sequence_coverage(
 
 
 def plot_chrom(
-    data, #alphatims.bruker.TimsTOF object
+    data,  # alphatims.bruker.TimsTOF object
     colorscale_qualitative: str,
-)-> go.Figure:
+) -> go.Figure:
     """Create a plot showing 4 chromatogram types: total ion chromatogram (TIC) and base peak chromatogram (BPC) for MS1 and MS2 raw data.
 
     Parameters
@@ -175,7 +174,7 @@ def plot_chrom(
     total_ion_col = ['RT', 'SummedIntensities']
     base_peak_col = ['RT', 'MaxIntensity']
 
-    for i, chrom_type in enumerate(['Total Ion Chromatogram - MS1', 'Base Peak Chromatogram - MS1', 'Total Ion Chromatogram - MS2','Base Peak Chromatogram - MS2']):
+    for i, chrom_type in enumerate(['Total Ion Chromatogram - MS1', 'Base Peak Chromatogram - MS1', 'Total Ion Chromatogram - MS2', 'Base Peak Chromatogram - MS2']):
         if chrom_type == 'Total Ion Chromatogram - MS1':
             data = chrom_ms1[total_ion_col]
         elif chrom_type == 'Total Ion Chromatogram - MS2':
@@ -196,7 +195,7 @@ def plot_chrom(
 
     fig.update_layout(
         title=dict(
-            text=f"Chromatograms",
+            text="Chromatograms",
             font=dict(
                 size=16,
             ),
@@ -249,7 +248,7 @@ def plot_heatmap(
     precursor_size: int = 15,
     colormap: str = 'fire',
     **kwargs
-)-> hv.Scatter:
+) -> hv.Scatter:
     """Create a heatmap for the MS1/MS2 frame that overlaps with the precursor mark at the location where the precursor has been selected for analysis.
 
     Parameters
@@ -348,12 +347,13 @@ def plot_heatmap(
         return fig * precursor
     return fig
 
+
 def _change_plot(plot, element):
     plot.state.toolbar.logo = None
 
 
 def plot_line(
-    timstof_data, #alphatims.bruker.TimsTOF object
+    timstof_data,  # alphatims.bruker.TimsTOF object
     selected_indices: np.ndarray,
     x_axis_label: str,
     colorscale_qualitative: str,
@@ -362,7 +362,7 @@ def plot_line(
     remove_zeros: bool = False,
     trim: bool = True,
     height: int = 400
-)-> go.Figure:
+) -> go.Figure:
     """Plot an XIC, mobilogram or spectrum as a lineplot.
 
     Parameters
@@ -437,7 +437,7 @@ def plot_line(
             x=x_ticks,
             y=intensities,
             mode='lines',
-            text = [f'{x_axis_label}'.format(i + 1) for i in range(len(x_ticks))],
+            text=[f'{x_axis_label}'.format(i + 1) for i in range(len(x_ticks))],
             hovertemplate='<b>%{text}:</b> %{x};<br><b>Intensity:</b> %{y}.',
             name=" ",
             marker=dict(color=getattr(px.colors.qualitative, colorscale_qualitative)[0])
@@ -457,13 +457,13 @@ def plot_line(
         xaxis=dict(
             title=x_axis_label,
             titlefont_size=14,
-            tickmode = 'auto',
+            tickmode='auto',
             tickfont_size=14,
         ),
         yaxis=dict(
             title=y_axis_label,
         ),
-        template = "plotly_white",
+        template="plotly_white",
         height=height,
         hovermode="x"
     )
@@ -481,7 +481,7 @@ def plot_mass_spectra(
     y_ion_color: str = 'blue',
     spectrum_line_width: float = 1.5,
     height: int = 520,
-)-> go.Figure:
+) -> go.Figure:
     """Plot the mass spectrum with a mass error plot for each ion and annotated peptide sequence as subplots.
 
     Parameters
@@ -513,7 +513,7 @@ def plot_mass_spectra(
     if predicted:
         import sklearn.preprocessing
         scaled_int = sklearn.preprocessing.MinMaxScaler((0, 100)).fit_transform(data.intensity_values.values.reshape(-1, 1))
-        data['intensity_values']= scaled_int.reshape(1, -1)[0]
+        data['intensity_values'] = scaled_int.reshape(1, -1)[0]
 
     fig.add_trace(
         go.Scatter(
@@ -596,7 +596,7 @@ def plot_mass_spectra(
                     x1=predicted[0][i],
                     y1=predicted[1][i],
                     line=dict(
-                        color = b_ion_color if 'b' in predicted[2][i] else y_ion_color,
+                        color=b_ion_color if 'b' in predicted[2][i] else y_ion_color,
                         width=spectrum_line_width
                     )
                 ) for i in range(len(predicted[0]))
@@ -614,7 +614,7 @@ def plot_mass_spectra(
                 x1=data.loc[i, 'mz_values'],
                 y1=data.loc[i, 'intensity_values'],
                 line=dict(
-                    color = b_ion_color if 'b' in data.loc[i, 'ions'] else (y_ion_color if 'y' in data.loc[i, 'ions'] else spectrum_color),
+                    color=b_ion_color if 'b' in data.loc[i, 'ions'] else (y_ion_color if 'y' in data.loc[i, 'ions'] else spectrum_color),
                     width=spectrum_line_width
                 )
             ) for i in data.index
@@ -648,6 +648,7 @@ def plot_mass_spectra(
     )
     return fig
 
+
 def plot_complex_ms_plot(
     data: pd.DataFrame,
     title: str,
@@ -661,7 +662,7 @@ def plot_complex_ms_plot(
     font_size_seq: int = 14,
     font_size_ion: int = 10,
     height: int = 520
-)-> go.Figure:
+) -> go.Figure:
     """Plot the mass spectrum with a mass error plot for each ion and annotated peptide sequence as subplots.
 
     Parameters
@@ -774,8 +775,8 @@ def plot_complex_ms_plot(
         if b:
             fig_common.add_trace(
                 go.Scatter(
-                    x=[distance[i],distance[i] + (distance[i+1] - distance[i])/2,distance[i] + (distance[i+1] - distance[i])/2],
-                    y=[0.7,0.7,0],
+                    x=[distance[i], distance[i] + (distance[i+1] - distance[i])/2, distance[i] + (distance[i+1] - distance[i])/2],
+                    y=[0.7, 0.7, 0],
                     mode="lines",
                     showlegend=False,
                     marker_color=b_ion_color,
@@ -800,8 +801,8 @@ def plot_complex_ms_plot(
         if y:
             fig_common.add_trace(
                 go.Scatter(
-                    x=[distance[i],distance[i] - (distance[i+1] - distance[i])/2,distance[i] - (distance[i+1] - distance[i])/2],
-                    y=[-0.7,-0.7,0],
+                    x=[distance[i], distance[i] - (distance[i+1] - distance[i])/2, distance[i] - (distance[i+1] - distance[i])/2],
+                    y=[-0.7, -0.7, 0],
                     mode="lines",
                     showlegend=False,
                     marker_color=y_ion_color,
@@ -824,7 +825,7 @@ def plot_complex_ms_plot(
             )
     fig_common.update_yaxes(
         visible=False,
-        range=(-1.1,1.1),
+        range=(-1.1, 1.1),
         row=6,
         col=1
     )
@@ -836,13 +837,14 @@ def plot_complex_ms_plot(
     fig_common.update_xaxes(matches='x')
     return fig_common
 
+
 def plot_mass_error(
     df: pd.DataFrame,
     x_axis_label: str,
     y_axis_label: str,
     plot_title: str,
     mz_tol: float = None
-)-> go.Figure:
+) -> go.Figure:
     """Create a density plot superimposed on the scatter plot together with the 1D distributions of both variables as marginal histograms.
 
     Parameters
@@ -865,27 +867,27 @@ def plot_mass_error(
     fig = go.Figure()
     fig.add_trace(
         go.Histogram2dContour(
-            x = df[x_axis_label].values,
-            y = df[y_axis_label].values,
-            colorscale = 'Blues',
-            ncontours = 5,
+            x=df[x_axis_label].values,
+            y=df[y_axis_label].values,
+            colorscale='Blues',
+            ncontours=5,
             name=" ",
-            contours = dict(
-                showlabels = False,
-                coloring = 'fill'
+            contours=dict(
+                showlabels=False,
+                coloring='fill'
             ),
             hoverinfo='none',
         )
     )
     fig.add_trace(
         go.Scatter(
-            x = df[x_axis_label].values,
-            y = df[y_axis_label].values,
-            mode = 'markers',
-            marker = dict(
-                color = 'rgba(0,0,0,0.3)',
-                size = 3,
-                opacity = 0.2
+            x=df[x_axis_label].values,
+            y=df[y_axis_label].values,
+            mode='markers',
+            marker=dict(
+                color='rgba(0,0,0,0.3)',
+                size=3,
+                opacity=0.2
             ),
             name=" ",
             # hoverinfo='none',
@@ -894,35 +896,35 @@ def plot_mass_error(
     if mz_tol:
         fig.add_trace(
             go.Scatter(
-                x = [df[x_axis_label].values.min(), df[x_axis_label].values.max()],
-                y = [mz_tol, mz_tol],
+                x=[df[x_axis_label].values.min(), df[x_axis_label].values.max()],
+                y=[mz_tol, mz_tol],
                 mode='lines',
                 line=dict(
                     color='darkred',
                     width=2,
                     dash='dash'
                 ),
-                showlegend = False,
+                showlegend=False,
                 hoverinfo='none',
             )
         )
         fig.add_trace(
             go.Scatter(
-                x = [df[x_axis_label].values.min(), df[x_axis_label].values.max()],
-                y = [-mz_tol, -mz_tol],
+                x=[df[x_axis_label].values.min(), df[x_axis_label].values.max()],
+                y=[-mz_tol, -mz_tol],
                 mode='lines',
                 line=dict(
                     color='darkred',
                     width=2,
                     dash='dash'
                 ),
-                showlegend = False,
+                showlegend=False,
                 hoverinfo='none',
             )
         )
 
     fig.update_layout(
-        autosize = False,
+        autosize=False,
         title=dict(
             text=plot_title,
             font=dict(
@@ -932,20 +934,21 @@ def plot_mass_error(
             xanchor='center',
             yanchor='top'
         ),
-        height = 500,
-        width = 500,
-        bargap = 0,
-        hovermode = 'closest',
-        showlegend = False,
-        template = "plotly_white"
+        height=500,
+        width=500,
+        bargap=0,
+        hovermode='closest',
+        showlegend=False,
+        template='plotly_white'
     )
     return fig
+
 
 def plot_peptide_distr(
     df: pd.DataFrame,
     x_axis_label: str,
     plot_title: str
-)-> go.Figure:
+) -> go.Figure:
     """Create a distribution plot in conjuction with boxplot.
 
     Parameters
@@ -967,23 +970,23 @@ def plot_peptide_distr(
 
     fig.add_trace(
         go.Histogram(
-            x = df[x_axis_label],
-            xaxis = 'x',
+            x=df[x_axis_label],
+            xaxis='x',
             nbinsy=50,
-            marker = dict(
-                color = 'rgb(198,219,239)'
+            marker=dict(
+                color='rgb(198,219,239)'
             ),
-            showlegend = False,
+            showlegend=False,
         )
     )
 
     fig.add_trace(
         go.Box(
             x=df[x_axis_label],
-            yaxis = 'y2',
+            yaxis='y2',
             marker_color='rgb(198,219,239)',
             name='',
-            showlegend = False,
+            showlegend=False,
         )
     )
 
@@ -997,30 +1000,30 @@ def plot_peptide_distr(
             xanchor='center',
             yanchor='top'
         ),
-        xaxis = dict(
-            zeroline = True,
-            domain = [0,0.85],
-            showgrid = True,
+        xaxis=dict(
+            zeroline=True,
+            domain=[0, 0.85],
+            showgrid=True,
             title=x_axis_label,
 
         ),
-        yaxis = dict(
-            zeroline = True,
-            domain = [0,0.85],
-            showgrid = True,
+        yaxis=dict(
+            zeroline=True,
+            domain=[0, 0.85],
+            showgrid=True,
             title='Count',
         ),
-        yaxis2 = dict(
-            zeroline = True,
-            domain = [0.85,1],
-            showgrid = True,
+        yaxis2=dict(
+            zeroline=True,
+            domain=[0.85, 1],
+            showgrid=True,
             title=''
         ),
         bargroupgap=0.1,
-        template = "plotly_white",
-        showlegend = False,
-        height = 400,
-        width = 600,
+        template='plotly_white',
+        showlegend=False,
+        height=400,
+        width=600,
     )
     return fig
 
@@ -1071,7 +1074,7 @@ def plot_elution_heatmap(
 
     df["rt_values"] /= 60
 
-    opts_ms1=dict(
+    opts_ms1 = dict(
         width=width,
         height=height,
         title=title,
@@ -1104,6 +1107,7 @@ def plot_elution_heatmap(
     ).opts(plot=opts_ms1)
 
     return fig
+
 
 def plot_elution_profile_heatmap(
     timstof_data,
@@ -1158,7 +1162,7 @@ def plot_elution_profile_heatmap(
         mass_dict=mass_dict
     )
     peptide_info['fragments'] = {
-        (f"b{key}" if key>0 else f"y{-key}"):value for key,value in zip(frag_type, frag_masses)
+        (f"b{key}" if key > 0 else f"y{-key}"): value for key, value in zip(frag_type, frag_masses)
     }
 
     # slice the data using the rt_tol, im_tol and mz_tol values
@@ -1210,8 +1214,11 @@ def plot_elution_profile_heatmap(
                 # ylim=(im_slice.start, im_slice.stop),
                 **kwargs
             )
+    try:
+        return common_plot.cols(n_cols)
+    except AttibuteError:
+        return common_plot
 
-    return common_plot.cols(n_cols)
 
 def plot_elution_line(
     timstof_data,
@@ -1246,7 +1253,7 @@ def plot_elution_line(
         "intensity": "Intensity",
     }
     x_axis_label = axis_dict["rt"]
-    y_axis_label = axis_dict["intensity"]
+    # y_axis_label = axis_dict["intensity"]
     labels = {
         'RT, min': "rt_values",
     }
@@ -1272,12 +1279,13 @@ def plot_elution_line(
         x=x_ticks,
         y=intensities,
         mode='lines',
-        text = [f'{x_axis_label}'.format(i + 1) for i in range(len(x_ticks))],
+        text=[f'{x_axis_label}'.format(i + 1) for i in range(len(x_ticks))],
         hovertemplate='<b>%{text}:</b> %{x};<br><b>Intensity:</b> %{y}.',
         name=label,
         marker=marker_color,
     )
     return trace
+
 
 def plot_elution_profile(
     raw_data,
@@ -1331,7 +1339,7 @@ def plot_elution_profile(
         mass_dict=mass_dict
     )
     peptide_info['fragments'] = {
-        (f"b{key}" if key>0 else f"y{-key}"):value for key,value in zip(frag_type, frag_masses)
+        (f"b{key}" if key > 0 else f"y{-key}"): value for key, value in zip(frag_type, frag_masses)
     }
 
     # slice the data using the rt_tol, im_tol and mz_tol values
@@ -1396,28 +1404,28 @@ def plot_elution_profile(
         xaxis=dict(
             title=x_axis_label,
             titlefont_size=14,
-            tickmode = 'auto',
+            tickmode='auto',
             tickfont_size=14,
         ),
         yaxis=dict(
             title=y_axis_label
         ),
         legend=dict(
-            orientation="h",
-            yanchor="bottom",
+            orientation='h',
+            yanchor='bottom',
             y=-1,
-            xanchor="right",
+            xanchor='right',
             x=0.95,
             font=dict(
                 # family="Courier",
                 size=11,
-                color="black"
+                color='black'
             ),
         ),
-        template = "plotly_white",
+        template='plotly_white',
         # width=width,
         height=height,
-        hovermode="x unified",
+        hovermode='x unified',
         showlegend=True
     )
     return fig
@@ -1427,7 +1435,7 @@ def plot_pept_per_protein_barplot(
     df: pd.DataFrame,
     x_axis_label: str,
     plot_title: str
-)-> go.Figure:
+) -> go.Figure:
     """Create a barplot for the number of peptides identified per protein.
 
     Parameters
@@ -1446,7 +1454,7 @@ def plot_pept_per_protein_barplot(
 
     """
     df = df.copy()
-    df['pept_per_prot'] = df[x_axis_label].apply(lambda x: str(x) if x <5 else '>5')
+    df['pept_per_prot'] = df[x_axis_label].apply(lambda x: str(x) if x < 5 else '>5')
 
     fig = go.Figure()
 
@@ -1459,8 +1467,8 @@ def plot_pept_per_protein_barplot(
             ),
             text=[f'{each:.2f}' for each in df.pept_per_prot.value_counts(normalize=True).sort_index().values],
             textfont={
-                'size':8,
-                'color':'green'
+                'size': 8,
+                'color': 'green'
             },
         )
     )
@@ -1475,22 +1483,23 @@ def plot_pept_per_protein_barplot(
             xanchor='center',
             yanchor='top'
         ),
-        xaxis = dict(
-            zeroline = True,
-            showgrid = True,
-            title="Number of peptide",
+        xaxis=dict(
+            zeroline=True,
+            showgrid=True,
+            title='Number of peptide',
 
         ),
-        yaxis = dict(
-            zeroline = True,
-            showgrid = True,
+        yaxis=dict(
+            zeroline=True,
+            showgrid=True,
             title='Count',
         ),
-        template = "plotly_white",
-        height = 400,
-        width = 400,
+        template='plotly_white',
+        height=400,
+        width=400,
     )
     return fig
+
 
 def export_svg(obj, filename='test', width=500, height=500):
     plot_state = hv.renderer('bokeh').get_plot(obj).state

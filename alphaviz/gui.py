@@ -3,7 +3,6 @@ import logging
 import platform
 import json
 import pandas as pd
-import numpy as np
 from io import StringIO
 
 import alphatims.bruker
@@ -12,10 +11,8 @@ import alphatims.utils
 # visualization
 import panel as pn
 import bokeh.server.views.ws
-from bokeh.models.widgets.tables import NumberFormatter
 import plotly.express as px
 import holoviews as hv
-import matplotlib.colors
 
 # local
 import alphaviz
@@ -48,16 +45,17 @@ def update_config(filename, height=400, width=900, ext='svg'):
     config = {
         'displaylogo': False,
         'toImageButtonOptions': {
-            'format': f'{ext}', # one of png, svg, jpeg, webp
+            'format': f'{ext}',  # one of png, svg, jpeg, webp
             'filename': f'{filename}',
             'height': height,
             'width': width,
-            'scale': 1 # Multiply title/legend/axis/canvas sizes by this factor
+            'scale': 1  # Multiply title/legend/axis/canvas size by this factor
         },
         'modeBarButtonsToRemove': ['select2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines'],
         # 'scrollZoom': True,
     }
     return config
+
 
 if platform.system() == 'Windows':
     raw_folder_placeholder = r'D:\bruker\21min_HELA_proteomics'
@@ -221,7 +219,7 @@ class MainWidget(object):
             self.download_new_version_button.name = f"Download version {latest_github_version}"
             download_new_version_button = self.download_new_version_button
             download_new_version_button.js_on_click(
-                code=f"""window.open("https://github.com/MannLabs/alphaviz/releases/latest")"""
+                code="""window.open("https://github.com/MannLabs/alphaviz/releases/latest")"""
             )
         else:
             download_new_version_button = None
@@ -387,7 +385,7 @@ class DataImportWidget(BaseWidget):
                 )
             )
         except OSError:
-            self.import_error.object = f"#### The selected directory is not found."
+            self.import_error.object = "#### The selected directory is not found."
 
     def update_output_folder_and_fasta(self, *args):
         try:
@@ -447,7 +445,7 @@ class DataImportWidget(BaseWidget):
             self.import_error.object += "\n#### The fasta file file has not been provided."
 
         # read analysis output files (MQ, DIA-NN, etc.) if specified
-        ## check all files in the analysis output folder
+        # check all files in the analysis output folder
         if self.path_output_folder.value:
             files = alphaviz.io.get_filenames_from_directory(
                 directory=self.path_output_folder.value,
@@ -488,7 +486,6 @@ class DataImportWidget(BaseWidget):
             self.import_error.object += "\n#### The output files of the supported software tools have not been provided."
 
         if self.is_prediction.value:
-            import peptdeep
             from peptdeep.pretrained_models import ModelManager
 
             self.model_mgr = ModelManager()
@@ -503,12 +500,11 @@ class DataImportWidget(BaseWidget):
                 )
 
                 self.psm_df = mq_reader.psm_df.groupby(
-                    ['sequence','mods','mod_sites','nAA','charge','spec_idx']
+                    ['sequence', 'mods', 'mod_sites', 'nAA', 'charge', 'spec_idx']
                 )['ccs'].median().reset_index()
 
                 self.psm_df['nce'] = 0.3
-                self.psm_df['instrument'] = 'timsTOF' #trained on more Lumos files therefore should work better than 'timsTOF'
-
+                self.psm_df['instrument'] = 'timsTOF'  # trained on more Lumos files therefore should work better than 'timsTOF'
 
         self.trigger_dependancy()
         self.upload_progress.active = False
@@ -644,6 +640,7 @@ class ToleranceOptionsWidget(object):
             css_classes=['background']
         )
         return layout
+
 
 class CustomizationOptionsWidget(object):
 
@@ -788,8 +785,8 @@ class MainTab(object):
             formatters={
                 "Protein IDs": {
                     'type': 'link',
-                    'urlPrefix':"https://www.uniprot.org/uniprot/",
-                    'target':"_blank",
+                    'urlPrefix': "https://www.uniprot.org/uniprot/",
+                    'target': "_blank",
                 }
             },
             sizing_mode='stretch_width',
@@ -976,23 +973,23 @@ class MainTab(object):
                     margin=(10, 0),
                 ),
                 pn.panel(
-                    f"### Proteins table",
+                    "### Proteins table",
                     align='center',
                     margin=(-10, 10, -5, 10)
                 ),
                 self.proteins_table,
                 pn.panel(
-                    f"### Peptides table",
+                    "### Peptides table",
                     align='center',
                     margin=(-10, 10, -5, 10)
                 ),
                 self.peptides_table,
                 self.protein_coverage_plot,
-                None, # peptide description
-                None, #XIC plot
+                None,  # peptide description
+                None,  # XIC plot
                 pn.Row(
-                    None, #Previous frame button
-                    None, #Next frame button
+                    None,  # Previous frame button
+                    None,  # Next frame button
                 ),
                 pn.Row(
                     pn.Column(
@@ -1006,9 +1003,9 @@ class MainTab(object):
                     sizing_mode='stretch_width',
                     align='center'
                 ),
-                None, #Overlap frames button
-                None, #Show mirrored spectra checkbox
-                None, #Summed MS2 spectrum
+                None,  # Overlap frames button
+                None,  # Show mirrored spectra checkbox
+                None,  # Summed MS2 spectrum
                 margin=(20, 10, 5, 10),
                 sizing_mode='stretch_width',
             )
@@ -1079,13 +1076,13 @@ class MainTab(object):
                         software='maxquant',
                     )
                     if filtered_df.empty:
-                        self.proteins_table.value = self.data.mq_protein_groups.iloc[0:0,:]
+                        self.proteins_table.value = self.data.mq_protein_groups.iloc[0:0, :]
                     else:
                         self.proteins_table.value = filtered_df
                 elif self.analysis_software == 'diann':
                     filtered_df = self.data.diann_proteins[self.data.diann_proteins['Gene names'].isin(predefined_list)]
                     if filtered_df.empty:
-                        self.proteins_table.value = self.data.diann_proteins.iloc[0:0,:]
+                        self.proteins_table.value = self.data.diann_proteins.iloc[0:0, :]
                     else:
                         self.proteins_table.value = filtered_df
             else:
@@ -1136,11 +1133,11 @@ class MainTab(object):
                     software='diann',
                 )
             self.layout[7:] = [
-                None, # peptide description
-                None, #XIC plot
+                None,  # peptide description
+                None,  # XIC plot
                 pn.Row(
-                    None, #Previous frame button
-                    None, #Next frame button
+                    None,  # Previous frame button
+                    None,  # Next frame button
                 ),
                 pn.Row(
                     None,
@@ -1148,9 +1145,9 @@ class MainTab(object):
                     sizing_mode='stretch_width',
                     align='center'
                 ),
-                None, #Overlap frames button
-                None, #Show mirrored spectra checkbox
-                None, #Summed MS2 spectrum
+                None,  # Overlap frames button
+                None,  # Show mirrored spectra checkbox
+                None,  # Summed MS2 spectrum
             ]
             self.protein_seq = alphaviz.preprocessing.get_aa_seq(
                 self.curr_protein_ids,
@@ -1200,11 +1197,11 @@ class MainTab(object):
             self.peptides_table.value = self.data.mq_evidence.iloc[0:0] if self.analysis_software == 'maxquant' else self.data.diann_peptides.iloc[0:0]
             self.layout[6] = None
             self.layout[7:] = [
-                None, # peptide description
-                None, #XIC plot
+                None,  # peptide description
+                None,  # XIC plot
                 pn.Row(
-                    None, #Previous frame button
-                    None, #Next frame button
+                    None,  # Previous frame button
+                    None,  # Next frame button
                 ),
                 pn.Row(
                     None,
@@ -1212,9 +1209,9 @@ class MainTab(object):
                     sizing_mode='stretch_width',
                     align='center'
                 ),
-                None, #Overlap frames button
-                None, #Show mirrored spectra checkbox
-                None, #Summed MS2 spectrum
+                None,  # Overlap frames button
+                None,  # Show mirrored spectra checkbox
+                None,  # Summed MS2 spectrum
             ]
             self.peptides_table.loading = False
 
@@ -1280,11 +1277,11 @@ class MainTab(object):
                     sizing_mode='stretch_width',
                 )
                 self.layout[7:] = [
-                    None, # peptide description
-                    None, #XIC plot
+                    None,  # peptide description
+                    None,  # XIC plot
                     pn.Row(
-                        None, #Previous frame button
-                        None, #Next frame button
+                        None,  # Previous frame button
+                        None,  # Next frame button
                     ),
                     pn.Row(
                         None,
@@ -1292,9 +1289,9 @@ class MainTab(object):
                         sizing_mode='stretch_width',
                         align='center'
                     ),
-                    None, #Overlap frames button
-                    None, #Show mirrored spectra checkbox
-                    None, #Summed MS2 spectrum
+                    None,  # Overlap frames button
+                    None,  # Show mirrored spectra checkbox
+                    None,  # Summed MS2 spectrum
                 ]
             self.peptides_table.loading = False
 
@@ -1316,9 +1313,9 @@ class MainTab(object):
                 one_over_k0_low, one_over_k0_high = one_over_k0 - self.im_tol.value, one_over_k0 + self.im_tol.value
                 precursor_indices = self.data.raw_data[
                     :,
-                    one_over_k0_low : one_over_k0_high,
+                    one_over_k0_low:one_over_k0_high,
                     :,
-                    prec_mono_low_mz : prec_mono_high_mz,
+                    prec_mono_low_mz:prec_mono_high_mz,
                     'raw'
                 ]
             elif self.x_axis_label_mq.value == 'Ion mobility':
@@ -1326,7 +1323,7 @@ class MainTab(object):
                     prec_rt_start_sec:prec_rt_end_sec,
                     :,
                     :,
-                    prec_mono_low_mz : prec_mono_high_mz,
+                    prec_mono_low_mz:prec_mono_high_mz,
                     'raw'
                 ]
             else:
@@ -1546,7 +1543,6 @@ class MainTab(object):
             height=600 if predicted_df.empty else 700
         )
 
-
     def display_previous_frame(self, *args):
         try:
             self.layout[10][0][0].loading = True
@@ -1588,7 +1584,7 @@ class MainTab(object):
             self.layout[12].loading = True
         except IndexError:
             pass
-        if self.plot_overlapped_frames.value == True:
+        if self.plot_overlapped_frames.value is True:
             mz = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z'])
             im = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0'])
             try:
@@ -1728,7 +1724,7 @@ class QCTab(object):
                     show_index=False,
                 ),
                 pn.panel(
-                    f"## Quality control of the entire sample",
+                    "## Quality control of the entire sample",
                     align='center',
                     margin=(15, 10, -5, 10)
                 ),
@@ -1764,7 +1760,7 @@ class QCTab(object):
                     show_index=False,
                 ),
                 pn.panel(
-                    f"## Quality control of the entire sample",
+                    "## Quality control of the entire sample",
                     align='center',
                     margin=(15, 10, -5, 10)
                 ),
@@ -1820,7 +1816,7 @@ class QCTab(object):
                     margin=(0, 0, 0, 30),
                 )
             if self.layout_qc:
-                    self.layout_qc[2][0][1] = mass_dens_plot
+                self.layout_qc[2][0][1] = mass_dens_plot
             else:
                 return mass_dens_plot
 
@@ -1872,6 +1868,7 @@ class QCTab(object):
         else:
             return plot
 
+
 class TargetModeTab(object):
     def __init__(self, data, options):
         self.name = "Scout Mode"
@@ -1895,7 +1892,7 @@ class TargetModeTab(object):
         self.analysis_software = self.data.settings.get('analysis_software')
         self.targeted_peptides_table = pn.widgets.Tabulator(
             value=pd.DataFrame(
-                columns=['name','sequence', 'charge', 'im', 'rt']
+                columns=['name', 'sequence', 'charge', 'im', 'rt']
             ),
             widths={'index': 70},
             sizing_mode='stretch_width',
@@ -1918,7 +1915,7 @@ class TargetModeTab(object):
         )
         self.peptides_table_file = pn.widgets.FileInput(
             accept='.tsv,.csv,.txt',
-            margin=(-10,0,0,10)
+            margin=(-10, 0, 0, 10)
         )
         self.clear_peptides_table_button = pn.widgets.Button(
             name='Clear table',
@@ -1930,7 +1927,7 @@ class TargetModeTab(object):
             value=pd.DataFrame(
                 columns=['sequence', 'mods', 'mod_sites', 'charge']
             ),
-            hidden_columns=['frag_end_idx','frag_start_idx'],
+            hidden_columns=['frag_end_idx', 'frag_start_idx'],
             widths={'index': 70},
             sizing_mode='stretch_width',
             layout='fit_data_table',
@@ -1952,7 +1949,7 @@ class TargetModeTab(object):
         )
         self.peptides_table_file_prediction = pn.widgets.FileInput(
             accept='.tsv,.csv,.txt',
-            margin=(-10,0,0,10)
+            margin=(-10, 0, 0, 10)
         )
         self.clear_peptides_table_button_prediction = pn.widgets.Button(
             name='Clear table',
@@ -1970,7 +1967,7 @@ class TargetModeTab(object):
             value=False,
             bgcolor='light',
             color='secondary',
-            margin=(25,0,0,15),
+            margin=(25, 0, 0, 15),
             width=30,
             height=30
         )
@@ -1989,10 +1986,7 @@ class TargetModeTab(object):
             margin=(25, 0, 0, 10),
         )
 
-
     def create_layout(self):
-        experiment = self.data.ms_file_name.value.split('.')[0]
-
         dependances = {
             self.peptides_table_file: [self.read_peptides_table, 'value'],
             self.targeted_peptides_table: [self.visualize_elution_plots, ['selection', 'value']],
@@ -2115,13 +2109,12 @@ class TargetModeTab(object):
             )
         self.peptides_count.value = 0
 
-
     def read_peptides_table(self, *args):
         file_ext = os.path.splitext(self.peptides_table_file.filename)[-1]
-        if file_ext=='.csv':
-            sep=';'
+        if file_ext == '.csv':
+            sep = ';'
         else:
-            sep='\t'
+            sep = '\t'
         self.targeted_peptides_table.selection = []
         self.targeted_peptides_table.value = pd.read_csv(
             StringIO(str(self.peptides_table_file.value, "utf-8")),
@@ -2153,7 +2146,7 @@ class TargetModeTab(object):
                     except:
                         print('The current peptide cannot be loaded.')
                     else:
-                        self.peptide_manual['rt'] *= 60 # to convert to seconds
+                        self.peptide_manual['rt'] *= 60  # to convert to sec
                         try:
                             self.layout_target_mode_manual[1] = pn.Pane(
                                 alphaviz.plotting.plot_elution_profile(
@@ -2244,10 +2237,10 @@ class TargetModeTab(object):
 
     def read_peptides_table_prediction(self, *args):
         file_ext = os.path.splitext(self.peptides_table_file_prediction.filename)[-1]
-        if file_ext=='.csv':
-            sep=','
+        if file_ext == '.csv':
+            sep = ','
         else:
-            sep='\t'
+            sep = '\t'
         self.targeted_peptides_table_prediction.selection = []
         self.targeted_peptides_table_prediction.value = pd.read_csv(
             StringIO(str(self.peptides_table_file_prediction.value, "utf-8")),
@@ -2279,7 +2272,7 @@ class TargetModeTab(object):
         if 'dia' in self.data.raw_data.acquisition_mode:
             if self.targeted_peptides_table_prediction.selection and self.predicted_dict:
                 try:
-                    self.peptide_prediction = self.targeted_peptides_table_prediction.value.loc[self.targeted_peptides_table_prediction.selection[0],['sequence', 'charge', 'precursor_mz', 'rt_pred', 'mobility_pred']].to_dict()
+                    self.peptide_prediction = self.targeted_peptides_table_prediction.value.loc[self.targeted_peptides_table_prediction.selection[0], ['sequence', 'charge', 'precursor_mz', 'rt_pred', 'mobility_pred']].to_dict()
                     self.peptide_prediction['mz'] = self.peptide_prediction.pop('precursor_mz')
                     self.peptide_prediction['rt'] = self.peptide_prediction.pop('rt_pred')
                     self.peptide_prediction['im'] = self.peptide_prediction.pop('mobility_pred')
@@ -2287,7 +2280,7 @@ class TargetModeTab(object):
                     self.peptide_prediction = {}
                 if self.peptide_prediction and not any(pd.isna(val) for val in self.peptide_prediction.values()):
                     self.targeted_peptides_table_prediction.loading = True
-                    self.peptide_prediction['rt'] *= 60 # to convert to seconds
+                    self.peptide_prediction['rt'] *= 60  # to convert to sec
                     try:
                         self.layout_target_mode_predicted[1] = pn.Pane(
                             alphaviz.plotting.plot_elution_profile(
@@ -2350,6 +2343,7 @@ class TargetModeTab(object):
                 ),
                 height=int(self.image_save_size.value[0]), width=int(self.image_save_size.value[1])
             )
+
 
 class GUI(object):
     # TODO: move to alphabase and docstring
