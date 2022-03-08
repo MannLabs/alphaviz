@@ -805,19 +805,27 @@ class MainTab(object):
             margin=(0, 0, 10, 0),
         )
         self.gene_name_reset = pn.widgets.Button(
-            name='\u21bb',
+            name='Reset proteins',
             height=32,
             button_type='default',
-            width=50,
+            width=150,
             margin=(18, 5, 0, 20),
         )
         self.protein_list_title = pn.pane.Markdown(
             'Load a list of proteins:',
             margin=(10, 5, 0, 20),
         )
+        self.selected_peptides_reset = pn.widgets.Button(
+            name='Deselect peptides',
+            height=32,
+            button_type='default',
+            width=150,
+            margin=(18, 5, 0, 0),
+        )
         self.protein_list = pn.widgets.FileInput(
             accept='.txt',
             margin=(22, 5, 0, 5),
+            width=250,
         )
         self.peptides_table = pn.widgets.Tabulator(
             layout='fit_data_table',
@@ -853,13 +861,13 @@ class MainTab(object):
             align='center'
         )
         self.previous_frame = pn.widgets.Button(
-            type='default',
+            button_type='default',
             name='\u25c0  Previous frame',
             sizing_mode='stretch_width',
             margin=(10, 30, 30, 30)
         )
         self.next_frame = pn.widgets.Button(
-            type='default',
+            button_type='default',
             name='Next frame  \u25b6',
             sizing_mode='stretch_width',
             margin=(10, 30, 30, 30)
@@ -904,6 +912,7 @@ class MainTab(object):
         if self.analysis_software:
             dependances = {
                 self.gene_name_reset: [self.reset_protein_table, 'clicks'],
+                self.selected_peptides_reset: [self.unselect_peptides, 'clicks'],
                 self.protein_list: [self.filter_protein_table, 'value'],
                 self.gene_name_filter: [self.run_after_gene_filter, 'value'],
                 self.proteins_table: [self.run_after_protein_selection, 'selection'],
@@ -963,6 +972,7 @@ class MainTab(object):
                     self.gene_name_reset,
                     self.protein_list_title,
                     self.protein_list,
+                    self.selected_peptides_reset,
                     margin=(10, 0),
                 ),
                 pn.panel(
@@ -1047,6 +1057,9 @@ class MainTab(object):
         self.proteins_table.selection = []
         self.peptides_table.loading = False
         self.proteins_table.loading = False
+
+    def unselect_peptides(self, *args):
+        self.peptides_table.selection = []
 
     def filter_protein_table(self, *args):
         if self.protein_list.value != b'':
@@ -1209,7 +1222,7 @@ class MainTab(object):
         if self.proteins_table.selection:
             self.peptides_table.loading = True
             if self.peptides_table.selection:
-                self.protein_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
+                one_peptide_coverage_plot = alphaviz.plotting.plot_sequence_coverage(
                     self.protein_seq,
                     self.gene_name,
                     [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified.Sequence']] if self.analysis_software == 'diann' else [self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Modified sequence']],
@@ -1219,7 +1232,7 @@ class MainTab(object):
                     self.curr_protein_ids
                 )
                 self.layout[6] = pn.Pane(
-                    self.protein_coverage_plot,
+                    one_peptide_coverage_plot,
                     config=update_config(f"{self.gene_name}_coverage_plot"),
                     align='center',
                     sizing_mode='stretch_width',
@@ -1260,6 +1273,12 @@ class MainTab(object):
                     self.display_heatmap_spectrum()
             else:
                 self.peptides_table.selection = []
+                self.layout[6] = pn.Pane(
+                    self.protein_coverage_plot,
+                    config=update_config(f"{self.gene_name}_coverage_plot"),
+                    align='center',
+                    sizing_mode='stretch_width',
+                )
                 self.layout[7:] = [
                     None, # peptide description
                     None, #XIC plot
@@ -1661,7 +1680,6 @@ class MainTab(object):
 
 
 class QCTab(object):
-
     def __init__(self, data, options):
         self.name = "Quality Control"
         self.data = data
@@ -1809,7 +1827,6 @@ class QCTab(object):
     def display_distribution_plot(self, *args):
         if self.layout_qc:
             self.layout_qc[2][1][1].loading = True
-            print(self.layout_qc)
 
         if self.analysis_software == 'maxquant':
             if self.distribution_axis.value in ['Score', '(EXP) # peptides']:
@@ -1838,7 +1855,6 @@ class QCTab(object):
                 ),
                 loading=False,
                 config=update_config(f'{title} plot'),
-                margin=(0, 0, 0, 30),
             )
         else:
             plot = pn.Pane(
@@ -1849,7 +1865,6 @@ class QCTab(object):
                 ),
                 loading=False,
                 config=update_config(title),
-                margin=(0, 0, 0, 30),
             )
 
         if self.layout_qc:
@@ -1859,9 +1874,11 @@ class QCTab(object):
 
 class TargetModeTab(object):
     def __init__(self, data, options):
-        self.name = "Targeted Mode"
+        self.name = "Scout Mode"
         self.data = data
         self.predicted_dict = None
+        self.peptide_manual = None
+        self.peptide_prediction = None
         self.mz_tol = options.layout[0][0][0]
         self.im_tol = options.layout[0][0][1]
         self.rt_tol = options.layout[0][0][2]
@@ -1957,6 +1974,21 @@ class TargetModeTab(object):
             width=30,
             height=30
         )
+        self.export_svg_manual_button = pn.widgets.Button(
+            name='Export as .svg',
+            button_type='default',
+            align='center',
+            width=250,
+            margin=(25, 0, 0, 10),
+        )
+        self.export_svg_prediction_button = pn.widgets.Button(
+            name='Export as .svg',
+            button_type='default',
+            align='center',
+            width=250,
+            margin=(25, 0, 0, 10),
+        )
+
 
     def create_layout(self):
         experiment = self.data.ms_file_name.value.split('.')[0]
@@ -1986,6 +2018,8 @@ class TargetModeTab(object):
             self.rt_tol: [self.visualize_elution_plots_prediction, 'value'],
             self.colorscale_qualitative: [self.visualize_elution_plots_prediction, 'value'],
             self.colorscale_sequential: [self.visualize_elution_plots_prediction, 'value'],
+            self.export_svg_manual_button: [self.export_svg_manual, 'clicks'],
+            self.export_svg_prediction_button: [self.export_svg_prediction, 'clicks'],
         }
         for k in dependances.keys():
             k.param.watch(
@@ -2004,6 +2038,7 @@ class TargetModeTab(object):
                     ),
                     self.targeted_peptides_table,
                 ),
+                None,
                 None,
                 None,
                 margin=(15, 10, 5, 10),
@@ -2030,10 +2065,12 @@ class TargetModeTab(object):
                 ),
                 None,
                 None,
+                None,
                 margin=(15, 10, 5, 10),
                 sizing_mode='stretch_width',
                 align='start',
                 title='Prediction',
+                collapsed=True,
                 header_background='#dbf0fe',
                 # collapsed=True,
             )
@@ -2048,6 +2085,7 @@ class TargetModeTab(object):
                     'To use this functionality please load DIA data.',
                     margin=(5, 0, 0, 10),
                 ),
+                None,
                 None,
                 None,
             )
@@ -2094,38 +2132,38 @@ class TargetModeTab(object):
         if 'dia' in self.data.raw_data.acquisition_mode:
             if self.targeted_peptides_table.selection:
                 try:
-                    peptide = self.targeted_peptides_table.value.iloc[self.targeted_peptides_table.selection[0]].to_dict()
+                    self.peptide_manual = self.targeted_peptides_table.value.iloc[self.targeted_peptides_table.selection[0]].to_dict()
                 except IndexError:
-                    peptide = {}
-                if peptide and not any(pd.isna(val) for val in peptide.values()):
+                    self.peptide_manual = {}
+                if self.peptide_manual and not any(pd.isna(val) for val in self.peptide_manual.values()):
                     self.targeted_peptides_table.loading = True
                     try:
-                        peptide['charge'] = int(peptide['charge'])
+                        self.peptide_manual['charge'] = int(self.peptide_manual['charge'])
                         for val in ['im', 'rt']:
-                            peptide[val] = float(peptide[val])
+                            self.peptide_manual[val] = float(self.peptide_manual[val])
                         for val in ['name', 'sequence']:
-                            peptide[val] = str(peptide[val])
-                        peptide['mz'] = alphaviz.utils.calculate_mz(
+                            self.peptide_manual[val] = str(self.peptide_manual[val])
+                        self.peptide_manual['mz'] = alphaviz.utils.calculate_mz(
                             prec_mass=alphaviz.utils.get_precmass(
-                                alphaviz.utils.parse(peptide['sequence']),
+                                alphaviz.utils.parse(self.peptide_manual['sequence']),
                                 self.data.mass_dict
                             ),
-                            charge=peptide['charge']
+                            charge=self.peptide_manual['charge']
                         )
                     except:
                         print('The current peptide cannot be loaded.')
                     else:
-                        peptide['rt'] *= 60 # to convert to seconds
+                        self.peptide_manual['rt'] *= 60 # to convert to seconds
                         try:
                             self.layout_target_mode_manual[1] = pn.Pane(
                                 alphaviz.plotting.plot_elution_profile(
                                     self.data.raw_data,
-                                    peptide,
+                                    self.peptide_manual,
                                     self.data.mass_dict,
                                     mz_tol=self.mz_tol.value,
                                     rt_tol=self.rt_tol.value,
                                     im_tol=self.im_tol.value,
-                                    title=f"Precursor and fragment elution profiles of {peptide['name']}({peptide['sequence']}) in RT and RT/IM dimensions ({peptide['rt'] / 60:.2f} min)",
+                                    title=f"Precursor and fragment elution profiles of {self.peptide_manual['name']}({self.peptide_manual['sequence']}) in RT and RT/IM dimensions ({self.peptide_manual['rt'] / 60:.2f} min)",
                                     colorscale_qualitative=self.colorscale_qualitative.value,
                                     colorscale_sequential=self.colorscale_sequential.value,
                                     height=500,
@@ -2140,7 +2178,7 @@ class TargetModeTab(object):
                             self.layout_target_mode_manual[2] = pn.pane.HoloViews(
                                 alphaviz.plotting.plot_elution_profile_heatmap(
                                     self.data.raw_data,
-                                    peptide,
+                                    self.peptide_manual,
                                     self.data.mass_dict,
                                     mz_tol=self.mz_tol.value,
                                     rt_tol=self.rt_tol.value,
@@ -2159,15 +2197,26 @@ class TargetModeTab(object):
                             )
                         except AttibuteError:
                             self.layout_target_mode_manual[2] = None
+                        self.layout_target_mode_manual[3] = self.export_svg_manual_button
                     finally:
                         self.targeted_peptides_table.loading = False
                 else:
                     if self.layout_target_mode_manual:
-                        self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
+                        self.layout_target_mode_manual[1], self.layout_target_mode_manual[2], self.layout_target_mode_manual[3] = None, None, None
             else:
                 if self.layout_target_mode_manual:
-                    self.layout_target_mode_manual[1], self.layout_target_mode_manual[2] = None, None
+                    self.layout_target_mode_manual[1], self.layout_target_mode_manual[2], self.layout_target_mode_manual[3] = None, None, None
 
+    def export_svg_manual(self, *args):
+        for i, subplot in enumerate(self.layout_target_mode_manual[2].object):
+            alphaviz.plotting.export_svg(
+                subplot,
+                filename=os.path.join(
+                    self.data.path_raw_folder.value,
+                    f"elution_profile_heatmaps_manual_{self.peptide_manual['name']}{i}.svg"
+                ),
+                height=int(self.image_save_size.value[0]), width=int(self.image_save_size.value[1])
+            )
 
     def clear_peptide_table_prediction(self, *args):
         if not self.targeted_peptides_table_prediction.value.empty:
@@ -2210,7 +2259,6 @@ class TargetModeTab(object):
             self.run_prediction_spinner.value = True
             df = self.targeted_peptides_table_prediction.value.loc[:, ['sequence', 'mods', 'mod_sites', 'charge']]
             df.fillna(0, inplace=True)
-            # df.mod_sites = df.mod_sites.astype(int)
             df.mod_sites.replace(0, "", inplace=True)
             df.mods.replace(0, "", inplace=True)
             for col in ['sequence', 'mods', 'mod_sites']:
@@ -2231,25 +2279,25 @@ class TargetModeTab(object):
         if 'dia' in self.data.raw_data.acquisition_mode:
             if self.targeted_peptides_table_prediction.selection and self.predicted_dict:
                 try:
-                    peptide = self.targeted_peptides_table_prediction.value.loc[self.targeted_peptides_table_prediction.selection[0],['sequence', 'charge', 'precursor_mz', 'rt_pred', 'mobility_pred']].to_dict()
-                    peptide['mz'] = peptide.pop('precursor_mz')
-                    peptide['rt'] = peptide.pop('rt_pred')
-                    peptide['im'] = peptide.pop('mobility_pred')
-                except IndexError:
-                    peptide = {}
-                if peptide and not any(pd.isna(val) for val in peptide.values()):
+                    self.peptide_prediction = self.targeted_peptides_table_prediction.value.loc[self.targeted_peptides_table_prediction.selection[0],['sequence', 'charge', 'precursor_mz', 'rt_pred', 'mobility_pred']].to_dict()
+                    self.peptide_prediction['mz'] = self.peptide_prediction.pop('precursor_mz')
+                    self.peptide_prediction['rt'] = self.peptide_prediction.pop('rt_pred')
+                    self.peptide_prediction['im'] = self.peptide_prediction.pop('mobility_pred')
+                except:
+                    self.peptide_prediction = {}
+                if self.peptide_prediction and not any(pd.isna(val) for val in self.peptide_prediction.values()):
                     self.targeted_peptides_table_prediction.loading = True
-                    peptide['rt'] *= 60 # to convert to seconds
+                    self.peptide_prediction['rt'] *= 60 # to convert to seconds
                     try:
                         self.layout_target_mode_predicted[1] = pn.Pane(
                             alphaviz.plotting.plot_elution_profile(
                                 self.data.raw_data,
-                                peptide,
+                                self.peptide_prediction,
                                 self.data.mass_dict,
                                 mz_tol=self.mz_tol.value,
                                 rt_tol=self.rt_tol.value,
                                 im_tol=self.im_tol.value,
-                                title=f"Precursor and fragment elution profiles of peptide {peptide['sequence']} in RT and RT/IM dimensions ({peptide['rt'] / 60:.2f} min)",
+                                title=f"Precursor and fragment elution profiles of peptide {self.peptide_prediction['sequence']} in RT and RT/IM dimensions ({self.peptide_prediction['rt'] / 60:.2f} min)",
                                 colorscale_qualitative=self.colorscale_qualitative.value,
                                 colorscale_sequential=self.colorscale_sequential.value,
                                 height=500,
@@ -2264,7 +2312,7 @@ class TargetModeTab(object):
                         self.layout_target_mode_predicted[2] = pn.pane.HoloViews(
                             alphaviz.plotting.plot_elution_profile_heatmap(
                                 self.data.raw_data,
-                                peptide,
+                                self.peptide_prediction,
                                 self.data.mass_dict,
                                 mz_tol=self.mz_tol.value,
                                 rt_tol=self.rt_tol.value,
@@ -2283,14 +2331,25 @@ class TargetModeTab(object):
                         )
                     except AttibuteError:
                         self.layout_target_mode_predicted[2] = None
+                    self.layout_target_mode_predicted[3] = self.export_svg_prediction_button
                     self.targeted_peptides_table_prediction.loading = False
                 else:
                     if self.layout_target_mode_predicted:
-                        self.layout_target_mode_predicted[1], self.layout_target_mode_predicted[2] = None, None
+                        self.layout_target_mode_predicted[1], self.layout_target_mode_predicted[2], self.layout_target_mode_predicted[3] = None, None, None
             else:
                 if self.layout_target_mode_predicted:
-                    self.layout_target_mode_predicted[1], self.layout_target_mode_predicted[2] = None, None
+                    self.layout_target_mode_predicted[1], self.layout_target_mode_predicted[2], self.layout_target_mode_predicted[3] = None, None, None
 
+    def export_svg_prediction(self, *args):
+        for i, subplot in enumerate(self.layout_target_mode_predicted[2].object):
+            alphaviz.plotting.export_svg(
+                subplot,
+                filename=os.path.join(
+                    self.data.path_raw_folder.value,
+                    f"elution_profile_heatmaps_prediction_{self.peptide_prediction['sequence']}{i}.svg"
+                ),
+                height=int(self.image_save_size.value[0]), width=int(self.image_save_size.value[1])
+            )
 
 class GUI(object):
     # TODO: move to alphabase and docstring
