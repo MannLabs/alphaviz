@@ -44,6 +44,7 @@ def init_panel():
 def update_config(filename, height=400, width=900, ext='svg'):
     config = {
         'displaylogo': False,
+        # 'responsive': True,
         'toImageButtonOptions': {
             'format': f'{ext}',  # one of png, svg, jpeg, webp
             'filename': f'{filename}',
@@ -1350,7 +1351,7 @@ class MainTab(object):
             }
             self.layout[8] = pn.Row(
                 self.x_axis_label_mq,
-                pn.Pane(
+                pn.panel(
                     alphaviz.plotting.plot_line(
                         self.data.raw_data,
                         precursor_indices,
@@ -1383,7 +1384,7 @@ class MainTab(object):
             if self.x_axis_label_diann.value == 'RT dimension':
                 self.layout[8] = pn.Row(
                     self.x_axis_label_diann,
-                    pn.Pane(
+                    pn.panel(
                         alphaviz.plotting.plot_elution_profile(
                             self.data.raw_data,
                             self.peptide,
@@ -1748,6 +1749,7 @@ class QCTab(object):
         elif self.analysis_software == 'diann':
             self.distribution_axis.options = ['m/z', 'Charge', 'Length', 'IM', 'CScore', 'Decoy.CScore', 'Decoy.Evidence', 'Evidence', 'Global.Q.Value', 'Q.Value', 'Quantity.Quality', 'Spectrum.Similarity', '(EXP) # peptides']
             self.distribution_axis.value = ['m/z']
+
             self.layout_qc = pn.Column(
                 pn.widgets.Tabulator(
                     self.data.diann_statist,
@@ -1843,7 +1845,7 @@ class QCTab(object):
             title = f'Peptide {self.distribution_axis.value.lower()} distribution'
 
         if self.distribution_axis.value == '(EXP) # peptides':
-            plot = pn.Pane(
+            plot = pn.panel(
                 alphaviz.plotting.plot_pept_per_protein_barplot(
                     data,
                     self.distribution_axis.value,
@@ -1853,7 +1855,7 @@ class QCTab(object):
                 config=update_config(f'{title} plot'),
             )
         else:
-            plot = pn.Pane(
+            plot = pn.panel(
                 alphaviz.plotting.plot_peptide_distr(
                     data,
                     self.distribution_axis.value,
@@ -1887,6 +1889,8 @@ class TargetModeTab(object):
         self.heatmap_precursor_color = options.layout[1][0][5]
         self.colorscale_qualitative = options.layout[2][0][0]
         self.colorscale_sequential = options.layout[2][0][1]
+        self.image_save_size = options.layout[2][0][2]
+        self.image_save_format = options.layout[2][0][3]
         self.layout_target_mode_manual = None
         self.layout_target_mode_predicted = None
         self.analysis_software = self.data.settings.get('analysis_software')
@@ -1991,27 +1995,21 @@ class TargetModeTab(object):
             self.peptides_table_file: [self.read_peptides_table, 'value'],
             self.targeted_peptides_table: [self.visualize_elution_plots, ['selection', 'value']],
             self.peptides_count: [self.update_row_count, 'value'],
-            self.heatmap_colormap: [self.visualize_elution_plots, 'value'],
-            self.heatmap_background_color: [self.visualize_elution_plots, 'value'],
-            self.mz_tol: [self.visualize_elution_plots, 'value'],
-            self.im_tol: [self.visualize_elution_plots, 'value'],
-            self.rt_tol: [self.visualize_elution_plots, 'value'],
-            self.colorscale_qualitative: [self.visualize_elution_plots, 'value'],
-            self.colorscale_sequential: [self.visualize_elution_plots, 'value'],
             self.clear_peptides_table_button: [self.clear_peptide_table, 'clicks'],
-
+            self.heatmap_colormap: [self.update_plots, 'value'],
+            self.heatmap_background_color: [self.update_plots, 'value'],
+            self.mz_tol: [self.update_plots, 'value'],
+            self.im_tol: [self.update_plots, 'value'],
+            self.rt_tol: [self.update_plots, 'value'],
+            self.colorscale_qualitative: [self.update_plots, 'value'],
+            self.colorscale_sequential: [self.update_plots, 'value'],
+            self.image_save_size: [self.update_row_count, 'value'],
+            self.image_save_format: [self.update_row_count, 'value'],
             self.clear_peptides_table_button_prediction: [self.clear_peptide_table_prediction, 'clicks'],
             self.peptides_count_prediction: [self.update_row_count_prediction, 'value'],
             self.peptides_table_file_prediction: [self.read_peptides_table_prediction, 'value'],
             self.run_prediction_button: [self.run_prediction, 'clicks'],
             self.targeted_peptides_table_prediction: [self.visualize_elution_plots_prediction, ['selection', 'value']],
-            self.heatmap_colormap: [self.visualize_elution_plots_prediction, 'value'],
-            self.heatmap_background_color: [self.visualize_elution_plots_prediction, 'value'],
-            self.mz_tol: [self.visualize_elution_plots_prediction, 'value'],
-            self.im_tol: [self.visualize_elution_plots_prediction, 'value'],
-            self.rt_tol: [self.visualize_elution_plots_prediction, 'value'],
-            self.colorscale_qualitative: [self.visualize_elution_plots_prediction, 'value'],
-            self.colorscale_sequential: [self.visualize_elution_plots_prediction, 'value'],
             self.export_svg_manual_button: [self.export_svg_manual, 'clicks'],
             self.export_svg_prediction_button: [self.export_svg_prediction, 'clicks'],
         }
@@ -2085,6 +2083,12 @@ class TargetModeTab(object):
             )
             return self.layout_target_mode_manual
 
+    def update_plots(self, *args):
+        if self.layout_target_mode_manual:
+            self.visualize_elution_plots()
+        if self.layout_target_mode_predicted:
+            self.visualize_elution_plots_prediction()
+
     def clear_peptide_table(self, *args):
         if not self.targeted_peptides_table.value.empty:
             self.targeted_peptides_table.selection = []
@@ -2148,7 +2152,7 @@ class TargetModeTab(object):
                     else:
                         self.peptide_manual['rt'] *= 60  # to convert to sec
                         try:
-                            self.layout_target_mode_manual[1] = pn.Pane(
+                            self.layout_target_mode_manual[1] = pn.panel(
                                 alphaviz.plotting.plot_elution_profile(
                                     self.data.raw_data,
                                     self.peptide_manual,
@@ -2447,7 +2451,7 @@ class AlphaVizGUI(GUI):
                 [
                     ('Main View', pn.panel("Blank")),
                     ('Quality Control', pn.panel("Blank")),
-                    ('Targeted Mode', pn.panel("Blank"))
+                    ('Scout Mode', pn.panel("Blank"))
                 ]
             ),
         ]
