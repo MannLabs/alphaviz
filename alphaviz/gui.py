@@ -1747,7 +1747,7 @@ class QCTab(object):
                 align='start',
             )
         elif self.analysis_software == 'diann':
-            self.distribution_axis.options = ['m/z', 'Charge', 'Length', 'IM', 'CScore', 'Decoy.CScore', 'Decoy.Evidence', 'Evidence', 'Global.Q.Value', 'Q.Value', 'Quantity.Quality', 'Spectrum.Similarity', '(EXP) # peptides']
+            self.distribution_axis.options = ['m/z', 'Charge', 'Length', 'IM', 'CScore', 'Decoy.CScore', 'Decoy.Evidence', 'Evidence', 'Global.Q.Value', 'Q.Value', 'Quantity.Quality', 'Spectrum.Similarity', '(EXP) # peptides', 'Global.PG.Q.Value', 'PG.Q.Value', 'PG.Quantity', 'Protein.Q.Value']
             self.distribution_axis.value = ['m/z']
 
             self.layout_qc = pn.Column(
@@ -1832,7 +1832,7 @@ class QCTab(object):
             else:
                 data = self.data.mq_evidence
         elif self.analysis_software == 'diann':
-            if self.distribution_axis.value in ['(EXP) # peptides']:
+            if self.distribution_axis.value in ['(EXP) # peptides', 'Global.PG.Q.Value', 'PG.Q.Value', 'PG.Quantity', 'Protein.Q.Value']:
                 data = self.data.diann_proteins
             else:
                 data = self.data.diann_peptides
@@ -1841,6 +1841,8 @@ class QCTab(object):
             title = f'Protein {self.distribution_axis.value.lower()} distribution'
         elif self.distribution_axis.value == '(EXP) # peptides':
             title = 'Number of peptides per protein'
+        elif self.distribution_axis.value in ['Global.PG.Q.Value', 'PG.Q.Value', 'PG.Quantity', 'Protein.Q.Value']:
+            title = f'{self.distribution_axis.value} distribution'
         else:
             title = f'Peptide {self.distribution_axis.value.lower()} distribution'
 
