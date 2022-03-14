@@ -504,7 +504,7 @@ class DataImportWidget(BaseWidget):
                     ['sequence', 'mods', 'mod_sites', 'nAA', 'charge', 'spec_idx']
                 )['ccs'].median().reset_index()
 
-                self.psm_df['nce'] = 0.3
+                self.psm_df['nce'] = 30
                 self.psm_df['instrument'] = 'timsTOF'  # trained on more Lumos files therefore should work better than 'timsTOF'
 
         self.trigger_dependancy()
@@ -2263,8 +2263,8 @@ class TargetModeTab(object):
             for col in ['sequence', 'mods', 'mod_sites']:
                 df[col] = df[col].astype('str')
             df.charge = df.charge.astype('int')
-            df['nce'] = 0.3
-            df['instrument'] = 'timsTOF'
+            df['nce'] = 30
+            df['instrument'] = 'Lumos'
             self.predicted_dict = self.data.model_mgr.predict_all(
                 df,
                 predict_items=['rt', 'mobility'],
