@@ -141,7 +141,7 @@ Note that this needs to be prepended with a `!` when you want to run this from w
 
 AlphaViz can be imported as a Python package into any Python script or notebook with the command `import alphaviz`.
 
-An ‘nbs’ folder in the GitHub repository contains several Jupyter Notebooks as tutorials regarding using AlphaViz as a Python package for all available pipelines: for DDA data analyzed with MaxQuant, for DIA data analyzed with DIA-NN, and for the targeted mode. 
+An ‘nbs’ folder in the GitHub repository contains several Jupyter Notebooks as tutorials regarding using AlphaViz as a Python package for all available pipelines: for DDA data analyzed with MaxQuant, for DIA data analyzed with DIA-NN, and for the targeted mode.
 
 ---
 ## Troubleshooting
@@ -154,7 +154,7 @@ In case of issues, check out the following:
 ---
 ## Citations
 
-There are currently no plans to draft a manuscript.
+A manuscript is currently in preparation.
 
 ---
 ## How to contribute
