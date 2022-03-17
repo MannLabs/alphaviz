@@ -31,8 +31,6 @@ To enable all hyperlinks in this document, please view it at [GitHub](https://gi
 
 Software tools such as **MaxQuant** or **DIA-NN** identify and quantify high amounts of proteins. After downstream processing in **Perseus**, **MSstats** or the **Clinical Knowledge Graph**, differentially expressed proteins become possible candidates for biomarker discovery. **AlphaViz** is an automated visualization pipeline to link these identifications with the original raw data and easily assess their individual quality or the overall quality whole samples.
 
-Data that was processed by any of the above-mentioned software tools can be uploaded to **AlphaViz** and proteins of interests can be selected to explore all available information about the identified peptides. It shows the position of each peptide on the protein sequence, its extracted ion chromatogram or the spectra with the identified b- or y-ions. Additionally, it visualizes the position where the precursor was peaked for sequencing on MS1 and MS2/PASEF frames.
-
 An open-source Python package of the AlphaPept ecosystem from the [Mann Labs at the Max Planck Institute of Biochemistry](https://www.biochem.mpg.de/mann). This project is built purely in Python using a new cutting-edge [Holoviz ecosystem](https://holoviz.org/index.html) and Plotly library to create interactive dashboards and plots.
 
 ---
