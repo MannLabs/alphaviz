@@ -3,16 +3,14 @@
 This module provides functions that are helping to preprocess the data.
 """
 
-import os
 import re
 import logging
 import pandas as pd
-import numpy as np
 
 
 def get_mq_unique_proteins(
     filepath: str
-)-> list:
+) -> list:
     """Extract unique "Protein names" from the specified MaxQuant output file.
 
     Parameters
@@ -47,29 +45,13 @@ def get_mq_unique_proteins(
     sorted_unique_proteins = sorted(list(unique_proteins))
     return sorted_unique_proteins
 
-# not used
-# def preprocess_ckg_output(
-#     proteins_string: str
-# ):
-#     """
-#     This function converts the string of proteins copied from the CKG into
-#     a list of leading proteins.
-#     """
-#     proteins_ckg = []
-#     if not (';' in proteins_string and '~' in proteins_string):
-#         raise ValueError # Good practice to give a descriptive string why this error is raised
-#     for protein in proteins_string.split(';'):
-#         leading_protein = protein.split('~')[-1]
-#         proteins_ckg.append(leading_protein.strip())
-#     return proteins_ckg # Is the ValueError necessary? In principle an empty list sounds valid and the error should be thrown elsewhere?
-
 
 def filter_df(
     df: pd.DataFrame,
     pattern: str,
     column: str,
     software: str
-)-> pd.DataFrame:
+) -> pd.DataFrame:
     """Filter the data frame based on the pattern (any value) in the specified column.
 
     Parameters
@@ -97,10 +79,11 @@ def filter_df(
         output = df[df[column] == pattern]
     return output
 
+
 def sort_naturally(
     line: str,
     reverse: bool = False
-)-> str:
+) -> str:
     """Sort the string natural to humans, e.g. 4,1,6,11 will be sorted as 1,4,6,11 and not like 1,11,4,6.
 
     Parameters
@@ -126,8 +109,8 @@ def sort_naturally(
 
 def get_aa_seq(
     protein_id: str,
-    fasta, # pyteomics.fasta.IndexedUniProt object
-)-> str:
+    fasta,  # pyteomics.fasta.IndexedUniProt object
+) -> str:
     """Extract the leading razor protein sequence for the list of
     proteinIDs of the protein group from the pyteomics.fasta.IndexedUniProt object.
 
@@ -155,9 +138,9 @@ def get_aa_seq(
 def get_mq_ms2_scan_data(
     msms: pd.DataFrame,
     selected_msms_scan: int,
-    raw_data, # AlphaTims TimsTOF object,
+    raw_data,  # AlphaTims TimsTOF object,
     precursor_id: int
-)-> pd.DataFrame:
+) -> pd.DataFrame:
     """Extract MS2 data as a data frame for the specified MSMS scan number and precursor ID from the 'msms.txt' MQ output file and raw file.
 
     Parameters
@@ -193,11 +176,11 @@ def get_mq_ms2_scan_data(
     for col in ['mz', 'mass_dev_Da', 'mass_dev_ppm']:
         msms_filtered_df[col] = msms_filtered_df[col].astype(float)
 
-    data = raw_data[:, :, precursor_id].loc[:, ['mz_values', 'intensity_values']] # can be slightly faster by only retrieving the indices and converting directly to mz values and intensities
+    data = raw_data[:, :, precursor_id].loc[:, ['mz_values', 'intensity_values']]  # can be slightly faster by only retrieving the indices and converting directly to mz values and intensities
     data['ions'] = '-'
     data['wrong_dev_value'] = False
 
-    for row in msms_filtered_df.itertuples(): # inefficient implementation. Sorting both arrays by mz should allow you to do it much faster.
+    for row in msms_filtered_df.itertuples():  # inefficient implementation. Sorting both arrays by mz should allow you to do it much faster.
         ion_index = data.mz_values.sub(row.mz).abs().idxmin()
         mass_dev_ppm_calc = ((row.mz + row.mass_dev_Da - data.loc[ion_index, 'mz_values']) * 10**6) / data.loc[ion_index, 'mz_values']
         # to think how not to set a fixed threshold?
@@ -217,7 +200,7 @@ def get_identified_ions(
     values: list,
     sequence: str,
     ion_type: str
-)-> list:
+) -> list:
     """For the specified peptide sequence extract all identified in the experiment ions and based on the specified ion_type return a list of booleans containing information for the b-ions whether the peptide is breaking after aligned amino acid or for the y-ion whether is breaking before aligned amino acid.
 
     E.g. for the peptide 'NTINHN' having the unique ion values ['b2-H2O', 'b2', 'b3', 'b5-NH3'] it will return the following list of booleans: [False,True,True,False,True,False].
@@ -237,7 +220,7 @@ def get_identified_ions(
         List of peptide length of booleans with True for the presenting ion and False for a missing one.
 
     """
-    ions=[False] * (len(sequence))
+    ions = [False] * (len(sequence))
     all_ions = list(set([ion.split('-')[0] for ion in set(values) if ion_type in ion]))
     for each in all_ions:
         if ion_type == 'b':
@@ -248,8 +231,9 @@ def get_identified_ions(
             raise NotImplementedError(f"The specified ion type {ion_type} is not implemented in the current version.")
     return ions
 
+
 def convert_diann_mq_mod(
-    sequence:str
+    sequence: str
 ) -> str:
     # this function is taken from the AlphaMap package and modified
     """Convert DIA-NN style modifications to MaxQuant style modifications.
@@ -288,10 +272,10 @@ def convert_diann_mq_mod(
         '(UniMod:526)': '[Dethiomethyl ({})]',
         '(UniMod:877)': '[QQTGG ({})]',
     }
-    mods = re.findall('\(UniMod:\d+\)', sequence)
+    mods = re.findall(r'\(UniMod:\d+\)', sequence)
     if mods:
         for mod in mods:
-            posit = re.search('\(UniMod:\d+\)', sequence)
+            posit = re.search(r'\(UniMod:\d+\)', sequence)
             i = posit.start()
 
             if i == 0:
@@ -333,8 +317,9 @@ def convert_diann_mq_mod(
 
     return sequence
 
+
 def convert_diann_ap_mod(
-    sequence:str
+    sequence: str
 ) -> str:
     """Convert DIA-NN style modifications to AlphaPept style modifications.
 
@@ -345,21 +330,21 @@ def convert_diann_ap_mod(
         str: A peptide sequence with AlphaPept style modification.
     """
     modif_convers_dict = {
-        '(UniMod:1)': 'a', #'[Acetyl ({})]'
-        '(UniMod:2)': 'am', #'[Amidated ({})]'
-        '(UniMod:4)': 'c', #'[Carbamidomethyl ({})]'
-        '(UniMod:7)': 'deam', #'[Deamidation ({})]'
-        '(UniMod:21)': 'p', #'[Phospho ({})]'
-        '(UniMod:26)': 'cm', #'[Pyro-carbamidomethyl ({})]',
-        '(UniMod:27)': 'pg', #'[Glu->pyro-Glu]'
-        '(UniMod:28)': 'pg', #'[Gln->pyro-Glu]'
-        '(UniMod:35)': 'ox', #'[Oxidation ({})]'
+        '(UniMod:1)': 'a',  # '[Acetyl ({})]'
+        '(UniMod:2)': 'am',  # '[Amidated ({})]'
+        '(UniMod:4)': 'c',  # '[Carbamidomethyl ({})]'
+        '(UniMod:7)': 'deam',  # '[Deamidation ({})]'
+        '(UniMod:21)': 'p',  # '[Phospho ({})]'
+        '(UniMod:26)': 'cm',  # '[Pyro-carbamidomethyl ({})]',
+        '(UniMod:27)': 'pg',  # '[Glu->pyro-Glu]'
+        '(UniMod:28)': 'pg',  # '[Gln->pyro-Glu]'
+        '(UniMod:35)': 'ox',  # '[Oxidation ({})]'
     }
-    mods = re.findall('\(UniMod:\d+\)', sequence)
+    mods = re.findall(r'\(UniMod:\d+\)', sequence)
 
     if mods:
         for mod in mods:
-            posit = re.search('\(UniMod:\d+\)', sequence)
+            posit = re.search(r'\(UniMod:\d+\)', sequence)
             i = posit.start()
             if i != 0:
                 i -= 1
@@ -370,6 +355,7 @@ def convert_diann_ap_mod(
                 logging.info(f"This modification {mod} can't be converted.")
 
     return sequence
+
 
 def get_protein_info(
     fasta: dict,
@@ -402,6 +388,7 @@ def get_protein_info(
         except KeyError:
             logging.info(f"The sequence length for the protein {protein_id} is not found in the fasta file.")
     return ','.join(protein_names), ','.join(protein_seq_lens)
+
 
 def get_protein_info_from_fastaheader(
     string: str,

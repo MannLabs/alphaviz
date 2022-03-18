@@ -5,7 +5,6 @@ This module provides functions to read MQ/DiaNN/AlphaPept output files and other
 
 import logging
 import os
-import re
 import pandas as pd
 import alphaviz.preprocessing
 
@@ -13,7 +12,7 @@ import alphaviz.preprocessing
 def read_file(
     filepath: str,
     column_names: list
-)-> pd.DataFrame:
+) -> pd.DataFrame:
     """Enable reading the file and retrieving the values from the
     specified columns. Compared to function pd.read_csv() it gains significant time if the file is huge and is only a few ms slower for small files.
 
@@ -40,10 +39,10 @@ def read_file(
         filename_data = []
 
         for line in filelines:
-            if i == 0: # for the first line to extract the index of the specified columns
+            if i == 0:  # for the first line to extract the index of the specified columns
                 line = line.strip().split(sep)
                 filename_col_index = [line.index(col) for col in column_names]
-            else: # use these indices for all other rows to extract the data
+            else:  # use these indices for all other rows to extract the data
                 line = line.split(sep)
                 filename_data.append([line[ind] for ind in filename_col_index])
             i += 1
@@ -56,7 +55,7 @@ def read_file(
 def import_mq_evidence(
     filepath: str,
     experiment: str
-)-> pd.DataFrame:
+) -> pd.DataFrame:
     """Read some columns from the output file evidence.txt of MaxQuant software.
 
     Parameters
@@ -134,7 +133,7 @@ def import_mq_evidence(
 def import_mq_protein_groups(
     filepath: str,
     experiment: str
-)-> pd.DataFrame:
+) -> pd.DataFrame:
     """Read the output file proteinGroups.txt of MaxQuant software.
 
     Parameters
@@ -186,7 +185,7 @@ def import_mq_protein_groups(
     if '(EXP) # peptides' not in data_common.columns:
         data_common.rename(
             columns={
-                f'Peptides': '(EXP) # peptides',
+                'Peptides': '(EXP) # peptides',
             },
             inplace=True
         )
@@ -200,11 +199,16 @@ def import_mq_protein_groups(
     except KeyError:
         pass
 
+    try:
+        data_common.Score = data_common.Score.astype(float)
+    except:
+        data_common.Score = data_common.Score.apply(lambda x: float(x) if x.replace('.', '', 1).isdigit() else None)
+
     if 'Gene names' not in data_common.columns:
-        data_common[['Protein names', 'Protein IDs', 'Gene names']] = data_common.apply(lambda x: alphaviz.preprocessing.get_protein_info_from_fastaheader(x['Fasta headers']), axis=1, result_type ='expand')
+        data_common[['Protein names', 'Protein IDs', 'Gene names']] = data_common.apply(lambda x: alphaviz.preprocessing.get_protein_info_from_fastaheader(x['Fasta headers']), axis=1, result_type='expand')
     data_common.dropna(
         axis=0,
-        subset=['Gene names', 'Protein IDs'],
+        subset=['Gene names', 'Protein IDs', 'Score'],
         inplace=True
     )
 
@@ -225,8 +229,8 @@ def import_mq_protein_groups(
 
 
 def import_mq_all_peptides(
-    filepath:str
-)-> pd.DataFrame:
+    filepath: str
+) -> pd.DataFrame:
     """Read some columns from the output file allPeptides.txt of MaxQuant software.
 
     Parameters
@@ -257,7 +261,7 @@ def import_mq_all_peptides(
 
 def import_mq_msms(
     filepath: str
-)-> pd.DataFrame:
+) -> pd.DataFrame:
     """Read some columns from the output file msms.txt of MaxQuant software.
 
     Parameters
@@ -300,7 +304,7 @@ def import_mq_msms(
 
 def import_mq_summary(
     filepath: str
-)-> pd.DataFrame:
+) -> pd.DataFrame:
     """Read the output file summary.txt of MaxQuant software.
 
     Parameters
@@ -313,7 +317,7 @@ def import_mq_summary(
     pd.DataFrame
         The output data frame contains summary information of all the experiments.
     """
-    data_common = pd.read_csv(filepath, sep='\t')
+    data_common = pd.read_csv(filepath, sep='\t', low_memory=False)
     data_common.dropna(subset=['MS'], axis=0, inplace=True)
     return data_common
 
@@ -367,7 +371,7 @@ def import_mq_output(
 def get_filenames_from_directory(
     directory: str,
     extensions_list: list
-)-> list:
+) -> list:
     """Search for files with the specified extension in the repository and return a list of all file names with that extention.
 
     Parameters
@@ -388,7 +392,7 @@ def get_filenames_from_directory(
 
 def read_fasta(
     filepath: str
-)-> dict:
+) -> dict:
     """Read the fasta file using the pyteomics package.
 
     Parameters
@@ -424,7 +428,7 @@ def import_diann_stats(
     pd.DataFrame
         The output data frame contains summary information about the whole experiment.
     """
-    diann_overview = pd.read_csv(filepath, sep='\t')
+    diann_overview = pd.read_csv(filepath, sep='\t', low_memory=False)
     return diann_overview
 
 
@@ -468,6 +472,7 @@ def create_diann_proteins_table(
     proteins = proteins[first_columns + sorted(list(set(proteins.columns).difference(first_columns)))]
     return proteins
 
+
 def create_diann_peptides_table(
     diann_df: pd.DataFrame
 ):
@@ -484,7 +489,7 @@ def create_diann_peptides_table(
         The output data frame contains information about peptides.
     """
     peptides = diann_df.copy()
-    columns = [col for col in peptides.columns if not 'PG' in col and not 'Protein' in col and not 'Genes' in col and not 'GG' in col]
+    columns = [col for col in peptides.columns if 'PG' not in col and 'Protein' not in col and 'Genes' not in col and 'GG' not in col]
     columns.extend(['Genes'])
 
     peptides = diann_df[columns[2:]].copy()
@@ -499,9 +504,11 @@ def create_diann_peptides_table(
 
     peptides['Sequence_AP_mod'] = peptides['Modified.Sequence'].apply(alphaviz.preprocessing.convert_diann_ap_mod)
     peptides['Modified.Sequence'] = peptides['Modified.Sequence'].apply(alphaviz.preprocessing.convert_diann_mq_mod)
-    first_columns = ['Modified.Sequence', 'Length', 'RT', 'Predicted.RT', 'Charge', 'IM', 'Predicted.IM']
+    peptides['m/z'] = 0.0
+    first_columns = ['Modified.Sequence', 'Length', 'm/z', 'RT', 'Predicted.RT', 'Charge', 'IM', 'Predicted.IM']
     peptides = peptides[first_columns + sorted(list(set(peptides.columns).difference(first_columns)))]
     return peptides
+
 
 def import_diann_output(
     path_diann_output_folder: str,
@@ -527,7 +534,7 @@ def import_diann_output(
     diann_output_file, diann_stats_file = sorted(get_filenames_from_directory(
         path_diann_output_folder, 'tsv'), key=len)[:2]
 
-    diann_df = pd.read_csv(os.path.join(path_diann_output_folder, diann_output_file), sep='\t')
+    diann_df = pd.read_csv(os.path.join(path_diann_output_folder, diann_output_file), sep='\t', low_memory=False)
     diann_df = diann_df[diann_df.Run == experiment]
 
     diann_proteins = create_diann_proteins_table(diann_df, fasta)

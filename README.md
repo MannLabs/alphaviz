@@ -31,8 +31,6 @@ To enable all hyperlinks in this document, please view it at [GitHub](https://gi
 
 Software tools such as **MaxQuant** or **DIA-NN** identify and quantify high amounts of proteins. After downstream processing in **Perseus**, **MSstats** or the **Clinical Knowledge Graph**, differentially expressed proteins become possible candidates for biomarker discovery. **AlphaViz** is an automated visualization pipeline to link these identifications with the original raw data and easily assess their individual quality or the overall quality whole samples.
 
-Data that was processed by any of the above-mentioned software tools can be uploaded to **AlphaViz** and proteins of interests can be selected to explore all available information about the identified peptides. It shows the position of each peptide on the protein sequence, its extracted ion chromatogram or the spectra with the identified b- or y-ions. Additionally, it visualizes the position where the precursor was peaked for sequencing on MS1 and MS2/PASEF frames.
-
 An open-source Python package of the AlphaPept ecosystem from the [Mann Labs at the Max Planck Institute of Biochemistry](https://www.biochem.mpg.de/mann). This project is built purely in Python using a new cutting-edge [Holoviz ecosystem](https://holoviz.org/index.html) and Plotly library to create interactive dashboards and plots.
 
 ---
@@ -141,7 +139,7 @@ Note that this needs to be prepended with a `!` when you want to run this from w
 
 AlphaViz can be imported as a Python package into any Python script or notebook with the command `import alphaviz`.
 
-An ‘nbs’ folder in the GitHub repository contains several Jupyter Notebooks as tutorials regarding using AlphaViz as a Python package for all available pipelines: for DDA data analyzed with MaxQuant, for DIA data analyzed with DIA-NN, and for the targeted mode. 
+An ‘nbs’ folder in the GitHub repository contains several Jupyter Notebooks as tutorials regarding using AlphaViz as a Python package for all available pipelines: for DDA data analyzed with MaxQuant, for DIA data analyzed with DIA-NN, and for the targeted mode.
 
 ---
 ## Troubleshooting
@@ -154,7 +152,7 @@ In case of issues, check out the following:
 ---
 ## Citations
 
-There are currently no plans to draft a manuscript.
+A manuscript is currently in preparation.
 
 ---
 ## How to contribute
