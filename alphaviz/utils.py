@@ -1,4 +1,9 @@
 import os
+import numba
+from numba import types
+from numba.typed import Dict, List
+from numba import njit
+import numpy as np
 
 # paths
 BASE_PATH = os.path.dirname(__file__)
@@ -6,21 +11,59 @@ IMG_PATH = os.path.join(BASE_PATH, "img")
 STYLE_PATH = os.path.join(BASE_PATH, "style")
 DOCS_PATH = os.path.join(BASE_PATH, "docs")
 DATA_PATH = os.path.join(BASE_PATH, "data")
+MODELS_PATH = os.path.join(BASE_PATH, "models")
+LATEST_GITHUB_INIT_FILE = "https://github.com/MannLabs/alphaviz/blob/main/alphaviz/__init__.py"
 
 
 def check_analysis_file(file):
-    ## TODO: write the checks for the preloaded file and return the exception when the file can't be uploaded
+    # TODO: write the checks for the preloaded file and return the exception when the file can't be uploaded
     pass
 
 
-# This code was taken from the AlphaPept Python package (https://github.com/MannLabs/alphapept/blob/master/nbs/03_fasta.ipynb)
-import numba
-from numba import types
-from numba.typed import Dict, List
-from numba import njit, jit
-import numpy as np
+# this code was taken from the AlphaTims Python package (https://github.com/MannLabs/alphatims/blob/master/alphatims/utils.py) and modified
+def check_github_version(silent=False) -> str:
+    """Checks and logs the current version of AlphaViz.
+    Check if the local version equals the AlphaViz GitHub master branch.
+    This is only possible with an active internet connection and
+    if no credentials are required for GitHub.
+    Parameters
+    ----------
+    silent : str
+        Use the logger to display the obtained conclusion.
+        Default is False.
+    Returns
+    -------
+    : str
+        The version on the AlphaViz GitHub master branch.
+        "" if no version can be found on GitHub
+    """
+    import requests
+    from bs4 import BeautifulSoup
+    import alphaviz
 
-def get_mass_dict(modfile:str="data/modifications.tsv", aasfile: str="data/amino_acids.tsv", verbose:bool=True):
+    try:
+        main_response = requests.get(LATEST_GITHUB_INIT_FILE)
+        main_soap = BeautifulSoup(main_response.content.decode('utf-8'), 'html.parser')
+        for line in main_soap.find_all('td', class_='blob-code blob-code-inner js-file-line'):
+            if line.text.startswith('__version__'):
+                github_version = line.text.split()[-1].strip()[1:-1]
+                if not silent:
+                    if github_version != alphaviz.__version__:
+                        print(f"You are currently using AlphaViz version {alphaviz.__version__}. However, the latest version of AlphaViz on GitHub is {github_version}. Checkout https://github.com/MannLabs/alphaviz.git for instructions on how to update AlphaViz...")
+                    else:
+                        print("Current AlphaViz version is up-to-date with GitHub.")
+                return github_version
+    except:
+        print("Could not check GitHub for the latest AlphaViz release.")
+        return ""
+
+
+# This code was taken from the AlphaPept Python package (https://github.com/MannLabs/alphapept/blob/master/nbs/03_fasta.ipynb)
+def get_mass_dict(
+    modfile: str = "data/modifications.tsv",
+    aasfile: str = "data/amino_acids.tsv",
+    verbose: bool = True
+):
     """
     Function to create a mass dict based on tsv files.
     This is used to create the hardcoded dict in the constants notebook.
@@ -36,7 +79,6 @@ def get_mass_dict(modfile:str="data/modifications.tsv", aasfile: str="data/amino
         FileNotFoundError: If files are not found.
     """
     import pandas as pd
-    import os
 
     mods = pd.read_csv(modfile, delimiter="\t")
     aas = pd.read_csv(aasfile, delimiter="\t")
@@ -49,7 +91,6 @@ def get_mass_dict(modfile:str="data/modifications.tsv", aasfile: str="data/amino
     for identifier, aar, mass in mods[
         ["Identifier", "Amino Acid Residue", "Monoisotopic Mass Shift (Da)"]
     ].values:
-        #print(identifier, aar, mass)
 
         if ("<" in identifier) or (">" in identifier):
             for aa_identifier, aa_mass in aas[["Identifier", "Monoisotopic Mass (Da)"]].values:
@@ -76,6 +117,7 @@ def get_mass_dict(modfile:str="data/modifications.tsv", aasfile: str="data/amino
     mass_dict["NH3"] = 17.03052
     mass_dict["delta_M"] = 1.00286864
     mass_dict["delta_S"] = 0.0109135
+    mass_dict['a'] = 42.01056469
 
     if verbose:
 
@@ -84,8 +126,11 @@ def get_mass_dict(modfile:str="data/modifications.tsv", aasfile: str="data/amino
 
     return mass_dict
 
+
 @njit
-def parse(peptide:str)->List:
+def parse(
+    peptide: str
+) -> List:
     """
     Parser to parse peptide strings
     Args:
@@ -98,16 +143,23 @@ def parse(peptide:str)->List:
     parsed = List()
     string = ""
 
-    for i in peptide:
+    for ind, i in enumerate(peptide):
         string += i
+        if ind == 0 and i == 'a' and peptide[1].islower():  # protein N-term modification
+            parsed.append(string)
+            string = ""
         if i.isupper():
             parsed.append(string)
             string = ""
 
     return parsed
 
+
 @njit
-def get_precmass(parsed_pep:list, mass_dict:numba.typed.Dict)->float:
+def get_precmass(
+    parsed_pep: list,
+    mass_dict: numba.typed.Dict
+) -> float:
     """
     Calculate the mass of the neutral precursor
     Args:
@@ -122,8 +174,12 @@ def get_precmass(parsed_pep:list, mass_dict:numba.typed.Dict)->float:
 
     return tmass
 
+
 @njit
-def get_fragmass(parsed_pep:list, mass_dict:numba.typed.Dict)->tuple:
+def get_fragmass(
+    parsed_pep: list,
+    mass_dict: numba.typed.Dict
+) -> tuple:
     """
     Calculate the masses of the fragment ions
     Args:
@@ -157,7 +213,11 @@ def get_fragmass(parsed_pep:list, mass_dict:numba.typed.Dict)->tuple:
 
     return frag_masses, frag_type
 
-def get_frag_dict(parsed_pep:list, mass_dict:dict)->dict:
+
+def get_frag_dict(
+    parsed_pep: list,
+    mass_dict: dict
+) -> dict:
     """
     Calculate the masses of the fragment ions
     Args:
@@ -178,11 +238,14 @@ def get_frag_dict(parsed_pep:list, mass_dict:dict)->dict:
             identifier = 'y'
             cnt = -cnt
         frag_dict[identifier+str(cnt)] = _
-
     return frag_dict
 
+
 @njit
-def calculate_mass(mono_mz:float, charge:int) -> float:
+def calculate_mass(
+    mono_mz: float,
+    charge: int
+) -> float:
     """Calculate the precursor mass from mono mz and charge.
     Args:
         mono_mz (float): mono m/z.
@@ -192,11 +255,14 @@ def calculate_mass(mono_mz:float, charge:int) -> float:
     """
     M_PROTON = 1.00727646687
     prec_mass = mono_mz * abs(charge) - charge * M_PROTON
-
     return prec_mass
 
+
 @njit
-def calculate_mz(prec_mass:float, charge:int) -> float:
+def calculate_mz(
+    prec_mass: float,
+    charge: int
+) -> float:
     """Calculate the precursor mono mz from mass and charge.
     Args:
         prec_mass (float): precursor mass.
