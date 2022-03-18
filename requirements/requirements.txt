@@ -1,3 +1,3 @@
 alphatims==0.3.0
-peptdeep==0.0.2
-alphabase==0.0.3
+peptdeep==0.0.4
+alphabase==0.0.5
