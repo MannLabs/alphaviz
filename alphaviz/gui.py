@@ -2,7 +2,9 @@ import os
 import logging
 import platform
 import json
+import warnings
 import pandas as pd
+from pandas.core.common import SettingWithCopyWarning
 from io import StringIO
 
 import alphatims.bruker
@@ -20,6 +22,8 @@ import alphaviz.utils
 import alphaviz.io
 import alphaviz.preprocessing
 import alphaviz.plotting
+
+warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
 
 
 def get_css_style(
@@ -506,6 +510,7 @@ class DataImportWidget(BaseWidget):
 
                 self.psm_df['nce'] = 30
                 self.psm_df['instrument'] = 'timsTOF'  # trained on more Lumos files therefore should work better than 'timsTOF'
+                self.psm_df['spec_idx'] += 1
 
         self.trigger_dependancy()
         self.upload_progress.active = False
@@ -1443,10 +1448,9 @@ class MainTab(object):
                 ms2_frame = self.ms2_frame
                 mz = self.peptide['mz']
                 im = self.peptide['im']
-            data_ms1 = self.data.raw_data[ms1_frame].copy()
             try:
                 self.heatmap_ms1_plot = alphaviz.plotting.plot_heatmap(
-                    data_ms1,
+                    self.data.raw_data[ms1_frame],
                     mz=mz,
                     im=im,
                     x_axis_label=self.heatmap_x_axis.value,
@@ -1460,9 +1464,8 @@ class MainTab(object):
                     height=450,
                     margin=(0, 10, 10, 0),
                 )
-                data_ms2 = self.data.raw_data[ms2_frame].copy()
                 self.heatmap_ms2_plot = alphaviz.plotting.plot_heatmap(
-                    data_ms2,
+                    self.data.raw_data[ms2_frame],
                     x_axis_label=self.heatmap_x_axis.value,
                     y_axis_label=self.heatmap_y_axis.value,
                     title=f'MS2 frame(s) #{ms2_frame}',
@@ -1472,7 +1475,12 @@ class MainTab(object):
                     height=450,
                     margin=(0, 10, 10, 0),
                 )
-
+                self.layout[10] = pn.Row(
+                    None,
+                    None,
+                    align='center',
+                    sizing_mode='stretch_width'
+                )
                 self.layout[10][0] = pn.Column(
                     pn.pane.HoloViews(
                         self.heatmap_ms1_plot,
@@ -1495,6 +1503,8 @@ class MainTab(object):
                 )
             except ValueError:
                 print('The x- and y-axis of the heatmaps should be different.')
+            except BaseException as x:
+                print('The heatmaps cannot be displayed.')
             if self.analysis_software == 'diann':
                 if self.x_axis_label_diann.value == 'RT/IM dimension':
                     self.display_elution_profile_plots()
@@ -1527,7 +1537,7 @@ class MainTab(object):
             predicted_df['FragmentMz'] = mz_ions.b_z1.values.tolist() + mz_ions.y_z1.values.tolist()[::-1]
             predicted_df['RelativeIntensity'] = intensities_ions.b_z1.values.tolist() + intensities_ions.y_z1.values.tolist()[::-1]
             predicted_df['ions'] = [f"b{i}" for i in range(1, len(mz_ions.b_z1)+1)] + [f"y{i}" for i in range(1, len(mz_ions.y_z1)+1)]
-
+        print(predicted_df)
         self.ms_spectra_plot = alphaviz.plotting.plot_complex_ms_plot(
             data_ions,
             title=f'MS2 spectrum for Precursor: {self.ms1_ms2_frames[self.current_frame][1]}',
@@ -1545,38 +1555,43 @@ class MainTab(object):
         )
 
     def display_previous_frame(self, *args):
-        try:
-            self.layout[10][0][0].loading = True
-            self.layout[10][1][0].loading = True
-            self.layout[12].loading = True
-        except IndexError:
-            pass
-        self.plot_overlapped_frames.value = False
-        current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
-        if current_frame_index == 0:
-            self.current_frame = list(self.ms1_ms2_frames.keys())[-1]
-        else:
-            self.current_frame = list(self.ms1_ms2_frames.keys())[current_frame_index - 1]
-        if self.x_axis_label_mq.value == 'm/z':
-            self.display_line_spectra_plots()
-        self.display_heatmap_spectrum()
+        print(self.ms1_ms2_frames)
+        if len(self.ms1_ms2_frames.keys()) > 1:
+            try:
+                self.layout[10][0][0].loading = True
+                self.layout[10][1][0].loading = True
+                self.layout[12].loading = True
+            except IndexError:
+                pass
+            self.plot_overlapped_frames.value = False
+
+            current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
+            if current_frame_index == 0:
+                self.current_frame = list(self.ms1_ms2_frames.keys())[-1]
+            else:
+                self.current_frame = list(self.ms1_ms2_frames.keys())[current_frame_index - 1]
+            if self.x_axis_label_mq.value == 'm/z':
+                self.display_line_spectra_plots()
+            self.display_heatmap_spectrum()
 
     def display_next_frame(self, *args):
-        try:
-            self.layout[10][0][0].loading = True
-            self.layout[10][1][0].loading = True
-            self.layout[12].loading = True
-        except IndexError:
-            pass
-        self.plot_overlapped_frames.value = False
-        current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
-        if current_frame_index == len(self.ms1_ms2_frames.keys())-1:
-            self.current_frame = list(self.ms1_ms2_frames.keys())[0]
-        else:
-            self.current_frame = list(self.ms1_ms2_frames.keys())[current_frame_index + 1]
-        if self.x_axis_label_mq.value == 'm/z':
-            self.display_line_spectra_plots()
-        self.display_heatmap_spectrum()
+        print(self.ms1_ms2_frames)
+        if len(self.ms1_ms2_frames.keys()) > 1:
+            try:
+                self.layout[10][0][0].loading = True
+                self.layout[10][1][0].loading = True
+                self.layout[12].loading = True
+            except IndexError:
+                pass
+            self.plot_overlapped_frames.value = False
+            current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
+            if current_frame_index == len(self.ms1_ms2_frames.keys())-1:
+                self.current_frame = list(self.ms1_ms2_frames.keys())[0]
+            else:
+                self.current_frame = list(self.ms1_ms2_frames.keys())[current_frame_index + 1]
+            if self.x_axis_label_mq.value == 'm/z':
+                self.display_line_spectra_plots()
+            self.display_heatmap_spectrum()
 
     def display_overlapped_frames(self, *args):
         try:
