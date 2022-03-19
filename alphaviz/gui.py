@@ -1603,6 +1603,8 @@ class MainTab(object):
         except IndexError:
             pass
         if self.plot_overlapped_frames.value is True:
+            self.layout[12] = None
+            self.layout[13] = None
             mz = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z'])
             im = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0'])
             try:
@@ -1630,6 +1632,12 @@ class MainTab(object):
                     height=450,
                     margin=(0, 10, 10, 0),
                 )
+                self.layout[10] = pn.Row(
+                    None,
+                    None,
+                    align='center',
+                    sizing_mode='stretch_width'
+                )
                 self.layout[10][0] = pn.Column(
                     pn.pane.HoloViews(
                         self.heatmap_ms1_plot,
@@ -1650,10 +1658,10 @@ class MainTab(object):
                     self.export_svg_ms2_button,
                     align='center',
                 )
-
             except ValueError:
                 print('The x- and y-axis of the heatmaps should be different.')
-            self.layout[12] = None
+            except BaseException as x:
+                print('The heatmaps cannot be displayed.')
         else:
             self.display_heatmap_spectrum()
 
