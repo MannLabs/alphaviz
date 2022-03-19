@@ -1509,9 +1509,15 @@ class MainTab(object):
                 if self.x_axis_label_diann.value == 'RT/IM dimension':
                     self.display_elution_profile_plots()
             if self.analysis_software == 'maxquant':
-                self.layout[9][0] = self.previous_frame
-                self.layout[9][1] = self.next_frame
-                self.layout[11] = self.plot_overlapped_frames
+                for each in [self.previous_frame, self.next_frame, self.plot_overlapped_frames]:
+                    if len(self.ms1_ms2_frames.keys()) < 2:
+                        each.disabled = True
+                    else:
+                        each.disabled = False
+                if type(self.layout[9][0]) == pn.pane.markup.Str:
+                    self.layout[9][0] = self.previous_frame
+                    self.layout[9][1] = self.next_frame
+                    self.layout[11] = self.plot_overlapped_frames
                 self.display_mass_spectrum()
 
     def display_mass_spectrum(self, *args):
@@ -1555,43 +1561,39 @@ class MainTab(object):
         )
 
     def display_previous_frame(self, *args):
-        print(self.ms1_ms2_frames)
-        if len(self.ms1_ms2_frames.keys()) > 1:
-            try:
-                self.layout[10][0][0].loading = True
-                self.layout[10][1][0].loading = True
-                self.layout[12].loading = True
-            except IndexError:
-                pass
-            self.plot_overlapped_frames.value = False
+        try:
+            self.layout[10][0][0].loading = True
+            self.layout[10][1][0].loading = True
+            self.layout[12].loading = True
+        except IndexError:
+            pass
+        self.plot_overlapped_frames.value = False
 
-            current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
-            if current_frame_index == 0:
-                self.current_frame = list(self.ms1_ms2_frames.keys())[-1]
-            else:
-                self.current_frame = list(self.ms1_ms2_frames.keys())[current_frame_index - 1]
-            if self.x_axis_label_mq.value == 'm/z':
-                self.display_line_spectra_plots()
-            self.display_heatmap_spectrum()
+        current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
+        if current_frame_index == 0:
+            self.current_frame = list(self.ms1_ms2_frames.keys())[-1]
+        else:
+            self.current_frame = list(self.ms1_ms2_frames.keys())[current_frame_index - 1]
+        if self.x_axis_label_mq.value == 'm/z':
+            self.display_line_spectra_plots()
+        self.display_heatmap_spectrum()
 
     def display_next_frame(self, *args):
-        print(self.ms1_ms2_frames)
-        if len(self.ms1_ms2_frames.keys()) > 1:
-            try:
-                self.layout[10][0][0].loading = True
-                self.layout[10][1][0].loading = True
-                self.layout[12].loading = True
-            except IndexError:
-                pass
-            self.plot_overlapped_frames.value = False
-            current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
-            if current_frame_index == len(self.ms1_ms2_frames.keys())-1:
-                self.current_frame = list(self.ms1_ms2_frames.keys())[0]
-            else:
-                self.current_frame = list(self.ms1_ms2_frames.keys())[current_frame_index + 1]
-            if self.x_axis_label_mq.value == 'm/z':
-                self.display_line_spectra_plots()
-            self.display_heatmap_spectrum()
+        try:
+            self.layout[10][0][0].loading = True
+            self.layout[10][1][0].loading = True
+            self.layout[12].loading = True
+        except IndexError:
+            pass
+        self.plot_overlapped_frames.value = False
+        current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
+        if current_frame_index == len(self.ms1_ms2_frames.keys())-1:
+            self.current_frame = list(self.ms1_ms2_frames.keys())[0]
+        else:
+            self.current_frame = list(self.ms1_ms2_frames.keys())[current_frame_index + 1]
+        if self.x_axis_label_mq.value == 'm/z':
+            self.display_line_spectra_plots()
+        self.display_heatmap_spectrum()
 
     def display_overlapped_frames(self, *args):
         try:
