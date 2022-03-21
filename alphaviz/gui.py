@@ -891,12 +891,14 @@ class MainTab(object):
             button_type='default',
             width=250,
             align='center',
+            disabled=True,
             margin=(25, 0, 0, 10),
         )
         self.export_svg_ms2_button = pn.widgets.Button(
             name='Export as .svg',
             button_type='default',
             align='center',
+            disabled=True,
             width=250,
             margin=(25, 0, 0, 10),
         )
@@ -904,6 +906,7 @@ class MainTab(object):
             name='Export as .svg',
             button_type='default',
             align='center',
+            disabled=True,
             width=250,
             margin=(25, 0, 0, 10),
         )
@@ -1543,7 +1546,6 @@ class MainTab(object):
             predicted_df['FragmentMz'] = mz_ions.b_z1.values.tolist() + mz_ions.y_z1.values.tolist()[::-1]
             predicted_df['RelativeIntensity'] = intensities_ions.b_z1.values.tolist() + intensities_ions.y_z1.values.tolist()[::-1]
             predicted_df['ions'] = [f"b{i}" for i in range(1, len(mz_ions.b_z1)+1)] + [f"y{i}" for i in range(1, len(mz_ions.y_z1)+1)]
-        print(predicted_df)
         self.ms_spectra_plot = alphaviz.plotting.plot_complex_ms_plot(
             data_ions,
             title=f'MS2 spectrum for Precursor: {self.ms1_ms2_frames[self.current_frame][1]}',
@@ -2005,6 +2007,7 @@ class TargetModeTab(object):
             name='Export as .svg',
             button_type='default',
             align='center',
+            disabled=True,
             width=250,
             margin=(25, 0, 0, 10),
         )
@@ -2012,6 +2015,7 @@ class TargetModeTab(object):
             name='Export as .svg',
             button_type='default',
             align='center',
+            disabled=True,
             width=250,
             margin=(25, 0, 0, 10),
         )
