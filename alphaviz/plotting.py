@@ -318,6 +318,7 @@ def plot_heatmap(
             z_dimension
         )
     )
+
     agg = rasterize(
         dmap,
         width=width,
@@ -565,20 +566,21 @@ def plot_mass_spectra(
                 mode='markers',
                 opacity=0.7,
                 marker=dict(color=b_ion_color, size=1),
-                hovertext=predicted[2],
+                hovertext=predicted[2][predicted_b_ions_ind],
                 hovertemplate='<b>m/z:</b> %{x};<br><b>Intensity:</b> %{y};<br><b>Ion:</b> %{hovertext}.',
                 name='',
                 showlegend=False
             )
         )
+        predicted_y_ions_ind = list(set(predicted[2].index).difference(predicted_b_ions_ind))
         fig.add_trace(
             go.Scatter(
-                x=predicted[0][set(predicted[2].index).difference(predicted_b_ions_ind)],
-                y=predicted[1][set(predicted[2].index).difference(predicted_b_ions_ind)],
+                x=predicted[0][predicted_y_ions_ind],
+                y=predicted[1][predicted_y_ions_ind],
                 mode='markers',
                 opacity=0.7,
-                marker=dict(color=b_ion_color if 'b' in predicted[2] else y_ion_color, size=1),
-                hovertext=predicted[2],
+                marker=dict(color=y_ion_color, size=1),
+                hovertext=predicted[2][predicted_y_ions_ind],
                 hovertemplate='<b>m/z:</b> %{x};<br><b>Intensity:</b> %{y};<br><b>Ion:</b> %{hovertext}.',
                 name='',
                 showlegend=False
