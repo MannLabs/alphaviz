@@ -884,7 +884,7 @@ class MainTab(object):
             name='Show mirrored spectra',
             disabled=False if self.data.model_mgr else True,
             value=True,
-            margin=(20, 0, -10, 10),
+            margin=(20, 0, -20, 10),
         )
         self.export_svg_ms1_button = pn.widgets.Button(
             name='Export as .svg',
@@ -1014,6 +1014,7 @@ class MainTab(object):
                 ),
                 None,  # Overlap frames button
                 None,  # Show mirrored spectra checkbox
+                None,  # Predicted peptide properties
                 None,  # Summed MS2 spectrum
                 margin=(20, 10, 5, 10),
                 sizing_mode='stretch_width',
@@ -1156,6 +1157,7 @@ class MainTab(object):
                 ),
                 None,  # Overlap frames button
                 None,  # Show mirrored spectra checkbox
+                None,  # Predicted peptide properties
                 None,  # Summed MS2 spectrum
             ]
             self.protein_seq = alphaviz.preprocessing.get_aa_seq(
@@ -1220,6 +1222,7 @@ class MainTab(object):
                 ),
                 None,  # Overlap frames button
                 None,  # Show mirrored spectra checkbox
+                None,  # Predicted peptide properties
                 None,  # Summed MS2 spectrum
             ]
             self.peptides_table.loading = False
@@ -1300,6 +1303,7 @@ class MainTab(object):
                     ),
                     None,  # Overlap frames button
                     None,  # Show mirrored spectra checkbox
+                    None,  # Predicted peptide properties
                     None,  # Summed MS2 spectrum
                 ]
             self.peptides_table.loading = False
@@ -1378,12 +1382,15 @@ class MainTab(object):
 
     def display_elution_profile_plots(self, *args):
         if self.analysis_software == 'diann' and self.peptide:
-            self.layout[7] = pn.panel(
-                f"## The selected peptide has: rt: {round(self.peptide['rt']/60, 3)}, m/z: {round(self.peptide['mz'], 3)}, charge: {self.peptide['charge']}, 1/K0: {round(self.peptide['im'], 3)}, Quantity.Quality score: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Quantity.Quality']), 2)}.",
-                css_classes=['main-part'],
-                sizing_mode='stretch_width',
-                align='center',
-                margin=(0, 10, 0, -10)
+            self.layout[7] = pn.Row(
+                pn.panel(
+                    f"## The selected peptide has: rt: {round(self.peptide['rt']/60, 3)}, m/z: {round(self.peptide['mz'], 3)}, charge: {self.peptide['charge']}, 1/K0: {round(self.peptide['im'], 3)}, Quantity.Quality score: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Quantity.Quality']), 2)}.",
+                    css_classes=['main-part'],
+                    sizing_mode='stretch_width',
+                    align='center',
+                    margin=(0, 10, 0, -10)
+                ),
+                None
             )
             try:
                 self.layout[8][1][0].loading = True
@@ -1531,14 +1538,18 @@ class MainTab(object):
             self.ms1_ms2_frames[self.current_frame][1]
         )
         predicted_df = pd.DataFrame(columns=['FragmentMz', 'RelativeIntensity','ions'])
+        rt_pred, im_pred = float(), float()
         if not self.data.psm_df.empty and self.show_mirrored_plot.value:
             data_slice = self.data.psm_df.loc[(self.data.psm_df.spec_idx == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number']) & (self.data.psm_df.sequence == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Sequence'])].copy()
             predlib = self.data.model_mgr.predict_all(
                 data_slice,
-                predict_items=['ms2'],
+                predict_items=['ms2', 'rt', 'mobility'],
                 frag_types=['b_z1', 'y_z1'],
                 multiprocessing=False,
             )
+            rt_pred = round(predlib['precursor_df']['rt_pred'].values[0] * self.data.raw_data.rt_max_value / 60, 3)
+            im_pred = round(predlib['precursor_df']['mobility_pred'].values[0], 3)
+
             mz_ions = predlib['fragment_mz_df']
             intensities_ions = predlib['fragment_intensity_df']
             intensities_ions *= -100
@@ -1553,10 +1564,19 @@ class MainTab(object):
             predicted=(predicted_df.FragmentMz, predicted_df.RelativeIntensity, predicted_df.ions) if not predicted_df.empty else ()
         )
         self.layout[12] = self.show_mirrored_plot
-        self.layout[13] = pn.Pane(
+        if rt_pred:
+            self.layout[13] = pn.panel(
+                f"## The predicted peptide properties: retention time = {rt_pred} min, ion mobility = {im_pred} 1/K0.",
+                css_classes=['main-part'],
+                sizing_mode='stretch_width',
+                # align='center',
+                margin=(0, 10, 0, 10)
+            )
+
+        self.layout[14] = pn.Pane(
             self.ms_spectra_plot,
             config=update_config('Combined MS2 spectrum'),
-            margin=(10, 0, 0, 0),
+            margin=(30, 0, 0, 0),
             sizing_mode='stretch_width',
             loading=False,
             height=600 if predicted_df.empty else 700
@@ -1566,7 +1586,7 @@ class MainTab(object):
         try:
             self.layout[10][0][0].loading = True
             self.layout[10][1][0].loading = True
-            self.layout[12].loading = True
+            self.layout[14][0].loading = True
         except IndexError:
             pass
         current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
@@ -1583,7 +1603,7 @@ class MainTab(object):
         try:
             self.layout[10][0][0].loading = True
             self.layout[10][1][0].loading = True
-            self.layout[12].loading = True
+            self.layout[14][0].loading = True
         except IndexError:
             pass
         current_frame_index = list(self.ms1_ms2_frames.keys()).index(self.current_frame)
@@ -1600,12 +1620,13 @@ class MainTab(object):
         try:
             self.layout[10][0][0].loading = True
             self.layout[10][1][0].loading = True
-            self.layout[12].loading = True
+            self.layout[14][0].loading = True
         except IndexError:
             pass
         if self.plot_overlapped_frames.value is True:
             self.layout[12] = None
             self.layout[13] = None
+            self.layout[14] = None
             mz = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z'])
             im = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0'])
             try:
