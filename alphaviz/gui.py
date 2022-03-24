@@ -415,6 +415,7 @@ class DataImportWidget(BaseWidget):
         alphatims.utils.set_progress_callback(self.upload_progress)
         self.settings['analysis_software'] = ''
         self.model_mgr = None
+        self.psm_df = pd.DataFrame()
         self.import_error.object = ''
         self.upload_progress.value = 0
         try:
@@ -471,7 +472,7 @@ class DataImportWidget(BaseWidget):
             else:
                 print('Reading the DIA-NN output files...')
                 try:
-                    self.diann_proteins, self.diann_peptides, self.diann_statist = alphaviz.io.import_diann_output(
+                    self.diann_proteins, self.diann_peptides, self.diann_statist, diann_output_file = alphaviz.io.import_diann_output(
                         self.path_output_folder.value,
                         self.ms_file_name.value.split('.')[0],
                         self.fasta
@@ -507,6 +508,19 @@ class DataImportWidget(BaseWidget):
                 self.psm_df = mq_reader.psm_df.groupby(
                     ['sequence', 'mods', 'mod_sites', 'nAA', 'charge', 'spec_idx']
                 )['ccs'].median().reset_index()
+
+                self.psm_df['nce'] = 30
+                self.psm_df['instrument'] = 'timsTOF'  # trained on more Lumos files therefore should work better than 'timsTOF'
+                self.psm_df['spec_idx'] += 1
+
+            elif self.settings['analysis_software'] == 'diann':
+                from alphabase.io.psm_reader import psm_reader_provider
+
+                diann_reader = psm_reader_provider.get_reader('diann')
+                diann_reader.load(
+                    os.path.join(self.path_output_folder.value, diann_output_file)
+                )
+                self.psm_df = diann_reader.psm_df.groupby(['sequence','mods','mod_sites','nAA','charge','spec_idx'])['ccs'].median().reset_index()
 
                 self.psm_df['nce'] = 30
                 self.psm_df['instrument'] = 'timsTOF'  # trained on more Lumos files therefore should work better than 'timsTOF'
@@ -1279,6 +1293,22 @@ class MainTab(object):
                         "mz": self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z'],
                     }
                     self.display_elution_profile_plots()
+                    if not self.data.psm_df.empty:
+                        data_slice = self.data.psm_df.loc[(self.data.psm_df.spec_idx == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['MS/MS scan number']) & (self.data.psm_df.sequence == self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Sequence'])].copy()
+                        predlib = self.data.model_mgr.predict_all(
+                            data_slice,
+                            predict_items=['rt', 'mobility'],
+                            multiprocessing=False,
+                        )
+                        rt_pred = round(predlib['precursor_df']['rt_pred'].values[0] * self.data.raw_data.rt_max_value / 60, 3)
+                        im_pred = round(predlib['precursor_df']['mobility_pred'].values[0], 3)
+                        self.layout[9] = pn.panel(
+                            f"## The predicted peptide properties: retention time = {rt_pred} min, ion mobility = {im_pred} V·s·cm\u207B\u00B2.",
+                            css_classes=['main-part'],
+                            sizing_mode='stretch_width',
+                            margin=(10, 10, 20, -10),
+                            align='center',
+                        )
                     self.display_heatmap_spectrum()
             else:
                 self.peptides_table.selection = []
@@ -1345,7 +1375,7 @@ class MainTab(object):
                     'raw'
                 ]
             self.layout[7] = pn.panel(
-                f"## The selected peptide has rt: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Retention time']), 3)}, m/z: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z']), 3)}, charge: {float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Charge'])}, 1/K0: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0']), 3)}, andromeda score: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Andromeda score']), 1)}.",
+                f"## The selected peptide has rt = {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Retention time']), 3)}, m/z = {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z']), 3)}, charge = {float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Charge'])}, im = {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0']), 3)}, andromeda score = {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Andromeda score']), 1)}.",
                 css_classes=['main-part'],
                 sizing_mode='stretch_width',
                 align='center',
@@ -1384,7 +1414,7 @@ class MainTab(object):
         if self.analysis_software == 'diann' and self.peptide:
             self.layout[7] = pn.Row(
                 pn.panel(
-                    f"## The selected peptide has: rt: {round(self.peptide['rt']/60, 3)}, m/z: {round(self.peptide['mz'], 3)}, charge: {self.peptide['charge']}, 1/K0: {round(self.peptide['im'], 3)}, Quantity.Quality score: {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Quantity.Quality']), 2)}.",
+                    f"## The selected peptide has rt = {round(self.peptide['rt']/60, 3)}, m/z = {round(self.peptide['mz'], 3)}, charge = {self.peptide['charge']}, im = {round(self.peptide['im'], 3)}, Quantity.Quality score = {round(float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['Quantity.Quality']), 2)}.",
                     css_classes=['main-part'],
                     sizing_mode='stretch_width',
                     align='center',
@@ -1454,6 +1484,7 @@ class MainTab(object):
                 mz = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['m/z'])
                 im = float(self.peptides_table.value.iloc[self.peptides_table.selection[0]]['1/K0'])
             elif self.analysis_software == 'diann':
+
                 ms1_frame = self.ms1_frame
                 ms2_frame = self.ms2_frame
                 mz = self.peptide['mz']
@@ -1569,8 +1600,7 @@ class MainTab(object):
                 f"## The predicted peptide properties: retention time = {rt_pred} min, ion mobility = {im_pred} 1/K0.",
                 css_classes=['main-part'],
                 sizing_mode='stretch_width',
-                # align='center',
-                margin=(0, 10, 0, 10)
+                margin=(-20, 10, 30, 10)
             )
 
         self.layout[14] = pn.Pane(
