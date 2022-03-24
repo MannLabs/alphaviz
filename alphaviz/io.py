@@ -542,4 +542,4 @@ def import_diann_output(
 
     diann_overview = import_diann_stats(os.path.join(path_diann_output_folder, diann_stats_file), experiment)
 
-    return diann_proteins, diann_peptides, diann_overview
+    return diann_proteins, diann_peptides, diann_overview, diann_output_file
