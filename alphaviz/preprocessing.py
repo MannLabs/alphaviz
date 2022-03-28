@@ -26,6 +26,8 @@ def get_mq_unique_proteins(
     """
     if filepath.endswith('.txt'):
         sep = '\t'
+    else:
+        raise ValueError('The given file does not have an original .txt extension.')
 
     with open(filepath) as filelines:
         i = 0
@@ -35,7 +37,10 @@ def get_mq_unique_proteins(
         for line in filelines:
             line = line.split(sep)
             if i == 0:
-                filename_col_index = line.index('Protein names')
+                try:
+                    filename_col_index = line.index('Protein names')
+                except ValueError:
+                    raise ValueError('The given file does not contain the "Protein names" column.')
             else:
                 filename_data.append(line[filename_col_index])
             i += 1
