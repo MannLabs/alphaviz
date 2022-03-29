@@ -1,5 +1,12 @@
 ## Changelog
 
+### 1.1.3
+* FEAT: Enable fine-tuning of retention times for predictions.
+* FEAT: Add the predicted retention time and ion mobility values to the "Main tab" of the dashboard.
+* FIX: Correct the mass calculation for modified peptides in prediction mode.
+* FIX: After selecting a new protein, always show the first page of the peptide table.
+* STYLE: Update the AlphaViz logo.
+
 ### 1.1.2
 * FIX: Correct the bug with MS2 intensity prediction using deep learning.
 * FIX: Correct the hover information/color for the MS2 spectrum for the predicted ion intensities.
