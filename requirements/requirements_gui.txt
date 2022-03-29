@@ -7,5 +7,5 @@ pyteomics==4.5
 plotly==5.3.1
 beautifulsoup4==4.10.0
 requests==2.27.1
-selenium
-chromedriver-binary
+#selenium
+#chromedriver-binary
