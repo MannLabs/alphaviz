@@ -1164,6 +1164,7 @@ class MainTab(object):
                     column='Gene names',
                     software='diann',
                 )
+            self.peptides_table.page = 1
             self.layout[7:] = [
                 None,  # peptide description
                 None,  # XIC plot
