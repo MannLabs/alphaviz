@@ -23,7 +23,7 @@ cd release/one_click_macos_gui
 pip install "../../dist/alphaviz-1.1.6-py3-none-any.whl[stable,gui-stable]"
 
 # Creating the stand-alone pyinstaller folder
-pip install pyinstaller==4.9
+pip install pyinstaller==4.3
 pyinstaller ../pyinstaller/alphaviz.spec -y
 conda deactivate
 
