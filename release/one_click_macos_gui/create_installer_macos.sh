@@ -20,10 +20,10 @@ python setup.py sdist bdist_wheel
 
 # Setting up the local package
 cd release/one_click_macos_gui
-pip install "../../dist/alphaviz-1.1.6-py3-none-any.whl[stable,gui-stable]"
+pip install "../../dist/alphaviz-1.1.7-py3-none-any.whl[stable,gui-stable]"
 
 # Creating the stand-alone pyinstaller folder
-pip install pyinstaller==4.9
+pip install pyinstaller==4.3
 pyinstaller ../pyinstaller/alphaviz.spec -y
 conda deactivate
 
@@ -40,5 +40,5 @@ cp ../../LICENSE.txt Resources/LICENSE.txt
 cp ../logos/alpha_logo.png Resources/alpha_logo.png
 chmod 777 scripts/*
 
-pkgbuild --root dist/alphaviz --identifier de.mpg.biochem.alphaviz.app --version 1.1.6 --install-location /Applications/alphaviz.app --scripts scripts alphaviz.pkg
+pkgbuild --root dist/alphaviz --identifier de.mpg.biochem.alphaviz.app --version 1.1.7 --install-location /Applications/alphaviz.app --scripts scripts alphaviz.pkg
 productbuild --distribution distribution.xml --resources Resources --package-path alphaviz.pkg dist/alphaviz_gui_installer_macos.pkg

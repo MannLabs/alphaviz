@@ -1,6 +1,6 @@
 ## Changelog
 
-### 1.1.6
+### 1.1.7
 * FEAT: Enable fine-tuning of retention times for predictions.
 * FEAT: Add the predicted retention time and ion mobility values to the "Main tab" of the dashboard.
 * FIX: Correct the mass calculation for modified peptides in prediction mode.
