@@ -17,10 +17,10 @@ python setup.py sdist bdist_wheel
 # Setting up the local package
 cd release/one_click_linux_gui
 # Make sure you include the required extra packages and always use the stable or very-stable options!
-pip install "../../dist/alphaviz-1.1.5-py3-none-any.whl[stable,gui-stable]"
+pip install "../../dist/alphaviz-1.1.6-py3-none-any.whl[stable,gui-stable]"
 
 # Creating the stand-alone pyinstaller folder
-pip install pyinstaller==4.2
+pip install pyinstaller==4.9
 pyinstaller ../pyinstaller/alphaviz.spec -y
 conda deactivate
 
