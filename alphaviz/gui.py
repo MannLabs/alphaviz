@@ -2006,7 +2006,7 @@ class TargetModeTab(object):
             width=300,
             margin=(25, 0, 0, 10),
         )
-        self.targeted_peptides_table_prediction = pn.widgets.Tabulator(
+        self.targeted_peptides_table_pred = pn.widgets.Tabulator(
             value=pd.DataFrame(
                 columns=['sequence', 'mods', 'mod_sites', 'charge']
             ),
@@ -2090,7 +2090,7 @@ class TargetModeTab(object):
             self.peptides_count_prediction: [self.update_row_count_prediction, 'value'],
             self.peptides_table_file_prediction: [self.read_peptides_table_prediction, 'value'],
             self.run_prediction_button: [self.run_prediction, 'clicks'],
-            self.targeted_peptides_table_prediction: [self.visualize_elution_plots_prediction, ['selection', 'value']],
+            self.targeted_peptides_table_pred: [self.visualize_elution_plots_prediction, ['selection', 'value']],
             self.export_svg_manual_button: [self.export_svg_manual, 'clicks'],
             self.export_svg_prediction_button: [self.export_svg_prediction, 'clicks'],
         }
@@ -2133,7 +2133,7 @@ class TargetModeTab(object):
                         ),
                         self.clear_peptides_table_button_prediction,
                     ),
-                    self.targeted_peptides_table_prediction,
+                    self.targeted_peptides_table_pred,
                     sizing_mode='stretch_width',
                 ),
                 None,
@@ -2273,17 +2273,22 @@ class TargetModeTab(object):
                                 align='center',
                                 margin=(0, 10, 10, 10)
                             )
-                        except AttibuteError:
+                        except AttributeError:
                             self.layout_target_mode_manual[2] = None
-                        self.layout_target_mode_manual[3] = self.export_svg_manual_button
+                        self.layout_target_mode_manual[3] = \
+                            self.export_svg_manual_button
                     finally:
                         self.targeted_peptides_table.loading = False
                 else:
                     if self.layout_target_mode_manual:
-                        self.layout_target_mode_manual[1], self.layout_target_mode_manual[2], self.layout_target_mode_manual[3] = None, None, None
+                        self.layout_target_mode_manual[1],
+                        self.layout_target_mode_manual[2],
+                        self.layout_target_mode_manual[3] = None, None, None
             else:
                 if self.layout_target_mode_manual:
-                    self.layout_target_mode_manual[1], self.layout_target_mode_manual[2], self.layout_target_mode_manual[3] = None, None, None
+                    self.layout_target_mode_manual[1],
+                    self.layout_target_mode_manual[2],
+                    self.layout_target_mode_manual[3] = None, None, None
 
     def export_svg_manual(self, *args):
         for i, subplot in enumerate(self.layout_target_mode_manual[2].object):
@@ -2293,41 +2298,44 @@ class TargetModeTab(object):
                     self.data.path_raw_folder.value,
                     f"elution_profile_heatmaps_manual_{self.peptide_manual['name']}{i}.svg"
                 ),
-                height=int(self.image_save_size.value[0]), width=int(self.image_save_size.value[1])
+                height=int(self.image_save_size.value[0]),
+                width=int(self.image_save_size.value[1])
             )
 
     def clear_peptide_table_prediction(self, *args):
-        if not self.targeted_peptides_table_prediction.value.empty:
-            self.targeted_peptides_table_prediction.selection = []
-            self.targeted_peptides_table_prediction.value = pd.DataFrame(
+        if not self.targeted_peptides_table_pred.value.empty:
+            self.targeted_peptides_table_pred.selection = []
+            self.targeted_peptides_table_pred.value = pd.DataFrame(
                 columns=['sequence', 'mods', 'mod_sites', 'charge'],
             )
 
     def update_row_count_prediction(self, *args):
-        if self.targeted_peptides_table_prediction.value.empty:
-            self.targeted_peptides_table_prediction.selection = []
-            self.targeted_peptides_table_prediction.value = pd.DataFrame(
+        if self.targeted_peptides_table_pred.value.empty:
+            self.targeted_peptides_table_pred.selection = []
+            self.targeted_peptides_table_pred.value = pd.DataFrame(
                 columns=['sequence', 'mods', 'mod_sites', 'charge'],
                 index=range(self.peptides_count_prediction.value),
             )
         else:
-            self.targeted_peptides_table_prediction.value = self.targeted_peptides_table_prediction.value.append(
-                pd.DataFrame(
-                    columns=self.targeted_peptides_table_prediction.value.columns,
-                    index=range(self.peptides_count_prediction.value),
-                ),
-                ignore_index=True
-            )
+            self.targeted_peptides_table_pred.value = \
+                self.targeted_peptides_table_pred.value.append(
+                    pd.DataFrame(
+                        columns=self.targeted_peptides_table_pred.value.columns,
+                        index=range(self.peptides_count_prediction.value),
+                    ),
+                    ignore_index=True
+                )
         self.peptides_count_prediction.value = 0
 
     def read_peptides_table_prediction(self, *args):
-        file_ext = os.path.splitext(self.peptides_table_file_prediction.filename)[-1]
+        file_ext = \
+            os.path.splitext(self.peptides_table_file_prediction.filename)[-1]
         if file_ext == '.csv':
             sep = ','
         else:
             sep = '\t'
-        self.targeted_peptides_table_prediction.selection = []
-        self.targeted_peptides_table_prediction.value = pd.read_csv(
+        self.targeted_peptides_table_pred.selection = []
+        self.targeted_peptides_table_pred.value = pd.read_csv(
             StringIO(str(self.peptides_table_file_prediction.value, "utf-8")),
             sep=sep,
         )
@@ -2335,7 +2343,10 @@ class TargetModeTab(object):
     def run_prediction(self, *args):
         if self.data.model_mgr:
             self.run_prediction_spinner.value = True
-            df = self.targeted_peptides_table_prediction.value.loc[:, ['sequence', 'mods', 'mod_sites', 'charge']]
+            df = self.targeted_peptides_table_pred.value.loc[
+                :,
+                ['sequence', 'mods', 'mod_sites', 'charge']
+            ]
             df.fillna(0, inplace=True)
             df.mod_sites.replace(0, "", inplace=True)
             df.mods.replace(0, "", inplace=True)
@@ -2346,25 +2357,48 @@ class TargetModeTab(object):
             df['instrument'] = 'Lumos'
             self.predicted_dict = self.data.model_mgr.predict_all(
                 df,
-                predict_items=['rt', 'mobility'],
+                predict_items=['rt', 'mobility', 'ms2'],
+                frag_types=['b_z1', 'y_z1'],
                 multiprocessing=False,
             )
-            self.predicted_dict['precursor_df']['rt_pred'] *= self.data.raw_data.rt_max_value / 60
-            self.targeted_peptides_table_prediction.value = self.predicted_dict['precursor_df'].drop(['instrument', 'nce', 'rt_norm_pred'], axis=1)
+            self.predicted_dict['precursor_df']['rt_pred'] *= \
+                self.data.raw_data.rt_max_value / 60
+            self.targeted_peptides_table_pred.value = \
+                self.predicted_dict['precursor_df'].drop(
+                    ['instrument', 'nce', 'rt_norm_pred'],
+                    axis=1
+                )
             self.run_prediction_spinner.value = False
 
     def visualize_elution_plots_prediction(self, *args):
         if 'dia' in self.data.raw_data.acquisition_mode:
-            if self.targeted_peptides_table_prediction.selection and self.predicted_dict:
+            if self.targeted_peptides_table_pred.selection and \
+                    self.predicted_dict:
                 try:
-                    self.peptide_prediction = self.targeted_peptides_table_prediction.value.loc[self.targeted_peptides_table_prediction.selection[0], ['sequence', 'charge', 'precursor_mz', 'rt_pred', 'mobility_pred']].to_dict()
-                    self.peptide_prediction['mz'] = self.peptide_prediction.pop('precursor_mz')
-                    self.peptide_prediction['rt'] = self.peptide_prediction.pop('rt_pred')
-                    self.peptide_prediction['im'] = self.peptide_prediction.pop('mobility_pred')
-                except:
+                    self.peptide_prediction = \
+                        self.targeted_peptides_table_pred.value.loc[
+                            self.targeted_peptides_table_pred.selection[0],
+                            ['sequence', 'charge', 'precursor_mz',
+                                'rt_pred', 'mobility_pred']
+                        ].to_dict()
+                    self.peptide_prediction['mz'] = \
+                        self.peptide_prediction.pop('precursor_mz')
+                    self.peptide_prediction['rt'] = \
+                        self.peptide_prediction.pop('rt_pred')
+                    self.peptide_prediction['im'] = \
+                        self.peptide_prediction.pop('mobility_pred')
+                    b_ions = {f"b{i}": v for i, v in zip(range(1,
+                        len(self.predicted_dict['fragment_mz_df'].b_z1) + 1),
+                        self.predicted_dict['fragment_mz_df'].b_z1)
+                    }
+                    y_ions = {f"y{i}": v for i, v in zip(range(1,
+                        len(self.predicted_dict['fragment_mz_df'].y_z1)+1),
+                        self.predicted_dict['fragment_mz_df'].y_z1[::-1])}
+                    self.peptide_prediction['fragments'] = {**b_ions, **y_ions}
+                except BaseException:
                     self.peptide_prediction = {}
                 if self.peptide_prediction and not any(pd.isna(val) for val in self.peptide_prediction.values()):
-                    self.targeted_peptides_table_prediction.loading = True
+                    self.targeted_peptides_table_pred.loading = True
                     self.peptide_prediction['rt'] *= 60  # to convert to sec
                     try:
                         self.layout_target_mode_predicted[1] = pn.Pane(
@@ -2375,6 +2409,7 @@ class TargetModeTab(object):
                                 mz_tol=self.mz_tol.value,
                                 rt_tol=self.rt_tol.value,
                                 im_tol=self.im_tol.value,
+                                calculate_fragment_masses=False,
                                 title=f"Precursor and fragment elution profiles of peptide {self.peptide_prediction['sequence']} in RT and RT/IM dimensions ({self.peptide_prediction['rt'] / 60:.2f} min)",
                                 colorscale_qualitative=self.colorscale_qualitative.value,
                                 colorscale_sequential=self.colorscale_sequential.value,
@@ -2410,7 +2445,7 @@ class TargetModeTab(object):
                     except AttibuteError:
                         self.layout_target_mode_predicted[2] = None
                     self.layout_target_mode_predicted[3] = self.export_svg_prediction_button
-                    self.targeted_peptides_table_prediction.loading = False
+                    self.targeted_peptides_table_pred.loading = False
                 else:
                     if self.layout_target_mode_predicted:
                         self.layout_target_mode_predicted[1], self.layout_target_mode_predicted[2], self.layout_target_mode_predicted[3] = None, None, None
