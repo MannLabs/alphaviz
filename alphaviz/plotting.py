@@ -1351,7 +1351,6 @@ def plot_elution_profile(
         peptide_info['fragments'] = {
             (f"b{key}" if key > 0 else f"y{-key}"): value for key, value in zip(frag_type, frag_masses)
         }
-        print(peptide_info)
 
     # slice the data using the rt_tol, im_tol and mz_tol values
     rt_slice = slice(peptide_info['rt'] - rt_tol, peptide_info['rt'] + rt_tol)

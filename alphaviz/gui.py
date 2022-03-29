@@ -486,7 +486,7 @@ class DataImportWidget(BaseWidget):
                         axis=1
                     )
                     self.settings['analysis_software'] = 'diann'
-                except:
+                except BaseException:
                     self.import_error.object += "\n#### The DIA-NN output files necessary for the visualization are not found."
         else:
             self.import_error.object += "\n#### The output files of the supported software tools have not been provided."
@@ -506,25 +506,33 @@ class DataImportWidget(BaseWidget):
                 )
 
                 self.psm_df = mq_reader.psm_df.groupby(
-                    ['sequence', 'mods', 'mod_sites', 'nAA', 'charge', 'spec_idx']
+                    ['sequence', 'mods', 'mod_sites', 'nAA', 'charge',
+                        'spec_idx', 'rt', 'rt_norm']
                 )['ccs'].median().reset_index()
-
-                self.psm_df['nce'] = 30
-                self.psm_df['instrument'] = 'timsTOF'  # trained on more Lumos files therefore should work better than 'timsTOF'
-                self.psm_df['spec_idx'] += 1
 
             elif self.settings['analysis_software'] == 'diann':
                 from alphabase.io.psm_reader import psm_reader_provider
 
                 diann_reader = psm_reader_provider.get_reader('diann')
                 diann_reader.load(
-                    os.path.join(self.path_output_folder.value, diann_output_file)
+                    os.path.join(
+                        self.path_output_folder.value,
+                        diann_output_file
+                    )
                 )
-                self.psm_df = diann_reader.psm_df.groupby(['sequence','mods','mod_sites','nAA','charge','spec_idx'])['ccs'].median().reset_index()
+                self.psm_df = diann_reader.psm_df.groupby(
+                    ['sequence', 'mods', 'mod_sites', 'nAA', 'charge',
+                        'spec_idx', 'rt', 'rt_norm']
+                )['ccs'].median().reset_index()
 
-                self.psm_df['nce'] = 30
-                self.psm_df['instrument'] = 'timsTOF'  # trained on more Lumos files therefore should work better than 'timsTOF'
-                self.psm_df['spec_idx'] += 1
+            self.psm_df['nce'] = 30
+            self.psm_df['instrument'] = 'timsTOF'
+            # trained on more Lumos files therefore should work better
+            # than 'timsTOF'
+            self.psm_df['spec_idx'] += 1
+            self.model_mgr.psm_num_to_tune_rt_ccs = 1000
+            self.model_mgr.fine_tune_rt_model(self.psm_df)
+            # self.model_mgr.fine_tune_ccs_model(self.psm_df)
 
         self.trigger_dependancy()
         self.upload_progress.active = False
