@@ -20,7 +20,7 @@ cd release/one_click_linux_gui
 pip install "../../dist/alphaviz-1.1.7-py3-none-any.whl[stable,gui-stable]"
 
 # Creating the stand-alone pyinstaller folder
-pip install pyinstaller==4.3
+pip install pyinstaller==4.10
 pyinstaller ../pyinstaller/alphaviz.spec -y
 conda deactivate
 
