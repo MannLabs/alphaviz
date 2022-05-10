@@ -260,7 +260,8 @@ def import_mq_all_peptides(
 
 
 def import_mq_msms(
-    filepath: str
+    filepath: str,
+    experiment: str
 ) -> pd.DataFrame:
     """Read some columns from the output file msms.txt of MaxQuant software.
 
@@ -281,6 +282,7 @@ def import_mq_msms(
     """
     try:
         maxquant_msms_columns = [
+            'Raw file',
             'Scan number',
             'Matches',
             'Masses',
@@ -290,6 +292,7 @@ def import_mq_msms(
         data_common = read_file(filepath, maxquant_msms_columns)
     except ValueError:
         maxquant_msms_columns = [
+            'Raw file',
             'Scan number',
             'Matches',
             'Masses',
@@ -297,6 +300,7 @@ def import_mq_msms(
             'Mass Deviations [ppm]'
         ]
         data_common = read_file(filepath, maxquant_msms_columns)
+    data_common = data_common[data_common['Raw file'] == experiment]
     data_common.columns = [col.strip().replace('Deviations', 'deviations') for col in data_common.columns]
     data_common['Scan number'] = data_common['Scan number'].astype('int')
     return data_common
@@ -355,7 +359,7 @@ def import_mq_output(
             path_mq_output_folder,
             file
         )
-        if file in ['allPeptides.txt', 'msms.txt', 'summary.txt']:
+        if file in ['allPeptides.txt', 'summary.txt']:
             df = file_func_dict[file](
                 file_path
             )
