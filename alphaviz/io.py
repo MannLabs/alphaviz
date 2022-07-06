@@ -547,3 +547,47 @@ def import_diann_output(
     diann_overview = import_diann_stats(os.path.join(path_diann_output_folder, diann_stats_file), experiment)
 
     return diann_proteins, diann_peptides, diann_overview, diann_output_file
+
+
+def create_ap_proteins_table(
+    ap_df: pd.DataFrame,
+    fasta: object
+):
+    ap_df[['Protein names', 'Protein IDs', 'Gene names']] = ap_df.apply(
+        lambda x: alphaviz.preprocessing.get_protein_info_from_fastaheader(
+            x['protein_group']
+        ), axis=1, result_type='expand'
+    )
+    ap_df[['Protein names', 'Sequence lengths']] = ap_df.apply(
+        lambda x: alphaviz.preprocessing.get_protein_info(
+            fasta, x['Protein IDs']
+        ), axis=1, result_type='expand'
+    )
+    columns = [col for col in ap_df.columns if 'protein' in col] \
+        + ['sequence', 'Protein names', 'Protein IDs',
+            'Gene names', 'Sequence lengths']
+
+    agg_dict = dict.fromkeys(columns, 'max')
+    agg_dict['sequence'] = 'count'
+    grouped_ap_df = ap_df.groupby(
+        'index_protein_group',
+        as_index=False
+    )[columns].agg(agg_dict)
+
+    grouped_ap_df.rename(
+        columns={'sequence': '(EXP) # peptides'},
+        inplace=True
+    )
+    grouped_ap_df['# proteins'] = grouped_ap_df['protein_idx'].apply(
+        lambda x: len(x.split(',')))
+    grouped_ap_df['# MS/MS'] = grouped_ap_df['(EXP) # peptides']
+    first_columns = [
+        'Protein IDs', 'Protein names', 'Gene names', '# proteins',
+        '(EXP) # peptides', '# MS/MS', 'Sequence lengths'
+    ]
+    proteins = grouped_ap_df[
+        first_columns + sorted(list(
+            set(grouped_ap_df.columns).difference(first_columns))
+        )
+    ]
+    return proteins
