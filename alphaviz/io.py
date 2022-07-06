@@ -493,7 +493,10 @@ def create_diann_peptides_table(
         The output data frame contains information about peptides.
     """
     peptides = diann_df.copy()
-    columns = [col for col in peptides.columns if 'PG' not in col and 'Protein' not in col and 'Genes' not in col and 'GG' not in col]
+    columns = [
+        col for col in peptides.columns if 'PG' not in col
+        and 'Protein' not in col and 'Genes' not in col and 'GG' not in col
+    ]
     columns.extend(['Genes'])
 
     peptides = diann_df[columns[2:]].copy()
@@ -506,11 +509,22 @@ def create_diann_peptides_table(
         'Stripped.Sequence': 'Sequence'
     }, inplace=True)
 
-    peptides['Sequence_AP_mod'] = peptides['Modified.Sequence'].apply(alphaviz.preprocessing.convert_diann_ap_mod)
-    peptides['Modified.Sequence'] = peptides['Modified.Sequence'].apply(alphaviz.preprocessing.convert_diann_mq_mod)
+    peptides['Sequence_AP_mod'] = peptides['Modified.Sequence'].apply(
+        alphaviz.preprocessing.convert_diann_ap_mod
+    )
+    peptides['Modified.Sequence'] = peptides['Modified.Sequence'].apply(
+        alphaviz.preprocessing.convert_diann_mq_mod
+    )
     peptides['m/z'] = 0.0
-    first_columns = ['Modified.Sequence', 'Length', 'm/z', 'RT', 'Predicted.RT', 'Charge', 'IM', 'Predicted.IM']
-    peptides = peptides[first_columns + sorted(list(set(peptides.columns).difference(first_columns)))]
+    first_columns = [
+        'Modified.Sequence', 'Length', 'm/z', 'RT',
+        'Predicted.RT', 'Charge', 'IM', 'Predicted.IM'
+    ]
+    peptides = peptides[
+        first_columns + sorted(list(
+            set(peptides.columns).difference(first_columns))
+        )
+    ]
     return peptides
 
 
@@ -591,3 +605,37 @@ def create_ap_proteins_table(
         )
     ]
     return proteins
+
+
+def create_ap_peptides_table(
+    ap_df: pd.DataFrame
+):
+    peptides = ap_df.copy()
+    columns = [
+        col for col in peptides.columns if 'protein' not in col
+        and 'Protein' not in col and col != 'Sequence lengths'
+    ]
+    peptides = peptides[columns]
+    peptides.rename(columns={
+        'n_AA': 'Length',
+        'charge': 'Charge',
+        'sequence_naked': 'Sequence',
+        'parent': 'MS/MS scan number',
+        'sequence': 'Sequence_AP_mod',
+        'mz': 'm/z',
+        'mass': 'Mass',
+        'mobility': 'IM',
+        'rt': 'RT',
+    }, inplace=True)
+    peptides['Modified.Sequence'] = peptides['Sequence_AP_mod']
+
+    first_columns = [
+        'Modified.Sequence', 'Length', 'm/z',
+        'RT', 'Charge', 'Mass', 'IM'
+    ]
+    peptides = peptides[
+        first_columns + sorted(list(
+            set(peptides.columns).difference(first_columns))
+        )
+    ]
+    return peptides
