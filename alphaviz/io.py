@@ -639,3 +639,22 @@ def create_ap_peptides_table(
         )
     ]
     return peptides
+
+
+def import_alphapept_output(
+    path_ap_output_folder: str,
+    experiment: str,
+    fasta: object
+):
+    ap_output_file = 'results_peptides.csv'
+    ap_df = pd.read_csv(
+        os.path.join(path_ap_output_folder, ap_output_file),
+        low_memory=False
+    )
+    ap_df = ap_df[ap_df.shortname == experiment]
+    cols_to_remove = ['filename', 'shortname', 'sample_group']
+    ap_df.drop(columns=cols_to_remove, axis=1, inplace=True)
+    ap_proteins = create_ap_proteins_table(ap_df, fasta)
+    ap_peptides = create_ap_peptides_table(ap_df)
+
+    return ap_proteins, ap_peptides
