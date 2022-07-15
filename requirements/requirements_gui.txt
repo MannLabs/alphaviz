@@ -4,7 +4,7 @@ datashader==0.13.0
 holoviews==1.14.8
 panel==0.12.4
 pyteomics==4.5
-plotly==5.3.1
+plotly==5.8.0
 beautifulsoup4==4.10.0
 requests==2.27.1
 #selenium
