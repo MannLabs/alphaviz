@@ -48,7 +48,6 @@ def init_panel():
 def update_config(filename, height=400, width=900, ext='svg'):
     config = {
         'displaylogo': False,
-        # 'responsive': True,
         'toImageButtonOptions': {
             'format': f'{ext}',  # one of png, svg, jpeg, webp
             'filename': f'{filename}',
@@ -56,8 +55,9 @@ def update_config(filename, height=400, width=900, ext='svg'):
             'width': width,
             'scale': 1  # Multiply title/legend/axis/canvas size by this factor
         },
-        'modeBarButtonsToRemove': ['select2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines'],
-        # 'scrollZoom': True,
+        'modeBarButtonsToRemove': [
+            'select2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines'
+        ],
     }
     return config
 
@@ -89,7 +89,9 @@ class BaseWidget(object):
 
 
 class HeaderWidget(object):
-    """This class creates a layout for the header of the dashboard with the name of the tool and all links to the MPI website, the MPI Mann Lab page and the GitHub repo.
+    """This class creates a layout for the header of the dashboard
+    with the name of the tool and all links to the MPI website,
+    the MPI Mann Lab page and the GitHub repo.
 
     Parameters
     ----------
@@ -101,11 +103,17 @@ class HeaderWidget(object):
     header_title : pn.pane.Markdown
         A Panel Markdown pane that returns the title of the tool.
     mpi_biochem_logo : pn.pane.PNG
-        A Panel PNG pane that embeds a png image file of the MPI Biochemisty logo and makes the image clickable with the link to the official website.
+        A Panel PNG pane that embeds a png image file of the MPI
+        Biochemisty logo and makes the image clickable with the
+        link to the official website.
     mpi_logo : pn.pane.JPG
-        A Panel JPG pane that embeds a jpg image file of the MPI Biochemisty logo and makes the image clickable with the link to the official website.
+        A Panel JPG pane that embeds a jpg image file of the MPI
+        Biochemisty logo and makes the image clickable with the
+        link to the official website.
     github_logo : pn.pane.PNG
-        A Panel PNG pane that embeds a png image file of the GitHub logo and makes the image clickable with the link to the GitHub repository of the project.
+        A Panel PNG pane that embeds a png image file of the
+        GitHub logo and makes the image clickable with the
+        link to the GitHub repository of the project.
 
     """
 
@@ -168,7 +176,9 @@ class HeaderWidget(object):
 
 
 class MainWidget(object):
-    """This class create a layout for the main part of the dashboard with the description of the tool and a button to download the manual for the project's GUI.
+    """This class create a layout for the main part of the
+    dashboard with the description of the tool and a button
+    to download the manual for the project's GUI.
 
     Parameters
     ----------
@@ -182,7 +192,8 @@ class MainWidget(object):
     project_description : pn.pane.Markdown
         A Panel Markdown pane that shows the description of the project.
     manual : pn.widgets.FileDownload
-        A Panel FileDownload widget that allows to download the GUI manual of the tool.
+        A Panel FileDownload widget that allows to download the GUI
+        manual of the tool.
 
     """
     def __init__(
@@ -218,9 +229,12 @@ class MainWidget(object):
 
     def create_layout(self):
 
-        latest_github_version = alphaviz.utils.check_github_version(silent=False)
+        latest_github_version = alphaviz.utils.check_github_version(
+            silent=False
+        )
 
-        if latest_github_version and latest_github_version != alphaviz.__version__:
+        if latest_github_version and \
+                latest_github_version != alphaviz.__version__:
             self.download_new_version_button.name = f"Download version {latest_github_version}"
             download_new_version_button = self.download_new_version_button
             download_new_version_button.js_on_click(
@@ -291,8 +305,6 @@ class DataImportWidget(BaseWidget):
             margin=(15, 15, 0, 15)
         )
         self.path_fasta_file = pn.widgets.TextInput(
-            # TODO: remove the fixed fasta file before release
-            # value='/Users/eugeniavoytik/copied/Bruker/MaxQuant_output_tables/20210413_TIMS03_EVO03_PaSk_MA_HeLa_200ng_S1-A1_1_24848.d/txt/human.fasta',
             name='Specify the full path to the fasta file:',
             placeholder=fasta_path_placeholder,
             width=900,
@@ -496,43 +508,43 @@ class DataImportWidget(BaseWidget):
 
             self.model_mgr = ModelManager()
             self.model_mgr.load_installed_models()
+            if self.settings['analysis_software']:
+                if self.settings['analysis_software'] == 'maxquant':
+                    from alphabase.io.psm_reader import psm_reader_provider
 
-            if self.settings['analysis_software'] == 'maxquant':
-                from alphabase.io.psm_reader import psm_reader_provider
-
-                mq_reader = psm_reader_provider.get_reader('maxquant')
-                mq_reader.load(
-                    os.path.join(self.path_output_folder.value, 'evidence.txt')
-                )
-
-                self.psm_df = mq_reader.psm_df.groupby(
-                    ['sequence', 'mods', 'mod_sites', 'nAA', 'charge',
-                        'spec_idx', 'rt', 'rt_norm']
-                )['ccs'].median().reset_index()
-
-            elif self.settings['analysis_software'] == 'diann':
-                from alphabase.io.psm_reader import psm_reader_provider
-
-                diann_reader = psm_reader_provider.get_reader('diann')
-                diann_reader.load(
-                    os.path.join(
-                        self.path_output_folder.value,
-                        diann_output_file
+                    mq_reader = psm_reader_provider.get_reader('maxquant')
+                    mq_reader.load(
+                        os.path.join(self.path_output_folder.value, 'evidence.txt')
                     )
-                )
-                self.psm_df = diann_reader.psm_df.groupby(
-                    ['sequence', 'mods', 'mod_sites', 'nAA', 'charge',
-                        'spec_idx', 'rt', 'rt_norm']
-                )['ccs'].median().reset_index()
 
-            self.psm_df['nce'] = 30
-            self.psm_df['instrument'] = 'timsTOF'
-            # trained on more Lumos files therefore should work better
-            # than 'timsTOF'
-            self.psm_df['spec_idx'] += 1
-            self.model_mgr.psm_num_to_tune_rt_ccs = 1000
-            self.model_mgr.fine_tune_rt_model(self.psm_df)
-            # self.model_mgr.fine_tune_ccs_model(self.psm_df)
+                    self.psm_df = mq_reader.psm_df.groupby(
+                        ['sequence', 'mods', 'mod_sites', 'nAA', 'charge',
+                            'spec_idx', 'rt', 'rt_norm']
+                    )['ccs'].median().reset_index()
+
+                elif self.settings['analysis_software'] == 'diann':
+                    from alphabase.io.psm_reader import psm_reader_provider
+
+                    diann_reader = psm_reader_provider.get_reader('diann')
+                    diann_reader.load(
+                        os.path.join(
+                            self.path_output_folder.value,
+                            diann_output_file
+                        )
+                    )
+                    self.psm_df = diann_reader.psm_df.groupby(
+                        ['sequence', 'mods', 'mod_sites', 'nAA', 'charge',
+                            'spec_idx', 'rt', 'rt_norm']
+                    )['ccs'].median().reset_index()
+
+                self.psm_df['nce'] = 30
+                self.psm_df['instrument'] = 'timsTOF'
+                # trained on more Lumos files therefore should work better
+                # than 'timsTOF'
+                self.psm_df['spec_idx'] += 1
+                self.model_mgr.psm_num_to_tune_rt_ccs = 500
+                self.model_mgr.fine_tune_rt_model(self.psm_df)
+                # self.model_mgr.fine_tune_ccs_model(self.psm_df)
 
         self.trigger_dependancy()
         self.upload_progress.active = False
@@ -578,7 +590,10 @@ class HeatmapOptionsWidget(object):
         self.heatmap_color = pn.widgets.Select(
             name='Color scale',
             value='fire',
-            options=sorted(hv.plotting.util.list_cmaps(reverse=True) + hv.plotting.util.list_cmaps(reverse=False)),
+            options=sorted(
+                hv.plotting.util.list_cmaps(reverse=True) +
+                hv.plotting.util.list_cmaps(reverse=False)
+            ),
             width=180,
             margin=(20, 20, 20, 10),
         )
@@ -732,7 +747,8 @@ class CustomizationOptionsWidget(object):
         from functools import partial
         update_config = partial(
             update_config,
-            height=self.image_save_size.value[0], width=self.image_save_size.value[1],
+            height=self.image_save_size.value[0],
+            width=self.image_save_size.value[1],
             ext=self.image_save_format.value
         )
 
@@ -769,7 +785,7 @@ class TabsWidget(object):
                 QCTab(self.data, self.options).create_layout()
             )
             self.layout[2] = (
-                'Targeted Mode',
+                'Predict Mode',
                 TargetModeTab(self.data, self.options).create_layout()
             )
             self.active = 0
@@ -2357,11 +2373,14 @@ class TargetModeTab(object):
                 ['sequence', 'mods', 'mod_sites', 'charge']
             ]
             df.fillna(0, inplace=True)
-            df.mod_sites.replace(0, "", inplace=True)
             df.mods.replace(0, "", inplace=True)
-            for col in ['sequence', 'mods', 'mod_sites']:
-                df[col] = df[col].astype('str')
-            df.charge = df.charge.astype('int')
+            for col in ['sequence', 'mods']:
+                try:
+                    df[col] = df[col].astype('str')
+                except:
+                    print(f'cannot convert the column {col}')
+            df.mod_sites = df.mod_sites.astype('int').astype('str')
+            df.mod_sites.replace('0', '', inplace=True)
             df['nce'] = 30
             df['instrument'] = 'Lumos'
             self.predicted_dict = self.data.model_mgr.predict_all(
@@ -2388,8 +2407,12 @@ class TargetModeTab(object):
                         self.targeted_peptides_table_pred.value.loc[
                             self.targeted_peptides_table_pred.selection[0],
                             ['sequence', 'charge', 'precursor_mz',
-                                'rt_pred', 'mobility_pred']
+                                'rt_pred', 'mobility_pred', 'frag_start_idx', 'frag_end_idx']
                         ].to_dict()
+                    index_range = range(
+                        self.peptide_prediction['frag_start_idx'],
+                        self.peptide_prediction['frag_end_idx']
+                    )
                     self.peptide_prediction['mz'] = \
                         self.peptide_prediction.pop('precursor_mz')
                     self.peptide_prediction['rt'] = \
@@ -2397,12 +2420,12 @@ class TargetModeTab(object):
                     self.peptide_prediction['im'] = \
                         self.peptide_prediction.pop('mobility_pred')
                     b_ions = {f"b{i}": v for i, v in zip(range(1,
-                        len(self.predicted_dict['fragment_mz_df'].b_z1) + 1),
-                        self.predicted_dict['fragment_mz_df'].b_z1)
+                        len(self.predicted_dict['fragment_mz_df'].iloc[index_range].b_z1) + 1),
+                        self.predicted_dict['fragment_mz_df'].iloc[index_range].b_z1)
                     }
                     y_ions = {f"y{i}": v for i, v in zip(range(1,
-                        len(self.predicted_dict['fragment_mz_df'].y_z1)+1),
-                        self.predicted_dict['fragment_mz_df'].y_z1[::-1])}
+                        len(self.predicted_dict['fragment_mz_df'].iloc[index_range].y_z1)+1),
+                        self.predicted_dict['fragment_mz_df'].iloc[index_range].y_z1[::-1])}
                     self.peptide_prediction['fragments'] = {**b_ions, **y_ions}
                 except BaseException:
                     self.peptide_prediction = {}
@@ -2436,6 +2459,7 @@ class TargetModeTab(object):
                                 self.data.raw_data,
                                 self.peptide_prediction,
                                 self.data.mass_dict,
+                                calculate_fragment_masses=False,
                                 mz_tol=self.mz_tol.value,
                                 rt_tol=self.rt_tol.value,
                                 im_tol=self.im_tol.value,
@@ -2576,7 +2600,7 @@ class AlphaVizGUI(GUI):
                 [
                     ('Main View', pn.panel("Blank")),
                     ('Quality Control', pn.panel("Blank")),
-                    ('Scout Mode', pn.panel("Blank"))
+                    ('Predict mode', pn.panel("Blank"))
                 ]
             ),
         ]
