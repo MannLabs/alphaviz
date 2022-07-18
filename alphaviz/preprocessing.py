@@ -382,7 +382,7 @@ def get_protein_info(
     """
     protein_names = []
     protein_seq_lens = []
-    for protein_id in protein_ids.split():
+    for protein_id in protein_ids.replace(';', ' ').split():
         try:
             protein_names.append(fasta.get_by_id(protein_id).description['name'])
         except KeyError:
