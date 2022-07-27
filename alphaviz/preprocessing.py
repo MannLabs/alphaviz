@@ -194,7 +194,6 @@ def get_mq_ms2_scan_data(
             data.loc[ion_index, 'ions'] = row.ions
             msms_filtered_df.loc[msms_filtered_df.ions == row.ions, 'mass_dev_ppm'] = mass_dev_ppm_calc
 
-    data.drop_duplicates('mz_values', inplace=True)
     data.sort_values(['ions', 'intensity_values'], ascending=True, inplace=True)
     data_merged = pd.merge(data, msms_filtered_df, on='ions', how='left')
 
@@ -383,7 +382,7 @@ def get_protein_info(
     """
     protein_names = []
     protein_seq_lens = []
-    for protein_id in protein_ids.split():
+    for protein_id in protein_ids.replace(';', ' ').split():
         try:
             protein_names.append(fasta.get_by_id(protein_id).description['name'])
         except KeyError:

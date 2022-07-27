@@ -1115,6 +1115,7 @@ def plot_elution_profile_heatmap(
     timstof_data,
     peptide_info: dict,
     mass_dict: dict,
+    calculate_fragment_masses: bool = True,
     mz_tol: int = 50,
     rt_tol: int = 30,
     im_tol: int = 0.05,
@@ -1158,14 +1159,15 @@ def plot_elution_profile_heatmap(
         The elution profile heatmap plots in retention time and ion mobility dimensions
         for the specified peptide and all his fragments.
     """
-    # predict the theoretical fragments using the Alphapept get_fragmass() function.
-    frag_masses, frag_type = alphaviz.utils.get_fragmass(
-        parsed_pep=alphaviz.utils.parse(peptide_info['sequence']),
-        mass_dict=mass_dict
-    )
-    peptide_info['fragments'] = {
-        (f"b{key}" if key > 0 else f"y{-key}"): value for key, value in zip(frag_type, frag_masses)
-    }
+    if calculate_fragment_masses:
+        # predict the theoretical fragments using the Alphapept get_fragmass() function.
+        frag_masses, frag_type = alphaviz.utils.get_fragmass(
+            parsed_pep=alphaviz.utils.parse(peptide_info['sequence']),
+            mass_dict=mass_dict
+        )
+        peptide_info['fragments'] = {
+            (f"b{key}" if key > 0 else f"y{-key}"): value for key, value in zip(frag_type, frag_masses)
+        }
 
     # slice the data using the rt_tol, im_tol and mz_tol values
     rt_slice = slice(peptide_info['rt'] - rt_tol, peptide_info['rt'] + rt_tol)

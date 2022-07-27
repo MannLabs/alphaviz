@@ -260,7 +260,8 @@ def import_mq_all_peptides(
 
 
 def import_mq_msms(
-    filepath: str
+    filepath: str,
+    experiment: str
 ) -> pd.DataFrame:
     """Read some columns from the output file msms.txt of MaxQuant software.
 
@@ -281,6 +282,7 @@ def import_mq_msms(
     """
     try:
         maxquant_msms_columns = [
+            'Raw file',
             'Scan number',
             'Matches',
             'Masses',
@@ -290,6 +292,7 @@ def import_mq_msms(
         data_common = read_file(filepath, maxquant_msms_columns)
     except ValueError:
         maxquant_msms_columns = [
+            'Raw file',
             'Scan number',
             'Matches',
             'Masses',
@@ -297,6 +300,7 @@ def import_mq_msms(
             'Mass Deviations [ppm]'
         ]
         data_common = read_file(filepath, maxquant_msms_columns)
+    data_common = data_common[data_common['Raw file'] == experiment]
     data_common.columns = [col.strip().replace('Deviations', 'deviations') for col in data_common.columns]
     data_common['Scan number'] = data_common['Scan number'].astype('int')
     return data_common
@@ -355,7 +359,7 @@ def import_mq_output(
             path_mq_output_folder,
             file
         )
-        if file in ['allPeptides.txt', 'msms.txt', 'summary.txt']:
+        if file in ['allPeptides.txt', 'summary.txt']:
             df = file_func_dict[file](
                 file_path
             )
@@ -489,7 +493,10 @@ def create_diann_peptides_table(
         The output data frame contains information about peptides.
     """
     peptides = diann_df.copy()
-    columns = [col for col in peptides.columns if 'PG' not in col and 'Protein' not in col and 'Genes' not in col and 'GG' not in col]
+    columns = [
+        col for col in peptides.columns if 'PG' not in col
+        and 'Protein' not in col and 'Genes' not in col and 'GG' not in col
+    ]
     columns.extend(['Genes'])
 
     peptides = diann_df[columns[2:]].copy()
@@ -502,11 +509,22 @@ def create_diann_peptides_table(
         'Stripped.Sequence': 'Sequence'
     }, inplace=True)
 
-    peptides['Sequence_AP_mod'] = peptides['Modified.Sequence'].apply(alphaviz.preprocessing.convert_diann_ap_mod)
-    peptides['Modified.Sequence'] = peptides['Modified.Sequence'].apply(alphaviz.preprocessing.convert_diann_mq_mod)
+    peptides['Sequence_AP_mod'] = peptides['Modified.Sequence'].apply(
+        alphaviz.preprocessing.convert_diann_ap_mod
+    )
+    peptides['Modified.Sequence'] = peptides['Modified.Sequence'].apply(
+        alphaviz.preprocessing.convert_diann_mq_mod
+    )
     peptides['m/z'] = 0.0
-    first_columns = ['Modified.Sequence', 'Length', 'm/z', 'RT', 'Predicted.RT', 'Charge', 'IM', 'Predicted.IM']
-    peptides = peptides[first_columns + sorted(list(set(peptides.columns).difference(first_columns)))]
+    first_columns = [
+        'Modified.Sequence', 'Length', 'm/z', 'RT',
+        'Predicted.RT', 'Charge', 'IM', 'Predicted.IM'
+    ]
+    peptides = peptides[
+        first_columns + sorted(list(
+            set(peptides.columns).difference(first_columns))
+        )
+    ]
     return peptides
 
 
@@ -543,3 +561,100 @@ def import_diann_output(
     diann_overview = import_diann_stats(os.path.join(path_diann_output_folder, diann_stats_file), experiment)
 
     return diann_proteins, diann_peptides, diann_overview, diann_output_file
+
+
+def create_ap_proteins_table(
+    ap_df: pd.DataFrame,
+    fasta: object
+):
+    ap_df[['Protein names', 'Protein IDs', 'Gene names']] = ap_df.apply(
+        lambda x: alphaviz.preprocessing.get_protein_info_from_fastaheader(
+            x['protein_group']
+        ), axis=1, result_type='expand'
+    )
+    ap_df[['Protein names', 'Sequence lengths']] = ap_df.apply(
+        lambda x: alphaviz.preprocessing.get_protein_info(
+            fasta, x['Protein IDs']
+        ), axis=1, result_type='expand'
+    )
+    columns = [col for col in ap_df.columns if 'protein' in col] \
+        + ['sequence', 'Protein names', 'Protein IDs',
+            'Gene names', 'Sequence lengths']
+
+    agg_dict = dict.fromkeys(columns, 'max')
+    agg_dict['sequence'] = 'count'
+    grouped_ap_df = ap_df.groupby(
+        'index_protein_group',
+        as_index=False
+    )[columns].agg(agg_dict)
+
+    grouped_ap_df.rename(
+        columns={'sequence': '(EXP) # peptides'},
+        inplace=True
+    )
+    grouped_ap_df['# proteins'] = grouped_ap_df['protein_idx'].apply(
+        lambda x: len(x.split(',')))
+    grouped_ap_df['# MS/MS'] = grouped_ap_df['(EXP) # peptides']
+    first_columns = [
+        'Protein IDs', 'Protein names', 'Gene names', '# proteins',
+        '(EXP) # peptides', '# MS/MS', 'Sequence lengths'
+    ]
+    proteins = grouped_ap_df[
+        first_columns + sorted(list(
+            set(grouped_ap_df.columns).difference(first_columns))
+        )
+    ]
+    return proteins
+
+
+def create_ap_peptides_table(
+    ap_df: pd.DataFrame
+):
+    peptides = ap_df.copy()
+    columns = [
+        col for col in peptides.columns if 'protein' not in col
+        and 'Protein' not in col and col != 'Sequence lengths'
+    ]
+    peptides = peptides[columns]
+    peptides.rename(columns={
+        'n_AA': 'Length',
+        'charge': 'Charge',
+        'sequence_naked': 'Sequence',
+        'parent': 'MS/MS scan number',
+        'sequence': 'Sequence_AP_mod',
+        'mz': 'm/z',
+        'mass': 'Mass',
+        'mobility': 'IM',
+        'rt': 'RT',
+    }, inplace=True)
+    peptides['Modified.Sequence'] = peptides['Sequence_AP_mod']
+
+    first_columns = [
+        'Modified.Sequence', 'Length', 'm/z',
+        'RT', 'Charge', 'Mass', 'IM'
+    ]
+    peptides = peptides[
+        first_columns + sorted(list(
+            set(peptides.columns).difference(first_columns))
+        )
+    ]
+    return peptides
+
+
+def import_alphapept_output(
+    path_ap_output_folder: str,
+    experiment: str,
+    fasta: object
+):
+    ap_output_file = 'results_peptides.csv'
+    ap_df = pd.read_csv(
+        os.path.join(path_ap_output_folder, ap_output_file),
+        low_memory=False
+    )
+    ap_df = ap_df[ap_df.shortname == experiment]
+    cols_to_remove = ['filename', 'shortname', 'sample_group']
+    ap_df.drop(columns=cols_to_remove, axis=1, inplace=True)
+    ap_proteins = create_ap_proteins_table(ap_df, fasta)
+    ap_peptides = create_ap_peptides_table(ap_df)
+
+    return ap_proteins, ap_peptides
