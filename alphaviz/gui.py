@@ -312,7 +312,7 @@ class DataImportWidget(BaseWidget):
             margin=(15, 15, 15, 15)
         )
         self.is_prediction = pn.widgets.Checkbox(
-            name='Activate the prediction',
+            name='Activate the deep learning prediction',
             margin=(5, 0, 5, 15),
         )
         # UPLOAD DATA
@@ -1823,7 +1823,7 @@ class QCTab(object):
                     selection=list(self.data.mq_summary[self.data.mq_summary['Raw file'].str.contains(experiment)].index),
                     row_height=40,
                     disabled=True,
-                    height=200,
+                    height=400,
                     show_index=False,
                 ),
                 pn.panel(
@@ -1860,6 +1860,7 @@ class QCTab(object):
                     name='Overview table',
                     selection=list(self.data.diann_statist[self.data.diann_statist['File.Name'].str.contains(experiment)].index),
                     row_height=40,
+                    height=400,
                     disabled=True,
                     show_index=False,
                 ),
@@ -1977,7 +1978,7 @@ class QCTab(object):
 
 class TargetModeTab(object):
     def __init__(self, data, options):
-        self.name = "Scout Mode"
+        self.name = "Predict Mode"
         self.data = data
         self.predicted_dict = None
         self.peptide_manual = None
@@ -2167,7 +2168,7 @@ class TargetModeTab(object):
                 margin=(15, 10, 5, 10),
                 sizing_mode='stretch_width',
                 align='start',
-                title='Prediction',
+                title='Deep learning prediction',
                 collapsed=True,
                 header_background='#dbf0fe',
                 # collapsed=True,
@@ -2585,7 +2586,6 @@ class AlphaVizGUI(GUI):
 
         # ERROR/WARNING MESSAGES
         self.error_message_upload = "The selected file can't be uploaded. Please check the instructions for data uploading."
-
         self.data = DataImportWidget()
         self.options = OptionsWidget(self.data)
         self.options.add_option(ToleranceOptionsWidget().create_layout())
