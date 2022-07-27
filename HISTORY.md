@@ -1,5 +1,11 @@
 ## Changelog
 
+### 1.1.14
+* FIX: Fix the m/z fragment calculation for the modified peptides.
+* FIX: Fix the extraction of the protein names and sequences for the protein groups in DIA-NN.
+* FEAT: Use deep learning prediction for raw files without having to provide output.
+* STYLE: Update the tutorial and add a notebook demonstrating the use of the predict mode.
+
 ### 1.1.13
 * FEAT: Enable fine-tuning of retention times for predictions.
 * FEAT: Add the predicted retention time and ion mobility values to the "Main tab" of the dashboard.
