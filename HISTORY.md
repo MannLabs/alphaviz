@@ -1,5 +1,8 @@
 ## Changelog
 
+### 1.1.15
+* FIX: Allow to use multiple modifications for the prediction of peptide properties.
+
 ### 1.1.14
 * FIX: Fix the m/z fragment calculation for the modified peptides.
 * FIX: Fix the extraction of the protein names and sequences for the protein groups in DIA-NN.

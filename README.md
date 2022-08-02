@@ -152,7 +152,7 @@ In case of issues, check out the following:
 ---
 ## Citations
 
-A manuscript is currently in preparation.
+Pre-print published online: bioRxiv (2022), doi: 10.1101/2022.07.12.499676v1.
 
 ---
 ## How to contribute

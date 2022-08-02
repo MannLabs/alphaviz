@@ -2380,7 +2380,7 @@ class TargetModeTab(object):
                     df[col] = df[col].astype('str')
                 except:
                     print(f'cannot convert the column {col}')
-            df.mod_sites = df.mod_sites.astype('int').astype('str')
+            df.mod_sites = df.mod_sites.astype('str')
             df.mod_sites.replace('0', '', inplace=True)
             df['nce'] = 30
             df['instrument'] = 'Lumos'
