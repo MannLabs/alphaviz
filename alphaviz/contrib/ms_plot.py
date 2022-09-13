@@ -1,9 +1,10 @@
 import os
-from typing import Union
+from typing import Union, Tuple
 
 import pandas as pd
 import numpy as np
 import plotly
+import torch
 
 import plotly.graph_objects as go
 
@@ -23,6 +24,10 @@ from peptdeep.psm_frag_reader.maxquant_frag_reader import (
 )
 from peptdeep.mass_spec.match import (
     match_centroid_mz, match_profile_mz
+)
+
+from peptdeep.model.ms2 import (
+    pearson_correlation, spearman_correlation
 )
 
 from alphatims.bruker import TimsTOF
@@ -79,6 +84,13 @@ class MS_Plotter:
         )
         self.colorscale_qualitative="Alphabet"
         self.colorscale_sequential="Viridis"
+        self.plotly_template_color="plotly_white"
+        self.peak_line_width = 1.5
+        self.plot_height = 550
+
+        # hovermode = "x" | "y" | "closest" | False | "x unified" | "y unified"
+        self.profile_plot_hovermode = 'closest'
+        self.ms2_plot_hovermode = 'x'
 
     def load_ms_data(self, ms_file, dda=False):
         if os.path.isfile(ms_file):
@@ -195,7 +207,6 @@ class MS_Plotter:
                 self.psm_df, self.fragment_intensity_df
             )
 
-
     def predict_one_peptide(
         self, one_pept_df:pd.DataFrame
     )->dict:
@@ -284,6 +295,21 @@ class MS_Plotter:
         peptide_info['fragments'] = peptide_info['fragment_mzs']
         return peptide_info
 
+    def get_ms2_spec_df(self, peptide_info)->pd.DataFrame:
+        im_slice = (
+            slice(None) if peptide_info['im'] == 0 else 
+            slice(peptide_info['im']-0.05,peptide_info['im']+0.05)
+        )
+        rt_slice = slice(peptide_info['rt']-0.5,peptide_info['rt']+0.5)
+
+        spec_df = self.ms_data[
+            rt_slice, im_slice
+        ]
+        return spec_df[
+            (spec_df.quad_low_mz_values <= peptide_info['mz'])
+            &(spec_df.quad_high_mz_values >= peptide_info['mz'])
+        ].reset_index()
+
     def get_frag_df_from_peptide_info(self, peptide_info)->pd.DataFrame:
         return pd.concat([
             pd.DataFrame().from_dict(
@@ -306,8 +332,6 @@ class MS_Plotter:
         mz_tol: float = 50,
         rt_tol: float = 30,
         im_tol: float = 0.05,
-        # width: int = 900,
-        height: int = 400,
     )->go.Figure:
         """Based on `alphaviz.plotting.plot_elution_profile`
 
@@ -342,21 +366,20 @@ class MS_Plotter:
             colorscale_sequential=self.colorscale_sequential,
             mz_tol=mz_tol, rt_tol=rt_tol, im_tol=im_tol,
             title=peptide_info['mod_seq_charge'], 
-            height=height,
+            height=self.plot_height,
+            hovermode=self.plotly_hovermode,
+            template_color=self.plotly_template_color
         )
 
     def plot_mirror_ms2(self, 
-        spec_df:pd.DataFrame, 
         frag_info:Union[pd.DataFrame, dict], 
+        spec_df:pd.DataFrame=None, 
         title:str="", 
         mz_tol:float=50,
-        peak_line_width:float=1.5, 
-        height=520,
         color_dict:dict = {
             '-': 'lightgrey', # '-' means umnatched
             'b': 'blue', 'y': 'red',
         },
-        template:str="plotly_white", 
         matching_mode:str="centroid",
         plot_unmatched_peaks:bool=True,
     )->go.Figure:
@@ -365,13 +388,19 @@ class MS_Plotter:
 
         Parameters
         ----------
-        spec_df : pd.DataFrame
-            AlphaTims sliced DataFrame for raw data
 
         frag_info : Union[pd.DataFrame, dict]
             Could be:
             - Fragment DataFrame, see `self.get_frag_df_from_peptide_info`
             - peptide_info, see `self.predict_one_peptide`
+            If it is pd.DataFrame, spec_df must be provided.
+            Otherwise (i.e. peptide_info) this method will 
+            slice self.ms_data based on peptide_info 
+            (see `MS_Plotter.get_ms2_spec_df`)
+        
+        spec_df : pd.DataFrame, optional
+            AlphaTims sliced DataFrame for raw data,
+            by default None
 
         title : str, optional
             figure title, by default ""
@@ -379,18 +408,9 @@ class MS_Plotter:
         mz_tol : float, optional
             in ppm, by default 50
 
-        peak_line_width : float, optional
-            peak line width, by default 1.5
-
-        height : int, optional
-            figure height, by default 520
-
         color_dict : _type_, optional
             Colors for differet peaks, by default 
             { '-': 'lightgrey', # '-' means umnatched 'b': 'blue', 'y': 'red', }
-
-        template : str, optional
-            by default "plotly_white"
 
         matching_mode : str, optional
             peak matching mode, by default "centroid"
@@ -405,17 +425,23 @@ class MS_Plotter:
         """
         if isinstance(frag_info, pd.DataFrame):
             frag_df = frag_info
+            if spec_df is None:
+                raise ValueError('Arg spec_df must be provided when Arg frag_df is a DF')
         else:
             frag_df = self.get_frag_df_from_peptide_info(frag_info)
+            if spec_df is None:
+                spec_df = self.get_ms2_spec_df(frag_info)
             if not title:
                 title = frag_info['mod_seq_charge']
 
-        plot_df = self.match_ms2(
+        plot_df, pcc, spc = self.match_ms2(
             spec_df=spec_df, frag_df=frag_df,
             mz_tol=mz_tol, 
             matching_mode=matching_mode,
             include_unmatched_peak=plot_unmatched_peaks,
         )
+
+        title += f" PCC={pcc:.3f}"
 
         fig = go.Figure()
 
@@ -434,8 +460,10 @@ class MS_Plotter:
         )
 
         self._update_fig_layout(
-            fig, plot_df, color_dict, template,
-            peak_line_width, title, height
+            fig, plot_df, color_dict, 
+            self.plotly_template_color,
+            self.peak_line_width, title,
+            self.plot_height
         )
 
         fig_comb = self._add_mass_err_subplot(fig)
@@ -459,10 +487,29 @@ class MS_Plotter:
         )
         return fig_comb
     
-    def match_ms2(self, spec_df, frag_df, 
+    def match_ms2(self, 
+        spec_df: pd.DataFrame, 
+        frag_df: pd.DataFrame, 
         mz_tol=50, matching_mode="centroid",
         include_unmatched_peak:bool=True,
-    ):
+    )->Tuple[pd.DataFrame, float, float]:
+        """
+
+        Parameters
+        ----------
+        spec_df : pd.DataFrame
+            AlphaTims DF object
+
+        frag_df : pd.DataFrame
+            Fragment DF of peptides, similar to spec_df
+
+        Returns
+        -------
+        Tuple[pd.DataFrame, float, float]
+            pd.DataFrame: DF contains matched, predicted and unmatched peaks
+            float: Pearson correlation
+            float: Spearman correlation
+        """
         frag_df = frag_df.copy()
         spec_df = spec_df.copy()
         tols = spec_df.mz_values.values*mz_tol*1e-6
@@ -487,6 +534,18 @@ class MS_Plotter:
         mass_errs[matched_idxes==-1] = 0
         matched_mzs[matched_idxes==-1] = 0
 
+
+        pcc = pearson_correlation(
+            torch.tensor(matched_intens.reshape(1,-1)),
+            torch.tensor(frag_df.intensity_values.values.reshape(1,-1))
+        ).item()
+
+        spc = spearman_correlation(
+            torch.tensor(matched_intens.reshape(1,-1)),
+            torch.tensor(frag_df.intensity_values.values.reshape(1,-1)),
+            device=torch.device('cpu')
+        ).item()
+
         frag_df['intensity_matched'] = matched_intens
         frag_df['intensity_values'] *= (
             -matched_intens.max()/frag_df.intensity_values.max()
@@ -506,7 +565,7 @@ class MS_Plotter:
             df_list
         ).reset_index(drop=True)
 
-        return plot_df
+        return plot_df, pcc, spc
 
     def _add_mass_err_subplot(self,
         fig,
@@ -580,7 +639,7 @@ class MS_Plotter:
                 yanchor="bottom",
                 y=1.01
             ),
-            hovermode="x",
+            hovermode=self.ms2_plot_hovermode,
             height=height,
             title=dict(
                 text=title,

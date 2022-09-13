@@ -1304,6 +1304,8 @@ def plot_elution_profile(
     title: str = "",
     # width: int = 900,
     height: int = 400,
+    hovermode:str = 'x unified',
+    template_color:str = 'plotly_white',
 ):
     """Plot an elution profile plot for the specified precursor and all
     his identified fragments.
@@ -1434,10 +1436,10 @@ def plot_elution_profile(
                 color='black'
             ),
         ),
-        template='plotly_white',
+        template=template_color,
         # width=width,
         height=height,
-        hovermode='x unified',
+        hovermode=hovermode,
         showlegend=True
     )
     return fig
