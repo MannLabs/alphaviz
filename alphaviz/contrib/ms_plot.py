@@ -367,7 +367,7 @@ class MS_Plotter:
             mz_tol=mz_tol, rt_tol=rt_tol, im_tol=im_tol,
             title=peptide_info['mod_seq_charge'], 
             height=self.plot_height,
-            hovermode=self.plotly_hovermode,
+            hovermode=self.profile_plot_hovermode,
             template_color=self.plotly_template_color
         )
 
