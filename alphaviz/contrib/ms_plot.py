@@ -178,6 +178,20 @@ class MS_Plotter:
         self.fragment_mz_df = ret['fragment_mz_df']
         self.fragment_intensity_df = ret['fragment_intensity_df']
 
+    def transfer_learn(self):
+        """
+        Transfer learning for RT and CCS models based on self.psm_df, 
+        and if applicable, MS2 model based on self.fragment_intensity_df
+        """
+        self.model_mgr.train_ccs_model(
+            self.psm_df
+        )
+        self.model_mgr.train_rt_model(self.psm_df)
+        self.model_mgr.train_ms2_model(
+            self.psm_df, self.fragment_intensity_df
+        )
+
+
     def predict_one_peptide(
         self, one_pept_df:pd.DataFrame
     )->dict:
