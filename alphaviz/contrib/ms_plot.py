@@ -132,6 +132,9 @@ class MS_Plotter:
             Otherwise predict them.
             By default True
         """
+        self.psm_df = pd.DataFrame()
+        self.fragment_mz_df = pd.DataFrame()
+        self.fragment_intensity_df = pd.DataFrame()
 
         if not get_fragments:
             reader = psm_reader_provider.get_reader(psm_type)
@@ -187,9 +190,10 @@ class MS_Plotter:
             self.psm_df
         )
         self.model_mgr.train_rt_model(self.psm_df)
-        self.model_mgr.train_ms2_model(
-            self.psm_df, self.fragment_intensity_df
-        )
+        if len(self.fragment_intensity_df) > 0:
+            self.model_mgr.train_ms2_model(
+                self.psm_df, self.fragment_intensity_df
+            )
 
 
     def predict_one_peptide(
