@@ -35,7 +35,10 @@ from alpharaw.thermo import ThermoRawData
 from alpharaw.sciex import SciexWiffData
 from alpharaw.wrappers.alphatims_wrapper import AlphaTimsWrapper
 
-from alphaviz.plotting import plot_elution_profile
+from alphaviz.plotting import (
+    plot_elution_profile,
+    plot_elution_profile_heatmap,
+)
 
 def get_mod_seq(sequence, mods, mod_sites, **kwargs):
     seq = '_'+sequence+'_'
@@ -91,6 +94,9 @@ class MS_Plotter:
         # hovermode = "x" | "y" | "closest" | False | "x unified" | "y unified"
         self.profile_plot_hovermode = 'closest'
         self.ms2_plot_hovermode = 'x'
+        self.heatmap_background_color = 'black'
+        self.heatmap_colormap = 'fire'
+        self.n_heatmap_cols = 5
 
     def load_ms_data(self, ms_file, dda=False):
         if os.path.isfile(ms_file):
@@ -250,7 +256,7 @@ class MS_Plotter:
 
         peptide_info['mod_seq'] = get_mod_seq(**peptide_info)
         peptide_info['mod_seq_charge'] = (
-            peptide_info['mod_seq'] + '[' + str(peptide_info['charge']) + '+]'
+            peptide_info['mod_seq'] + ',' + str(peptide_info['charge']) + '+'
         )
 
         peptide_info["mz"] = df.precursor_mz.values[0]
@@ -326,8 +332,25 @@ class MS_Plotter:
             ),
         ], axis=1).reset_index().rename(columns={'index':'ions'})
 
-    def plot_elution_profile(
-        self,
+    def plot_elution_profile_heatmap(self,
+        peptide_info: dict,
+        mz_tol: float = 50,
+        rt_tol: float = 30,
+        im_tol: float = 0.05,
+    ):
+        raise NotImplementedError('TODO for timsTOF data')
+        return plot_elution_profile_heatmap(
+            self.ms_data, peptide_info, 
+            mz_tol=mz_tol, rt_tol=rt_tol, im_tol=im_tol,
+            title = peptide_info['mod_seq_charge'],
+            height=self.plot_height,
+            n_cols=self.n_heatmap_cols,
+            background_color=self.heatmap_background_color,
+            colormap=self.heatmap_colormap,
+            mass_dict={}, calculate_fragment_masses=False,
+        )
+
+    def plot_elution_profile(self,
         peptide_info: dict,
         mz_tol: float = 50,
         rt_tol: float = 30,
@@ -459,7 +482,7 @@ class MS_Plotter:
             color_dict['b'], hovertext=True
         )
 
-        self._update_fig_layout(
+        self._add_fig_vlines(
             fig, plot_df, color_dict, 
             self.plotly_template_color,
             self.peak_line_width, title,
@@ -484,6 +507,9 @@ class MS_Plotter:
         fig_comb.update_yaxes(
             title_text=r"ppm", row=5, col=1, 
             range=[-mz_tol, mz_tol]
+        )
+        fig_comb.update_xaxes(
+            title_text='m/z', row=5, col=1, matches='x'
         )
         return fig_comb
     
@@ -604,7 +630,7 @@ class MS_Plotter:
             row=5, col=1
         )
 
-    def _update_fig_layout(self,
+    def _add_fig_vlines(self,
         fig, plot_df, color_dict, template,
         spectrum_line_width, title, height, 
     ):
@@ -625,10 +651,6 @@ class MS_Plotter:
                     )
                 ) for i in plot_df.index
             ],
-            xaxis=dict(
-                visible=True,
-                title='m/z',
-            ),
             yaxis=dict(
                 title='intensity',
             ),
@@ -657,7 +679,8 @@ class MS_Plotter:
                 mode='markers',
                 marker=dict(color=color, size=1),
                 hovertext= df.ions if hovertext else None,
-                hovertemplate='<b>m/z:</b> %{x}<br><b>Intensity:</b> %{y}',
+                hovertemplate='<b>%{text}</b></br><b>m/z:</b> %{x}<br><b>Intensity:</b> %{y}',
+                text=df.ions,
                 name='',
                 showlegend=False
             )
