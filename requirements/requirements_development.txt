@@ -10,3 +10,7 @@ ipykernel==6.4.0
 tqdm==4.61.1
 psutil==5.8.0
 pytest==6.2.5
+
+alphatims==0.3.0
+peptdeep
+alphabase

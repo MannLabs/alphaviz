@@ -204,9 +204,7 @@ class MS_Plotter:
         Transfer learning for RT and CCS models based on self.psm_df, 
         and if applicable, MS2 model based on self.fragment_intensity_df
         """
-        self.model_mgr.train_ccs_model(
-            self.psm_df
-        )
+        self.model_mgr.train_ccs_model(self.psm_df)
         self.model_mgr.train_rt_model(self.psm_df)
         if len(self.fragment_intensity_df) > 0:
             self.model_mgr.train_ms2_model(
