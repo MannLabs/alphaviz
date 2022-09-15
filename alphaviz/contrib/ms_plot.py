@@ -5,12 +5,15 @@ import pandas as pd
 import numpy as np
 import plotly
 import torch
+import re
 
 import plotly.graph_objects as go
 
 from alphabase.constants.modification import MOD_DF
 from alphabase.psm_reader import psm_reader_provider, PSMReaderBase
-from alphabase.peptide.fragment import get_charged_frag_types
+from alphabase.peptide.fragment import (
+    get_charged_frag_types
+)
 from alphabase.peptide.fragment import (
     create_fragment_mz_dataframe
 )
@@ -39,6 +42,7 @@ from alphaviz.plotting import (
     plot_elution_profile,
     plot_elution_profile_heatmap,
 )
+import alphaviz
 
 def get_mod_seq(sequence, mods, mod_sites, **kwargs):
     seq = '_'+sequence+'_'
@@ -53,6 +57,19 @@ def get_mod_seq(sequence, mods, mod_sites, **kwargs):
         seq = seq[:i+1]+'('+mod+')'+seq[i+1:]
     return seq
 
+def get_sequence_coverage(sequence, ion_types):
+    seq_len = len(sequence)
+    covs = [0]*(seq_len)
+    for ion_type in ion_types:
+        i = re.search('\d', ion_type).start()
+        i = int(ion_type[i:].strip('+'))
+
+        if ion_type[0] in 'abc':
+            covs[i-1] = 1
+        elif ion_type[0] in 'xyz':
+            covs[-i] = 1
+    return covs
+        
 def add_alphabase_mods(
     psm_reader:PSMReaderBase
 ):
@@ -97,6 +114,8 @@ class MS_Plotter:
         self.heatmap_background_color = 'black'
         self.heatmap_colormap = 'fire'
         self.n_heatmap_cols = 5
+        self.font_size_ladder_seq = 14
+        self.font_size_ladder_ion = 8
 
     def load_ms_data(self, ms_file, dda=False):
         if os.path.isfile(ms_file):
@@ -466,18 +485,23 @@ class MS_Plotter:
 
         fig = go.Figure()
 
+        plot_df = plot_df.query('intensity_values!=0')
+
         if plot_unmatched_peaks:
             self._add_fig_trace(
                 fig, plot_df[plot_df.ions=="-"], 
-                color_dict['-'], hovertext=False
+                color_dict['-'], hovertext=False,
             )
         self._add_fig_trace(
             fig, plot_df[plot_df.ions.str.startswith('y')],
-            color_dict['y'], hovertext=True
+            color_dict['y'], hovertext=True,
         )
         self._add_fig_trace(
             fig, plot_df[plot_df.ions.str.startswith('b')],
-            color_dict['b'], hovertext=True
+            color_dict['b'], hovertext=True,
+        )
+        self._add_frag_annotations(
+            fig, plot_df.query('ions != "-"')
         )
 
         self._add_fig_vlines(
@@ -487,7 +511,8 @@ class MS_Plotter:
             self.plot_height
         )
 
-        fig_comb = self._add_mass_err_subplot(fig)
+        fig_comb = self._add_ms2_other_subplots(fig)
+
         self._add_mass_err_trace(
             fig_comb, plot_df[
                 plot_df.ions.str.startswith('b')
@@ -507,8 +532,17 @@ class MS_Plotter:
             range=[-mz_tol, mz_tol]
         )
         fig_comb.update_xaxes(
-            title_text='m/z', row=5, col=1, matches='x'
+            title_text='m/z', row=5, col=1
         )
+        fig_comb.update_xaxes(
+            matches = 'x'
+        )
+        if isinstance(frag_info, dict):
+            self._add_seq_ladder_plot(
+                fig_comb, plot_df, 
+                sequence = frag_info['sequence'],
+                color_dict=color_dict,
+            )
         return fig_comb
     
     def match_ms2(self, 
@@ -581,7 +615,7 @@ class MS_Plotter:
         matched_df['mass_dev_ppm'] = mass_errs
         matched_df = matched_df[matched_idxes!=-1]
 
-        df_list = [matched_df,frag_df,]
+        df_list = [matched_df,frag_df]
         if include_unmatched_peak:
             spec_df['ions'] = "-"
             df_list.append(spec_df)
@@ -591,11 +625,11 @@ class MS_Plotter:
 
         return plot_df, pcc, spc
 
-    def _add_mass_err_subplot(self,
+    def _add_ms2_other_subplots(self,
         fig,
     ):
         return plotly.subplots.make_subplots(
-            rows=6, cols=3, shared_xaxes=True,
+            rows=7, cols=3, shared_xaxes=True,
             figure=fig,
             specs=[
                 [{"rowspan": 4, "colspan": 3}, None, None],
@@ -603,11 +637,125 @@ class MS_Plotter:
                 [None, None, None],
                 [None, None, None],
                 [{"colspan": 3}, None, None],
-                [{}, {}, {}]
+                [None, None, None],
+                [{"colspan": 3}, None, None]
             ],
             vertical_spacing=0.07,
             column_widths=[0.25, 0.5, 0.25]
         )
+
+    def _add_seq_ladder_plot(self,
+        fig_comb, plot_df,
+        sequence,
+        color_dict,
+    ):
+        distance_from_side = (plot_df.mz_values.max() - plot_df.mz_values.min()) * 2/8
+        distance = np.linspace(
+            plot_df.mz_values.min()+distance_from_side, 
+            plot_df.mz_values.max()-distance_from_side, 
+            len(sequence)+1
+        )
+        for i, aa in enumerate(sequence):
+            fig_comb.add_annotation(
+                dict(
+                    text=aa,
+                    x=distance[i],
+                    y=0,
+                    showarrow=False,
+                    font_size=self.font_size_ladder_seq,
+                    yshift=1, align='center'
+                ),
+                row=7,
+                col=1
+            )
+        self._add_ladder_one_ion_type(
+            fig_comb, plot_df, 
+            sequence, color_dict,
+            'b', distance
+        )
+        self._add_ladder_one_ion_type(
+            fig_comb, plot_df, 
+            sequence, color_dict,
+            'y', distance
+        )
+        fig_comb.update_yaxes(
+            visible=False,
+            range=(-1.1, 1.1),
+            row=7,
+            col=1
+        )
+        fig_comb.update_xaxes(
+            visible=False,
+            row=7,
+            col=1
+        )
+
+    def _add_ladder_one_ion_type(self, 
+        fig_comb, plot_df, 
+        sequence, 
+        color_dict,
+        ion_type,
+        distance,
+    ):
+        plot_df = plot_df[
+            plot_df.ions.str.startswith(ion_type)
+        ].query("intensity_values>0")
+        color = color_dict[ion_type]
+        covs = get_sequence_coverage(sequence, plot_df.ions)
+
+        sl = len(sequence)
+        def get_positions(ion_type, i):
+            if ion_type in 'abc':
+                return dict(
+                    x=[
+                        distance[i], 
+                        distance[i] + (distance[i+1] - distance[i])/2, 
+                        distance[i] + (distance[i+1] - distance[i])/2
+                    ], 
+                    y=[0.7,0.7,0.3],
+                    tx=distance[i] + (distance[i+1] - distance[i])/4,
+                    ty=1.1,
+                    s=i+1
+                )
+            else:
+                return dict(
+                    x=[
+                        distance[i], 
+                        distance[i] - (distance[i+1] - distance[i])/2, 
+                        distance[i] - (distance[i+1] - distance[i])/2
+                    ],
+                    y=[-0.7, -0.7, -0.3],
+                    tx=distance[i] - (distance[i+1] - distance[i])/4,
+                    ty=-1.1,
+                    s=sl-i
+                )
+        for i, cov in enumerate(covs):
+            if cov:
+                pos = get_positions(ion_type, i)
+                fig_comb.add_trace(
+                    go.Scatter(
+                        x=pos['x'],
+                        y=pos['y'],
+                        mode="lines",
+                        showlegend=False,
+                        marker_color=color,
+                        line_width=self.peak_line_width,
+                        hoverinfo='skip'
+                    ),
+                    row=7,
+                    col=1
+                )
+                fig_comb.add_annotation(
+                    dict(
+                        text=f"{ion_type}{pos['s']}",
+                        x=pos['tx'],
+                        y=pos['ty'],
+                        showarrow=False,
+                        font_size=self.font_size_ladder_ion
+                    ),
+                    row=7,
+                    col=1
+                )
 
     def _add_mass_err_trace(self,
         subfig, df, color, name, 
@@ -670,18 +818,60 @@ class MS_Plotter:
     def _add_fig_trace(self,
         fig, df, color, hovertext=True
     ):
+        pos_df = df.query('intensity_values>0')
         fig.add_trace(
             go.Scatter(
-                x=df.mz_values,
-                y=df.intensity_values,
+                x=pos_df.mz_values,
+                y=pos_df.intensity_values,
                 mode='markers',
                 marker=dict(color=color, size=1),
-                hovertext= df.ions if hovertext else None,
-                hovertemplate='<b>%{text}</b></br><b>m/z:</b> %{x}<br><b>Intensity:</b> %{y}',
-                text=df.ions,
+                hovertext=pos_df.ions if hovertext else None,
+                hovertemplate='<b>%{hovertext}</b></br><b>m/z:</b> %{x}<br><b>Intensity:</b> %{y}',
                 name='',
-                showlegend=False
+                showlegend=False,
             )
         )
+        neg_df = df.query('intensity_values<0')
+        fig.add_trace(
+            go.Scatter(
+                x=neg_df.mz_values,
+                y=neg_df.intensity_values,
+                mode='markers',
+                marker=dict(color=color, size=1),
+                hovertext=neg_df.ions if hovertext else None,
+                hovertemplate='<b>%{hovertext}</b></br><b>m/z:</b> %{x}<br><b>Intensity:</b> %{y}',
+                name='',
+                showlegend=False,
+            )
+        )
+
+    def _add_frag_annotations(self, fig, plot_df):
+        df = plot_df.query('intensity_values>0')
+        max_inten = df.intensity_values.max()
+        yshift=max_inten*0.02
+        for mz, inten, ion in df[
+            ['mz_values','intensity_values','ions']
+        ].values:
+            fig.add_annotation(
+                x=mz, y=inten+yshift,
+                text=ion,
+                textangle=-90,
+                font_size=10,
+            )
+        
+        neg_ay = max_inten*0.3
+        pred_df = plot_df.query('intensity_values<0')
+        pred_df = pred_df[~pred_df.ions.isin(set(df.ions))]
+        for mz, inten, ion in pred_df[
+            ['mz_values','intensity_values','ions']
+        ].values:
+            fig.add_annotation(
+                x=mz, y=inten-yshift,
+                text=ion,
+                textangle=-90,
+                font_size=10,
+                ay=inten-yshift-neg_ay,
+                ayref='y'
+            )
 
 

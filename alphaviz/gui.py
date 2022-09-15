@@ -2475,7 +2475,7 @@ class TargetModeTab(object):
                             align='center',
                             margin=(0, 10, 10, 10)
                         )
-                    except AttibuteError:
+                    except AttributeError:
                         self.layout_target_mode_predicted[2] = None
                     self.layout_target_mode_predicted[3] = self.export_svg_prediction_button
                     self.targeted_peptides_table_pred.loading = False
