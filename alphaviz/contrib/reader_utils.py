@@ -86,6 +86,13 @@ def load_psms(
     
     model_mgr : ModelManager, optional
         By default None
+
+    Returns
+    -------
+    tuple
+        pd.DataFrame: psm_df
+        pd.DataFrame: fragment_mz_df
+        pd.DataFrame: fragment_intensity_df
     """
     if not get_fragments:
         reader = psm_reader_provider.get_reader(psm_type)
