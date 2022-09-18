@@ -236,12 +236,12 @@ class PeakPlot:
             plot_df, 'y'
         )
 
-        self._plot_frag_annotations(
-            plot_df.query('ions != "-"')
-        )
-
         self._plot_peak_vlines(
             plot_df,
+        )
+
+        self._plot_frag_annotations(
+            plot_df.query('ions != "-"')
         )
         return self.fig
 
@@ -315,17 +315,34 @@ class PeakPlot:
     def _plot_peak_vlines(self,
         plot_df,
     ):
-        for i in plot_df.index:
-            self.fig.add_shape(type='line',
-                x0=plot_df.loc[i, 'mz_values'],
-                x1=plot_df.loc[i, 'mz_values'],
-                y0=0,
-                y1=plot_df.loc[i, 'intensity_values'],
-                line_color = color_map[plot_df.loc[i, 'ions'][0]],
-                line_width = self.peak_line_width,
-                row=self.row,
-                col=self.col,
-            )
+        self.fig.update_layout(
+            shapes=[
+                dict(
+                    type='line',
+                    xref=f'x{self.row}',
+                    yref=f'y{self.row}',
+                    x0=plot_df.loc[i, 'mz_values'],
+                    y0=0,
+                    x1=plot_df.loc[i, 'mz_values'],
+                    y1=plot_df.loc[i, 'intensity_values'],
+                    line=dict(
+                        color=color_map[plot_df.loc[i,'ions'][0]],
+                        width=self.peak_line_width,
+                    )
+                ) for i in plot_df.index
+            ]
+        )
+        # for i in plot_df.index:
+        #     self.fig.add_shape(type='line',
+        #         x0=plot_df.loc[i, 'mz_values'],
+        #         x1=plot_df.loc[i, 'mz_values'],
+        #         y0=0,
+        #         y1=plot_df.loc[i, 'intensity_values'],
+        #         line_color = color_map[plot_df.loc[i, 'ions'][0]],
+        #         line_width = self.peak_line_width,
+        #         row=self.row,
+        #         col=self.col,
+        #     )
 
 class FragCoveragePlot:
     def __init__(self, fig_subplots, row):

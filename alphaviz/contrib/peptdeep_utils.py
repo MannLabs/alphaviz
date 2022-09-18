@@ -252,10 +252,13 @@ def match_ms2(
         -matched_intens.max()/frag_df.intensity_values.max()
     )
 
-    df_list = [matched_df,frag_df]
     if include_unmatched_peak:
         spec_df['ions'] = "-"
-        df_list.append(spec_df)
+        spec_df['fragment_indices'] = -1
+        df_list = [spec_df]
+    else:
+        df_list = []
+    df_list.extend([matched_df,frag_df])
     plot_df = pd.concat(
         df_list
     ).reset_index(drop=True)

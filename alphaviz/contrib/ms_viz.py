@@ -193,6 +193,7 @@ class MS_Viz:
             plot_df, 
             title=title,
             sequence=peptide_info['sequence'],
+            plot_unmatched_peaks=plot_unmatched_peaks,
         )
 
     def get_ms2_spec_df(self, peptide_info)->pd.DataFrame:
