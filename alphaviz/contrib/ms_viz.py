@@ -179,6 +179,8 @@ class MS_Viz:
         if spec_df is None:
             spec_df = self.get_ms2_spec_df(peptide_info)
 
+        frag_df = frag_df[frag_df.mz_values>=spec_df.mz_values.min()-0.1]
+
         plot_df, pcc, spc = match_ms2(
             spec_df=spec_df, frag_df=frag_df,
             mz_tol=mz_tol, 

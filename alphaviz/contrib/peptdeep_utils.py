@@ -208,6 +208,7 @@ def match_ms2(
     """
     frag_df = frag_df.copy()
     spec_df = spec_df.copy()
+    spec_df.sort_values('mz_values', inplace=True)
     tols = spec_df.mz_values.values*mz_tol*1e-6
     if matching_mode == 'profile':
         matched_idxes = match_profile_mz(
