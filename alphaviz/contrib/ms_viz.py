@@ -98,6 +98,7 @@ class MS_Viz:
         mz_tol: float = 50,
         rt_tol: float = 30,
         im_tol: float = 0.05,
+        include_precursor:bool=True,
     )->go.Figure:
         """Based on `alphaviz.plotting.plot_elution_profile`
 
@@ -131,6 +132,7 @@ class MS_Viz:
             mz_tol=mz_tol,
             rt_tol=rt_tol,
             im_tol=im_tol,
+            include_precursor=include_precursor
         )
 
     def plot_mirror_ms2(self, 

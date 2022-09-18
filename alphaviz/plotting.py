@@ -1220,7 +1220,7 @@ def plot_elution_profile_heatmap(
             )
     try:
         return common_plot.cols(n_cols)
-    except AttibuteError:
+    except AttributeError:
         return common_plot
 
 
@@ -1305,7 +1305,8 @@ def plot_elution_profile(
     # width: int = 900,
     height: int = 400,
     hovermode:str = 'x unified',
-    template_color:str = 'plotly_white',
+    theme_template:str = 'plotly_white',
+    include_precursor:bool = True,
 ):
     """Plot an elution profile plot for the specified precursor and all
     his identified fragments.
@@ -1375,16 +1376,17 @@ def plot_elution_profile(
         'raw'
     ]
     fig = go.Figure()
-    fig.add_trace(
-        plot_elution_line(
-            raw_data,
-            precursor_indices,
-            remove_zeros=True,
-            # label=f"precursor ({round(peptide_info['mz'], 3)})",
-            label='precursor',
-            marker_color=dict(color=colors_set[0])
+    if include_precursor:
+        fig.add_trace(
+            plot_elution_line(
+                raw_data,
+                precursor_indices,
+                remove_zeros=True,
+                # label=f"precursor ({round(peptide_info['mz'], 3)})",
+                label='precursor',
+                marker_color=dict(color=colors_set[0])
+            )
         )
-    )
     # create elution profiles for all fragments
     for ind, (frag, frag_mz) in enumerate(peptide_info['fragments'].items()):
         fragment_data_indices = raw_data[
@@ -1436,7 +1438,7 @@ def plot_elution_profile(
                 color='black'
             ),
         ),
-        template=template_color,
+        template=theme_template,
         # width=width,
         height=height,
         hovermode=hovermode,

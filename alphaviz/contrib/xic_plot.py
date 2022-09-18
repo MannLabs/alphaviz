@@ -20,7 +20,7 @@ class XIC_1D_Plot():
     plot_height = 550
     colorscale_qualitative="Alphabet"
     colorscale_sequential="Viridis"
-    template_color='plotly_white'
+    theme_template='plotly_white'
 
     def plot(self,
         ms_data:TimsTOF,
@@ -28,6 +28,7 @@ class XIC_1D_Plot():
         mz_tol: float = 50,
         rt_tol: float = 30,
         im_tol: float = 0.05,
+        include_precursor:bool=True,
     )->go.Figure:
         """Based on `alphaviz.plotting.plot_elution_profile`
 
@@ -63,5 +64,6 @@ class XIC_1D_Plot():
             title=peptide_info['mod_seq_charge'], 
             height=self.plot_height,
             hovermode=self.hovermode,
-            template_color=self.template_color
+            theme_template=self.theme_template,
+            include_precursor=include_precursor,
         )
