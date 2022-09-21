@@ -55,7 +55,7 @@ class XIC_1D_Plot():
             plotly Figure object return by 
             `alphaviz.plotting.plot_elution_profile`
         """
-        return plot_elution_profile(
+        fig = plot_elution_profile(
             ms_data, peptide_info=peptide_info,
             mass_dict={}, calculate_fragment_masses=False,
             colorscale_qualitative=self.colorscale_qualitative,
@@ -67,3 +67,8 @@ class XIC_1D_Plot():
             theme_template=self.theme_template,
             include_precursor=include_precursor,
         )
+        fig.add_vline(
+            peptide_info['rt']/60, line_dash="dash", 
+            line_color="grey"
+        )
+        return fig

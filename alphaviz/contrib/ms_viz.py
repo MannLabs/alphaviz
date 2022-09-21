@@ -18,6 +18,7 @@ from .peptdeep_utils import (
 )
 
 class MS_Viz:
+    min_frag_mz:float = 200.0
     def __init__(self, 
         model_mgr:ModelManager,
         frag_types:list = ['b','y','b-modloss','y-modloss'],
@@ -135,6 +136,11 @@ class MS_Viz:
             include_precursor=include_precursor
         )
 
+    def _add_unmatched_df(self, plot_df, spec_df):
+        spec_df['ions'] = "-"
+        spec_df['fragment_indices'] = -1
+        return pd.concat([spec_df, plot_df], ignore_index=True)
+
     def plot_mirror_ms2(self, 
         peptide_info:dict,
         frag_df:pd.DataFrame=None, 
@@ -179,14 +185,22 @@ class MS_Viz:
         if spec_df is None:
             spec_df = self.get_ms2_spec_df(peptide_info)
 
-        frag_df = frag_df[frag_df.mz_values>=spec_df.mz_values.min()-0.1]
+        frag_df = frag_df[
+            frag_df.mz_values>=max(
+                spec_df.mz_values.min()-0.1, self.min_frag_mz
+            )
+        ]
 
         plot_df, pcc, spc = match_ms2(
             spec_df=spec_df, frag_df=frag_df,
             mz_tol=mz_tol, 
             matching_mode=matching_mode,
-            include_unmatched_peak=plot_unmatched_peaks,
         )
+
+        if plot_unmatched_peaks:
+            plot_df = self._add_unmatched_df(
+                plot_df, spec_df
+            )
 
         if not title:
             title = f"{peptide_info['mod_seq_charge']} PCC={pcc:.3f}"

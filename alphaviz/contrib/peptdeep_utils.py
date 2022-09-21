@@ -1,6 +1,7 @@
 import torch
 
 import pandas as pd
+import numpy as np
 
 from peptdeep.pretrained_models import ModelManager
 
@@ -13,6 +14,8 @@ from peptdeep.mass_spec.match import (
 from peptdeep.model.ms2 import (
     pearson_correlation, spearman_correlation
 )
+
+from alphatims.bruker import TimsTOF
 
 def get_peptide_info_from_dfs(
     one_pept_df: Union[pd.DataFrame, pd.Series], 
@@ -183,11 +186,24 @@ def get_frag_df_from_peptide_info(
         ),
     ], axis=1).reset_index().rename(columns={'index':'ions'})
 
+def match_tims_ms2_for_tuning(
+    ms_data: TimsTOF,
+    psm_df: pd.DataFrame,
+    frag_mz_df: pd.DataFrame, 
+    mz_tol: float=20.0, 
+):
+    frag_inten_df = pd.DataFrame(
+        np.zeros_like(frag_mz_df.values),
+        columns=frag_mz_df.columns
+    )
+
+
+
 def match_ms2(
     spec_df: pd.DataFrame, 
     frag_df: pd.DataFrame, 
-    mz_tol=50, matching_mode="centroid",
-    include_unmatched_peak:bool=True,
+    mz_tol=50, 
+    matching_mode="centroid",
 )->Tuple[pd.DataFrame, float, float]:
     """
 
@@ -207,7 +223,6 @@ def match_ms2(
         float: Spearman correlation
     """
     frag_df = frag_df.copy()
-    spec_df = spec_df.copy()
     spec_df.sort_values('mz_values', inplace=True)
     tols = spec_df.mz_values.values*mz_tol*1e-6
     if matching_mode == 'profile':
@@ -253,13 +268,7 @@ def match_ms2(
         -matched_intens.max()/frag_df.intensity_values.max()
     )
 
-    if include_unmatched_peak:
-        spec_df['ions'] = "-"
-        spec_df['fragment_indices'] = -1
-        df_list = [spec_df]
-    else:
-        df_list = []
-    df_list.extend([matched_df,frag_df])
+    df_list = [matched_df,frag_df]
     plot_df = pd.concat(
         df_list
     ).reset_index(drop=True)
