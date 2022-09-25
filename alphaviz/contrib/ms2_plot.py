@@ -116,9 +116,8 @@ class MS2_Plot:
     def _init_plot(self, title):
 
         self.fig = plotly.subplots.make_subplots(
-            rows=(
-                self.rows
-            ), cols=3, 
+            rows=self.rows,
+            cols=3, 
             shared_xaxes=True,
             specs=self.specs,
             vertical_spacing=self.vertical_spacing,
@@ -362,7 +361,7 @@ class FragCoveragePlot:
         d = (
             plot_df.mz_values.max() - 
             plot_df.mz_values.min()
-        ) * 2/8
+        ) * 2/len(sequence)
         aa_x_positions = np.linspace(
             plot_df.mz_values.min()+d, 
             plot_df.mz_values.max()-d, 

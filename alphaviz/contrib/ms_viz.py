@@ -18,7 +18,7 @@ from .peptdeep_utils import (
 )
 
 class MS_Viz:
-    min_frag_mz:float = 200.0
+    _min_frag_mz:float = 200.0
     def __init__(self, 
         model_mgr:ModelManager,
         frag_types:list = ['b','y','b-modloss','y-modloss'],
@@ -38,12 +38,22 @@ class MS_Viz:
         self.ms2_plot = MS2_Plot()
         self.xic_1d_plot = XIC_1D_Plot()
 
+    @property
+    def min_frag_mz(self):
+        return self._min_frag_mz
+    
+    @min_frag_mz.setter
+    def min_frag_mz(self, val):
+        self._min_frag_mz = val
+        self.xic_1d_plot.min_frag_mz = val
+
     def load_ms_data(self, ms_file, dda:bool):
         self.ms_data = load_ms_data(ms_file, dda=dda)
 
     def load_psms(self, 
-        psm_file, psm_type,
-        get_fragments=False,
+        psm_file:str, psm_type:str,
+        get_fragments:bool=False,
+        add_modification_mapping:dict=None,
     ):
         (
             self.psm_df, self.fragment_mz_df, 
@@ -54,6 +64,7 @@ class MS_Viz:
             model_mgr=self.model_mgr,
             frag_types=self._frag_types,
             max_frag_charge=self._max_frag_charge,
+            add_modification_mapping=add_modification_mapping,
         )
 
     def predict_one_peptide_info(self,
@@ -87,7 +98,7 @@ class MS_Viz:
             )
 
     def plot_elution_profile_heatmap(self,
-        peptide_info: dict,
+        peptide_info: pd.DataFrame,
         mz_tol: float = 50,
         rt_tol: float = 30,
         im_tol: float = 0.05,
@@ -95,18 +106,19 @@ class MS_Viz:
         raise NotImplementedError('TODO for timsTOF data')
 
     def plot_elution_profile(self,
-        peptide_info: dict,
+        peptide_info: pd.DataFrame,
         mz_tol: float = 50,
         rt_tol: float = 30,
         im_tol: float = 0.05,
         include_precursor:bool=True,
+        include_ms1:bool=True,
     )->go.Figure:
         """Based on `alphaviz.plotting.plot_elution_profile`
 
         Parameters
         ----------
-        peptide_info : dict
-            alphaviz peptide_info dict, 
+        peptide_info : pd.DataFrame
+            alphaviz peptide_info, 
             see `self.predict_one_peptide`.
 
         mz_tol : float, optional
@@ -133,7 +145,8 @@ class MS_Viz:
             mz_tol=mz_tol,
             rt_tol=rt_tol,
             im_tol=im_tol,
-            include_precursor=include_precursor
+            include_precursor=include_precursor,
+            include_ms1=include_ms1,
         )
 
     def _add_unmatched_df(self, plot_df, spec_df):
@@ -142,7 +155,7 @@ class MS_Viz:
         return pd.concat([spec_df, plot_df], ignore_index=True)
 
     def plot_mirror_ms2(self, 
-        peptide_info:dict,
+        peptide_info:pd.DataFrame,
         frag_df:pd.DataFrame=None, 
         spec_df:pd.DataFrame=None, 
         title:str="", 
@@ -156,8 +169,8 @@ class MS_Viz:
         Parameters
         ----------
 
-        peptide_info : dict
-            peptide_info dict in alphaviz format
+        peptide_info : pd.DataFrame
+            peptide_info in alphaviz format
 
         frag_df : pd.DataFrame, optional
             Fragment DF
@@ -187,15 +200,17 @@ class MS_Viz:
 
         frag_df = frag_df[
             frag_df.mz_values>=max(
-                spec_df.mz_values.min()-0.1, self.min_frag_mz
+                spec_df.mz_values.min()-0.1, self._min_frag_mz
             )
         ]
-
         plot_df, pcc, spc = match_ms2(
             spec_df=spec_df, frag_df=frag_df,
             mz_tol=mz_tol, 
             matching_mode=matching_mode,
         )
+
+        self.mirror_ms2_pcc = pcc
+        self.mirror_ms2_spc = spc
 
         if plot_unmatched_peaks:
             plot_df = self._add_unmatched_df(
@@ -203,29 +218,32 @@ class MS_Viz:
             )
 
         if not title:
-            title = f"{peptide_info['mod_seq_charge']} PCC={pcc:.3f}"
+            title = f"{peptide_info['mod_seq_charge'].values[0]} PCC={pcc:.3f}"
 
         plot_df = plot_df.query('intensity_values!=0')
 
         return self.ms2_plot.plot(
             plot_df, 
             title=title,
-            sequence=peptide_info['sequence'],
+            sequence=peptide_info['sequence'].values[0],
             plot_unmatched_peaks=plot_unmatched_peaks,
         )
 
     def get_ms2_spec_df(self, peptide_info)->pd.DataFrame:
         im_slice = (
-            slice(None) if peptide_info['im'] == 0 else 
-            slice(peptide_info['im']-0.05,peptide_info['im']+0.05)
+            slice(None) if peptide_info['im'].values[0] == 0 else 
+            slice(peptide_info['im'].values[0]-0.05,peptide_info['im']+0.05)
         )
-        rt_slice = slice(peptide_info['rt']-0.5,peptide_info['rt']+0.5)
+        rt_slice = slice(
+            peptide_info['rt'].values[0]-0.5,
+            peptide_info['rt'].values[0]+0.5
+        )
 
         spec_df = self.ms_data[
             rt_slice, im_slice
         ]
         return spec_df[
-            (spec_df.quad_low_mz_values <= peptide_info['mz'])
-            &(spec_df.quad_high_mz_values >= peptide_info['mz'])
+            (spec_df.quad_low_mz_values <= peptide_info['precursor_mz'].values[0])
+            &(spec_df.quad_high_mz_values >= peptide_info['precursor_mz'].values[0])
         ].reset_index(drop=True)
 
