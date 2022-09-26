@@ -8,9 +8,11 @@ from alphabase.peptide.fragment import (
 
 from peptdeep.pretrained_models import ModelManager
 
+from alpharaw.match.psm_match_alphatims import PepSpecMatch_AlphaTims
+
 from .ms2_plot import MS2_Plot
 from .xic_plot import XIC_1D_Plot
-from .reader_utils import load_ms_data, load_psms
+from .reader_utils import load_psms
 
 from .peptdeep_utils import (
     match_ms2, get_frag_df_from_peptide_info,
@@ -24,7 +26,9 @@ class MS_Viz:
         frag_types:list = ['b','y','b-modloss','y-modloss'],
     ):
         self.model_mgr = model_mgr
-        self.ms_data = None
+        self.tims_data = None
+        self.pep_spec_match = None
+
         self.psm_df = pd.DataFrame()
         self.fragment_mz_df = pd.DataFrame()
         self.fragment_intensity_df = pd.DataFrame()
@@ -34,6 +38,8 @@ class MS_Viz:
         self.charged_frag_types = get_charged_frag_types(
             self._frag_types, self._max_frag_charge
         )
+
+        self.prediction_mode=False
 
         self.ms2_plot = MS2_Plot()
         self.xic_1d_plot = XIC_1D_Plot()
@@ -47,8 +53,17 @@ class MS_Viz:
         self._min_frag_mz = val
         self.xic_1d_plot.min_frag_mz = val
 
-    def load_ms_data(self, ms_file, dda:bool):
-        self.ms_data = load_ms_data(ms_file, dda=dda)
+    def load_ms_data(self, ms_file, ms_file_type, dda:bool):
+        self.tims_match = PepSpecMatch_AlphaTims(
+            self.charged_frag_types, centroid_mode=True,
+        )
+        self.tims_match.load_ms_data(ms_file, ms_file_type, dda)
+        self.tims_data = self.tims_match.tims_data
+
+    def add_rt_im_columns_to_psm_df_if_missing(self):
+        self.psm_df = self.tims_match._add_missing_columns_to_psm_df(
+            self.psm_df
+        )
 
     def load_psms(self, 
         psm_file:str, psm_type:str,
@@ -69,20 +84,21 @@ class MS_Viz:
 
     def predict_one_peptide_info(self,
         one_pept_df:pd.DataFrame
-    )->dict:
+    )->pd.DataFrame:
         return predict_one_peptide(
             self.model_mgr, one_pept_df, 
-            self.ms_data.rt_max_value
+            self.tims_data.rt_max_value,
+            self.prediction_mode,
         )
 
     def extract_one_peptide_info(self,
         one_pept_df:pd.DataFrame,
-    )->dict:
+    )->pd.DataFrame:
         return get_peptide_info_from_dfs(
             one_pept_df,
             self.fragment_mz_df, 
             self.fragment_intensity_df,
-            self.ms_data.rt_max_value,
+            self.tims_data.rt_max_value,
         )
 
     def transfer_learn(self):
@@ -140,7 +156,7 @@ class MS_Viz:
             `alphaviz.plotting.plot_elution_profile`
         """
         return self.xic_1d_plot.plot(
-            self.ms_data,
+            self.tims_data,
             peptide_info=peptide_info,
             mz_tol=mz_tol,
             rt_tol=rt_tol,
@@ -232,14 +248,17 @@ class MS_Viz:
     def get_ms2_spec_df(self, peptide_info)->pd.DataFrame:
         im_slice = (
             slice(None) if peptide_info['im'].values[0] == 0 else 
-            slice(peptide_info['im'].values[0]-0.05,peptide_info['im']+0.05)
+            slice(
+                peptide_info['im'].values[0]-0.05,
+                peptide_info['im'].values[0]+0.05
+            )
         )
         rt_slice = slice(
-            peptide_info['rt'].values[0]-0.5,
-            peptide_info['rt'].values[0]+0.5
+            peptide_info['rt_sec'].values[0]-0.5,
+            peptide_info['rt_sec'].values[0]+0.5
         )
 
-        spec_df = self.ms_data[
+        spec_df = self.tims_data[
             rt_slice, im_slice
         ]
         return spec_df[

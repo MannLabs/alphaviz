@@ -11,10 +11,12 @@ from alphabase.peptide.fragment import (
     create_fragment_mz_dataframe
 )
 
-from alphatims.bruker import TimsTOF
-from alpharaw.thermo import ThermoRawData
-from alpharaw.sciex import SciexWiffData
-from alpharaw.wrappers.alphatims_wrapper import AlphaTimsWrapper
+import alpharaw.thermo
+import alpharaw.sciex
+import alpharaw.wrappers.alphatims_wrapper
+import alpharaw.legacy_msdata.mgf
+
+from alpharaw.ms_data_base import ms_reader_provider
 
 from peptdeep.psm_frag_reader.library_frag_reader import (
     SpectronautMSMSReader
@@ -23,29 +25,6 @@ from peptdeep.psm_frag_reader.maxquant_frag_reader import (
     MaxQuantMSMSReader
 )
 from peptdeep.pretrained_models import ModelManager
-
-def load_ms_data(
-    ms_file, dda=False
-):
-    if not os.path.isfile(ms_file):
-        return None
-    elif ms_file.lower().endswith('.hdf'):
-        return TimsTOF(ms_file)
-    elif ms_file.lower().endswith('.d'):
-        return TimsTOF(ms_file)
-    elif ms_file.lower().endswith('.raw'):
-        raw_data = ThermoRawData(centroided=True)
-        raw_data.import_raw(ms_file)
-        return AlphaTimsWrapper(raw_data, dda=dda)
-    elif (
-        ms_file.lower().endswith('.wiff') or
-        ms_file.lower().endswith('.wiff2')
-    ):
-        raw_data = SciexWiffData(centroided=False)
-        raw_data.import_raw(ms_file)
-        return AlphaTimsWrapper(raw_data, dda=dda)
-    else:
-        return None
 
 def load_psms(
     psm_file:str, 

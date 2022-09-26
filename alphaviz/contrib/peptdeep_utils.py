@@ -25,6 +25,7 @@ def get_peptide_info_from_dfs(
     fragment_mz_df: pd.DataFrame, 
     fragment_intensity_df:pd.DataFrame, 
     max_rt_in_seconds:float,
+    use_predicted_values:bool=False,
 )->pd.DataFrame:
     """
 
@@ -50,17 +51,17 @@ def get_peptide_info_from_dfs(
     df['mod_seq_charge'] = df['mod_seq'].str.cat(','+df['charge'].astype('U'))
 
     df["rt_pred"] *= max_rt_in_seconds
-    if 'rt' in df.columns:
-        df['rt_detected'] = df.rt*60
-        df['rt'] = df['rt_detected']
-    else:
-        df['rt'] = df['rt_pred']
-        
-    if 'mobility' in df.columns:
-        df['mobility_detected'] = df.mobility
-        df['im'] = df['mobility_detected']
-    else:
+    
+    if use_predicted_values:
+        df['rt_sec'] = df['rt_pred']
         df['im'] = df['mobility_pred']
+    else:
+        df['rt_sec'] = df.rt*60
+        if 'mobility' in df.columns:
+            df['im'] = df.mobility
+        else:
+            df['im'] = 0
+
 
     nAA = df["nAA"].values[0]
     charged_frag_types = []
@@ -101,7 +102,8 @@ def get_peptide_info_from_dfs(
 def predict_one_peptide(
     model_mgr:ModelManager, 
     one_pept_df:Union[pd.DataFrame, pd.Series],
-    max_rt_in_seconds
+    max_rt_in_seconds,
+    use_predicted_values:bool=False,
 )->pd.DataFrame:
     """Predict RT/Mobility/MS2 for one peptide (df)
 
@@ -129,7 +131,8 @@ def predict_one_peptide(
         predict_dict["precursor_df"], 
         predict_dict['fragment_mz_df'], 
         predict_dict['fragment_intensity_df'], 
-        max_rt_in_seconds
+        max_rt_in_seconds, 
+        use_predicted_values
     )
 
 def parse_one_pept_df(
@@ -159,7 +162,7 @@ def get_mod_seq(sequence, mods, mod_sites, mod_as_mass=True, **kwargs):
     if len(mods) == 0: return seq
     mods = mods.split(';')
     if mod_as_mass: 
-        mods = [int(MOD_MASS[mod]) for mod in mods]
+        mods = [round(MOD_MASS[mod]) for mod in mods]
         mods = [
             '+'+str(mod) if mod > 0 else str(mod) 
             for mod in mods
