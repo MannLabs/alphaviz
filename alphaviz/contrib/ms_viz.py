@@ -228,8 +228,8 @@ class MS_Viz:
             matching_mode=matching_mode,
         )
 
-        self.mirror_ms2_pcc = pcc
-        self.mirror_ms2_spc = spc
+        peptide_info['pcc'] = pcc
+        peptide_info['spc'] = spc
 
         if plot_unmatched_peaks:
             plot_df = self._add_unmatched_df(
