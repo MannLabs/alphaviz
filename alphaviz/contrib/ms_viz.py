@@ -21,6 +21,8 @@ from .peptdeep_utils import (
 
 class MS_Viz:
     _min_frag_mz:float = 200.0
+    _labeled_sites = ['K','N-term']
+    remove_unlabeled_fragments = False
     def __init__(self, 
         model_mgr:ModelManager,
         frag_types:list = ['b','y','b-modloss','y-modloss'],
@@ -89,6 +91,7 @@ class MS_Viz:
             self.model_mgr, one_pept_df, 
             self.tims_data.rt_max_value,
             self.prediction_mode,
+            self._labeled_sites if self.remove_unlabeled_fragments else None
         )
 
     def extract_one_peptide_info(self,

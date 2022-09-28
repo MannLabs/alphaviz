@@ -105,8 +105,8 @@ class XIC_1D_Plot():
 
         # slice the data using the rt_tol, im_tol and mz_tol values
         rt_slice = slice(
-            peptide_info['rt'].values[0] - rt_tol, 
-            peptide_info['rt'].values[0] + rt_tol
+            peptide_info['rt_sec'].values[0] - rt_tol, 
+            peptide_info['rt_sec'].values[0] + rt_tol
         )
         im_slice = slice(
             peptide_info['im'].values[0] - im_tol, 
@@ -191,7 +191,7 @@ class XIC_1D_Plot():
             )
         
         fig.add_vline(
-            peptide_info['rt'].values[0]/60, line_dash="dash", 
+            peptide_info['rt_sec'].values[0]/60, line_dash="dash", 
             line_color="grey", row=row, col=col,
         )
         return fig

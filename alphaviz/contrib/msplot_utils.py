@@ -35,7 +35,7 @@ def _plot_scatter(
 
 
 def _plot_line(
-    raw_data,
+    tims_data,
     selected_indices: np.ndarray,
     label: str,
     marker_color: str,
@@ -46,10 +46,10 @@ def _plot_line(
 
     Parameters
     ----------
-    timstof_data : alphatims.bruker.TimsTOF
+    tims_data : alphatims.bruker.TimsTOF
         An alphatims.bruker.TimsTOF data object.
     selected_indices : np.ndarray
-        The raw indices of raw_data that are selected for this plot.
+        The raw indices of tims_data that are selected for this plot.
     label : str
         The label for the line plot.
     remove_zeros : bool
@@ -72,8 +72,8 @@ def _plot_line(
         'RT (min)': "rt_values",
     }
     x_dimension = labels[x_axis_label]
-    intensities = raw_data.bin_intensities(selected_indices, [x_dimension])
-    x_ticks = raw_data.rt_values / 60
+    intensities = tims_data.bin_intensities(selected_indices, [x_dimension])
+    x_ticks = tims_data.rt_values / 60
 
     non_zeros = np.flatnonzero(intensities)
     if len(non_zeros) == 0:

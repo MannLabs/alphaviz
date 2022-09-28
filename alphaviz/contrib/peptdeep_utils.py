@@ -20,6 +20,41 @@ from peptdeep.model.ms2 import (
 
 from alphatims.bruker import TimsTOF
 
+def _get_abc_ion_mask(sequence, labeled_sites):
+    mask = np.zeros(len(sequence)-1)
+    for i,aa in enumerate(sequence[:-1]):
+        if aa in labeled_sites: break
+        mask[i] = 0
+    return mask
+
+def _get_xyz_ion_mask(sequence, labeled_sites):
+    mask = np.zeros(len(sequence)-1)
+    for i,aa in enumerate(sequence[:0:-1]):
+        if aa in labeled_sites: break
+        mask[len(sequence)-i-2] = 0
+    return mask
+
+def get_unlabeled_fragment_mask(
+    sequence:str,
+    fragment_df:pd.DataFrame, 
+    labeled_sites:list,
+):
+    masks = np.ones_like(fragment_df.values)
+    if 'N-term' in labeled_sites: pass
+    else:
+        abc_mask = _get_abc_ion_mask(sequence, labeled_sites)
+        for i,ion_type in enumerate(fragment_df.columns):
+            if ion_type[0] in 'abc':
+                masks[:,i] = abc_mask
+    if 'C-term' in labeled_sites: pass
+    else:
+        xyz_mask = _get_xyz_ion_mask(sequence, labeled_sites)
+        for i,ion_type in enumerate(fragment_df.columns):
+            if ion_type[0] in 'xyz':
+                masks[:,i] = xyz_mask
+    return masks
+
+
 def get_peptide_info_from_dfs(
     one_pept_df: Union[pd.DataFrame, pd.Series], 
     fragment_mz_df: pd.DataFrame, 
@@ -104,6 +139,7 @@ def predict_one_peptide(
     one_pept_df:Union[pd.DataFrame, pd.Series],
     max_rt_in_seconds,
     use_predicted_values:bool=False,
+    labeled_sites:list = None,
 )->pd.DataFrame:
     """Predict RT/Mobility/MS2 for one peptide (df)
 
@@ -127,10 +163,23 @@ def predict_one_peptide(
         multiprocessing=False
     )
 
+    precursor_df = predict_dict["precursor_df"]
+    frag_mz_df = predict_dict['fragment_mz_df']
+    frag_inten_df = predict_dict['fragment_intensity_df']
+
+    if labeled_sites:
+        masks = get_unlabeled_fragment_mask(
+            precursor_df.sequence.values[0],
+            frag_mz_df, labeled_sites
+        )
+
+        frag_mz_df.values[:] = frag_mz_df.values*masks
+        frag_inten_df.values[:] = frag_inten_df.values*masks
+
     return get_peptide_info_from_dfs(
-        predict_dict["precursor_df"], 
-        predict_dict['fragment_mz_df'], 
-        predict_dict['fragment_intensity_df'], 
+        precursor_df, 
+        frag_mz_df, 
+        frag_inten_df, 
         max_rt_in_seconds, 
         use_predicted_values
     )

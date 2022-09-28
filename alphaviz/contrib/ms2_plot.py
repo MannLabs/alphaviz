@@ -284,7 +284,7 @@ class PeakPlot:
         for mz, inten, ion in df[
             ['mz_values','intensity_values','ions']
         ].values:
-            ion = ion.replace('_modloss','-mod')
+            ion = ion.replace('modloss','ModNL')
             self.fig.add_annotation(
                 x=mz, y=inten+yshift,
                 text=ion,
@@ -299,7 +299,7 @@ class PeakPlot:
         for mz, inten, ion in pred_df[
             ['mz_values','intensity_values','ions']
         ].values:
-            ion = ion.replace('_modloss','-mod')
+            ion = ion.replace('modloss','ModNL')
             self.fig.add_annotation(
                 x=mz, y=inten-yshift,
                 text=ion,
