@@ -7,6 +7,8 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 
+from alphatims.bruker import TimsTOF
+
 def _plot_scatter(
     fig:go.Figure,
     x_values, y_values,
@@ -35,12 +37,13 @@ def _plot_scatter(
 
 
 def _plot_line(
-    tims_data,
+    tims_data:TimsTOF,
     selected_indices: np.ndarray,
     label: str,
     marker_color: str,
     remove_zeros: bool = False,
     trim: bool = True,
+    view_dim: str='rt' # or 'im'
 ):
     """Plot an XIC as a lineplot.
 
@@ -64,14 +67,16 @@ def _plot_line(
     """
     axis_dict = {
         "rt": "RT (min)",
-        "intensity": "Intensity",
+        "im": "Ion Mobility",
     }
-    x_axis_label = axis_dict["rt"]
-    # y_axis_label = axis_dict["intensity"]
     labels = {
-        'RT (min)': "rt_values",
+        'rt': "rt_values",
+        'im': "mobility_values"
     }
-    x_dimension = labels[x_axis_label]
+
+    x_axis_label = axis_dict[view_dim]
+    x_dimension = labels[view_dim]
+
     intensities = tims_data.bin_intensities(selected_indices, [x_dimension])
     x_ticks = tims_data.rt_values / 60
 

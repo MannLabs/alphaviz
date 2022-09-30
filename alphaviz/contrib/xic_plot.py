@@ -23,6 +23,7 @@ class XIC_1D_Plot():
     theme_template='plotly_white'
     min_frag_mz = 200
     remove_zeros = True
+    view_dim = 'rt' # or 'im'
 
     def plot(self,
         ms_data:TimsTOF,
@@ -141,6 +142,7 @@ class XIC_1D_Plot():
                     # label=f"precursor ({round(peptide_info['mz'], 3)})",
                     label=label,
                     marker_color=marker_color, 
+                    view_dim=self.view_dim,
                 ),
                 row=row, col=col,
             )
