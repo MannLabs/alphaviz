@@ -8,7 +8,10 @@ import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 
-from alphatims.bruker import TimsTOF
+from alphatims.bruker import (
+    TimsTOF, 
+    convert_slice_key_to_int_array
+)
 
 from alphaviz.contrib.msplot_utils import (
     _plot_line
@@ -22,7 +25,6 @@ class XIC_1D_Plot():
     colorscale_sequential="Viridis"
     theme_template='plotly_white'
     min_frag_mz = 200
-    remove_zeros = True
     view_dim = 'rt' # or 'im'
 
     def plot(self,
@@ -69,7 +71,7 @@ class XIC_1D_Plot():
     def _add_elution_profile(self,
         fig:go.Figure,
         row:int, col:int,
-        raw_data,
+        tims_data: TimsTOF,
         peptide_info: pd.DataFrame,
         mz_tol: float = 50,
         rt_tol: float = 30,
@@ -114,8 +116,50 @@ class XIC_1D_Plot():
             peptide_info['im'].values[0] + im_tol
         )
         prec_mz_slice = slice(
-            peptide_info['precursor_mz'].values[0] / (1 + mz_tol / 10**6), 
-            peptide_info['precursor_mz'].values[0] * (1 + mz_tol / 10**6)
+            peptide_info['precursor_mz'].values[0]
+             * (1 - mz_tol / 10**6), 
+            peptide_info['precursor_mz'].values[0]
+             * (1 + mz_tol / 10**6)
+        )
+
+        ms1_raw_indices = tims_data[
+            rt_slice,
+            im_slice,
+            0,
+            :,
+            'raw'
+        ]
+        sliced_ms1_frames = np.sort(np.array(list(set(
+            tims_data.convert_from_indices(
+            ms1_raw_indices,
+            return_frame_indices=True
+        )['frame_indices'])), dtype=np.int64))
+        sliced_ms1_rt_values = tims_data.rt_values[sliced_ms1_frames]
+        ms1_frame_df = pd.DataFrame(
+            dict(
+                frame_indices=sliced_ms1_frames,
+                rt_values=sliced_ms1_rt_values/60,
+            )
+        )
+
+        ms2_raw_indices = tims_data[
+            rt_slice,
+            im_slice,
+            prec_mz_slice,
+            :,
+            'raw'
+        ]
+        sliced_ms2_frames = np.sort(np.array(list(set(
+            tims_data.convert_from_indices(
+            ms2_raw_indices,
+            return_frame_indices=True
+        )['frame_indices'])), dtype=np.int64))
+        sliced_ms2_rt_values = tims_data.rt_values[sliced_ms2_frames]
+        ms2_frame_df = pd.DataFrame(
+            dict(
+                frame_indices=sliced_ms2_frames,
+                rt_values=sliced_ms2_rt_values/60,
+            )
         )
 
         if len(peptide_info) + 2 <= len(
@@ -131,14 +175,13 @@ class XIC_1D_Plot():
             )
 
         def _add_trace(
-            indices, label, marker_color
+            df, frame_df, label, marker_color
         ):
-            if len(indices) == 0: return
+            if len(df) == 0: return
             fig.add_trace(
                 _plot_line(
-                    raw_data,
-                    indices,
-                    remove_zeros=self.remove_zeros,
+                    df,
+                    frame_df,
                     # label=f"precursor ({round(peptide_info['mz'], 3)})",
                     label=label,
                     marker_color=marker_color, 
@@ -148,29 +191,29 @@ class XIC_1D_Plot():
             )
         # create an elution profile for the precursor in ms1
         if include_ms1 and include_precursor:
-            precursor_indices = raw_data[
+            ms1_m0_df = tims_data[
                 rt_slice,
                 im_slice,
                 0,
                 prec_mz_slice,
-                'raw'
             ]
             _add_trace(
-                precursor_indices,
+                ms1_m0_df,
+                ms1_frame_df,
                 label=f'MS1 M0 ({peptide_info["precursor_mz"].values[0]:.3f})',
                 marker_color=dict(color=colors_set[0])
             )
         # create elution profiles for all fragments
         if include_precursor:
-            m0_indices = raw_data[
+            ms2_m0_df = tims_data[
                 rt_slice,
                 im_slice,
                 prec_mz_slice,
                 prec_mz_slice,
-                'raw'
             ]
             _add_trace(
-                m0_indices,
+                ms2_m0_df,
+                ms2_frame_df,
                 label=f'MS2 M0 ({peptide_info["precursor_mz"].values[0]:.3f})',
                 marker_color=dict(color=colors_set[1])
             )
@@ -179,15 +222,18 @@ class XIC_1D_Plot():
         ):
             frag_mz = float(frag_mz)
             if frag_mz < self.min_frag_mz: continue
-            fragment_data_indices = raw_data[
+            frag_df = tims_data[
                 rt_slice,
                 im_slice,
                 prec_mz_slice,
-                slice(frag_mz / (1 + mz_tol / 10**6), frag_mz * (1 + mz_tol / 10**6)),
-                'raw'
+                slice(
+                    frag_mz * (1 - mz_tol / 10**6), 
+                    frag_mz * (1 + mz_tol / 10**6)
+                ),
             ]
             _add_trace(
-                fragment_data_indices,
+                frag_df,
+                ms2_frame_df,
                 label=f"{frag} ({frag_mz:.3f})",
                 marker_color=dict(color=colors_set[ind+2])
             )
@@ -199,7 +245,7 @@ class XIC_1D_Plot():
         return fig
 
     def plot_elution_profiles(self,
-        raw_data,
+        tims_data:TimsTOF,
         peptide_info_list: pd.DataFrame,
         mz_tol: float = 50,
         rt_tol: float = 30,
@@ -225,7 +271,7 @@ class XIC_1D_Plot():
         for i,peptide_info in enumerate(peptide_info_list):
             self._add_elution_profile(
                 fig, row=i+1,col=1,
-                raw_data=raw_data, 
+                tims_data=tims_data, 
                 peptide_info=peptide_info, 
                 mz_tol=mz_tol, rt_tol=rt_tol,
                 im_tol=im_tol,
@@ -234,18 +280,6 @@ class XIC_1D_Plot():
             )
         
         fig.update_layout(
-            # legend=dict(
-            #     orientation='h',
-            #     yanchor='top',
-            #     y=-0.2,
-            #     xanchor='right',
-            #     x=0.95,
-            #     font=dict(
-            #         # family="Courier",
-            #         size=11,
-            #         color='black'
-            #     ),
-            # ),
             template=self.theme_template,
             # width=width,
             height=self.plot_height,
