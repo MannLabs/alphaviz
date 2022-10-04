@@ -35,9 +35,10 @@ def _plot_scatter(
         row=row, col=col
     )
 
-def _plot_line_indices(
+def _plot_line_fast(
     tims_data:TimsTOF,
     selected_indices: np.ndarray,
+    view_indices: np.array,
     label: str,
     marker_color: str,
     remove_zeros: bool = False,
@@ -74,22 +75,11 @@ def _plot_line_indices(
     intensities = tims_data.bin_intensities(selected_indices, [x_dimension])
     if view_dim == 'rt': 
         x_ticks = tims_data.rt_values / 60
+        x_ticks = x_ticks[view_indices]
+        intensities = intensities[view_indices]
     else: 
-        x_ticks = tims_data.mobility_values
-
-    non_zeros = np.flatnonzero(intensities)
-    if len(non_zeros) == 0:
-        x_ticks = np.empty(0, dtype=x_ticks.dtype)
-        intensities = np.empty(0, dtype=intensities.dtype)
-    else:
-        if remove_zeros:
-            x_ticks = x_ticks[non_zeros]
-            intensities = intensities[non_zeros]
-        elif trim:
-            start = max(0, non_zeros[0] - 1)
-            end = non_zeros[-1] + 2
-            x_ticks = x_ticks[start: end]
-            intensities = intensities[start: end]
+        x_ticks = tims_data.mobility_values[view_indices]
+        intensities = intensities[view_indices]
 
     trace = go.Scatter(
         x=x_ticks,
@@ -107,7 +97,7 @@ def _plot_line_indices(
 
 def _plot_line(
     tims_sliced_df:pd.DataFrame,
-    frame_df:pd.DataFrame,
+    view_indices_df:pd.DataFrame,
     label: str,
     marker_color: str,
     view_dim: str='rt' # or 'im'
@@ -140,7 +130,9 @@ def _plot_line(
         )
         tims_sliced_df['rt_values'] /= 60
         tims_sliced_df.sort_values('rt_values', inplace=True)
-        tims_sliced_df = frame_df.merge(tims_sliced_df, on=['frame_indices','rt_values'], how='left')
+        tims_sliced_df = view_indices_df.merge(
+            tims_sliced_df, on=['frame_indices','rt_values'], how='left'
+        )
         tims_sliced_df.loc[tims_sliced_df.intensity_values.isna(),'intensity_values'] = 0
         x_ticks = tims_sliced_df.rt_values.values
     else: 
@@ -153,6 +145,10 @@ def _plot_line(
             }
         )
         tims_sliced_df.sort_values('mobility_values', inplace=True)
+        tims_sliced_df = view_indices_df.merge(
+            tims_sliced_df, on=['scan_indices','mobility_values'], how='left'
+        )
+        tims_sliced_df.loc[tims_sliced_df.intensity_values.isna(),'intensity_values'] = 0
         x_ticks = tims_sliced_df.mobility_values.values
 
     trace = go.Scatter(
