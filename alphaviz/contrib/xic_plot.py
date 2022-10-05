@@ -314,7 +314,10 @@ class XIC_1D_Plot():
             # )
         
         fig.add_vline(
-            peptide_info['rt_sec'].values[0]/60, line_dash="dash", 
+            peptide_info['rt_sec'].values[0]/60 if 
+            self.view_dim == 'rt' else 
+            peptide_info['im'].values[0], 
+            line_dash="dash", 
             line_color="grey", row=row, col=col,
         )
         return fig
@@ -335,7 +338,7 @@ class XIC_1D_Plot():
             rows=len(peptide_info_list), 
             cols=1, 
             shared_xaxes=True,
-            x_title='RT (min)',
+            x_title='RT (min)' if self.view_dim == 'rt' else 'Mobility',
             y_title='Intensity',
             vertical_spacing=0.2/len(peptide_info_list),
             subplot_titles=[

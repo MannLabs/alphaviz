@@ -1,3 +1,8 @@
 alphatims
 peptdeep
 alphabase
+
+holoviews
+xarray
+dask
+multipledispatch

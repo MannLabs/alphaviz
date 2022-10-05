@@ -222,6 +222,7 @@ class MS_Viz:
                 spec_df.mz_values.min()-0.1, self._min_frag_mz
             )
         ]
+        spec_df['intensity_values'] = spec_df.intensity_values.astype(float)
         plot_df, pcc, spc = match_ms2(
             spec_df=spec_df, frag_df=frag_df,
             mz_tol=mz_tol, 
