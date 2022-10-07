@@ -1,5 +1,3 @@
-import os
-import torch
 import plotly
 
 import pandas as pd
@@ -7,6 +5,7 @@ import numpy as np
 
 import plotly.graph_objects as go
 import plotly.express as px
+from plotly.subplots import make_subplots
 
 from alphatims.bruker import (
     TimsTOF, 
@@ -334,7 +333,7 @@ class XIC_1D_Plot():
         if isinstance(peptide_info_list, pd.DataFrame):
             peptide_info_list = [peptide_info_list]
 
-        fig = plotly.subplots.make_subplots(
+        fig = make_subplots(
             rows=len(peptide_info_list), 
             cols=1, 
             shared_xaxes=True,
