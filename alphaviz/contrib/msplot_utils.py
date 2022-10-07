@@ -40,9 +40,8 @@ def _plot_line_fast(
     selected_indices: np.ndarray,
     view_indices: np.array,
     label: str,
+    legend_group:str,
     marker_color: str,
-    remove_zeros: bool = False,
-    trim: bool = True,
     view_dim: str='rt' # or 'im'
 ):
     """Plot an XIC as a lineplot.
@@ -91,7 +90,7 @@ def _plot_line_fast(
         hovertemplate='%{text} <br><b>Intensity:</b> %{y}',
         name=label,
         marker=marker_color,
-        legendgroup=label.split(' ')[0],
+        legendgroup=legend_group,
     )
     return trace
 
@@ -99,6 +98,7 @@ def _plot_line(
     tims_sliced_df:pd.DataFrame,
     view_indices_df:pd.DataFrame,
     label: str,
+    legend_group:str,
     marker_color: str,
     view_dim: str='rt' # or 'im'
 ):
@@ -161,6 +161,6 @@ def _plot_line(
         hovertemplate='%{text}<br>Intensity: %{y}',
         name=label,
         marker=marker_color,
-        legendgroup=label.split(' ')[0],
+        legendgroup=legend_group,
     )
     return trace

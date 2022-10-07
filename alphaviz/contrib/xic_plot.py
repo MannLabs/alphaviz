@@ -24,6 +24,8 @@ class XIC_1D_Plot():
     theme_template='plotly_white'
     min_frag_mz = 200
     view_dim = 'rt' # or 'im'
+    label_format = '{ion} {mz:.3f}'
+    legend_group = '{ion}' # {ion}, {mz} or None
 
     def plot(self,
         tims_data:TimsTOF,
@@ -83,7 +85,7 @@ class XIC_1D_Plot():
 
     def _add_trace_fast(self,
         fig, row, col, tims_data, selected_indices, view_indices,
-        label, marker_color
+        label, legend_group, marker_color
     ):
         if len(selected_indices) == 0: return
         fig.add_trace(
@@ -91,6 +93,7 @@ class XIC_1D_Plot():
                 tims_data, selected_indices,
                 view_indices,
                 label=label,
+                legend_group=legend_group,
                 marker_color=marker_color, 
                 view_dim=self.view_dim,
             ),
@@ -101,12 +104,12 @@ class XIC_1D_Plot():
         fig, row, col, 
         tims_data, selected_indices, view_indices,
         df, view_indices_df, 
-        label, marker_color,
+        label, legend_group, marker_color,
     ):
         return self._add_trace_fast(
             fig, row, col, 
             tims_data, selected_indices, view_indices,
-            label, marker_color,
+            label, legend_group, marker_color,
         )
         return self._add_trace_df(
             fig, row, col, 
@@ -254,7 +257,14 @@ class XIC_1D_Plot():
             self._add_trace_fast(
                 fig, row, col,
                 tims_data, ms1_m0_indices, ms1_view_indices,
-                label=f'MS1 M0 ({peptide_info["precursor_mz"].values[0]:.3f})',
+                label=self.label_format.format(
+                    ion='MS1_M0', 
+                    mz=peptide_info["precursor_mz"].values[0]
+                ),
+                legend_group = self.legend_group.format(
+                    ion='MS1_M0', 
+                    mz=peptide_info["precursor_mz"].values[0]
+                ) if self.legend_group else None,
                 marker_color=dict(color=colors_set[0])
             )
             # self._add_trace_df(
@@ -275,7 +285,14 @@ class XIC_1D_Plot():
             self._add_trace_fast(
                 fig, row, col,
                 tims_data, ms2_m0_indices, ms2_view_indices,
-                label=f'MS2 M0 ({peptide_info["precursor_mz"].values[0]:.3f})',
+                label=self.label_format.format(
+                    ion='MS2_M0', 
+                    mz=peptide_info["precursor_mz"].values[0]
+                ),
+                legend_group = self.legend_group.format(
+                    ion='MS2_M0', 
+                    mz=peptide_info["precursor_mz"].values[0]
+                ) if self.legend_group else None,
                 marker_color=dict(color=colors_set[1])
             )
             # self._add_trace_df(
@@ -302,7 +319,14 @@ class XIC_1D_Plot():
             self._add_trace_fast(
                 fig, row, col,
                 tims_data, frag_indices, ms2_view_indices,
-                label=f"{frag} ({frag_mz:.3f})",
+                label=self.label_format.format(
+                    ion=frag, 
+                    mz=frag_mz
+                ),
+                legend_group = self.legend_group.format(
+                    ion=frag, 
+                    mz=frag_mz
+                ) if self.legend_group else None,
                 marker_color=dict(color=colors_set[ind+2])
             )
             # self._add_trace_df(
