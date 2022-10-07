@@ -261,10 +261,7 @@ class XIC_1D_Plot():
                     ion='MS1_M0', 
                     mz=peptide_info["precursor_mz"].values[0]
                 ),
-                legend_group = self.legend_group.format(
-                    ion='MS1_M0', 
-                    mz=peptide_info["precursor_mz"].values[0]
-                ) if self.legend_group else None,
+                legend_group = 'MS1_M0',
                 marker_color=dict(color=colors_set[0])
             )
             # self._add_trace_df(
@@ -289,10 +286,7 @@ class XIC_1D_Plot():
                     ion='MS2_M0', 
                     mz=peptide_info["precursor_mz"].values[0]
                 ),
-                legend_group = self.legend_group.format(
-                    ion='MS2_M0', 
-                    mz=peptide_info["precursor_mz"].values[0]
-                ) if self.legend_group else None,
+                legend_group = 'MS2_M0',
                 marker_color=dict(color=colors_set[1])
             )
             # self._add_trace_df(
