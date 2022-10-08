@@ -308,7 +308,7 @@ def match_ms2(
     matched_df = matched_df[matched_idxes!=-1]
 
     if len(matched_df) == 0:
-        return pd.DataFrame, 0, 0
+        return matched_df, 0, 0
 
     pcc = pearson_correlation(
         torch.tensor(matched_intens.reshape(1,-1)),
