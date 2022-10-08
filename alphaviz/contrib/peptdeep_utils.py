@@ -113,9 +113,10 @@ def get_peptide_info_from_dfs(
             if mz < 10: continue
             frag_num = _get_frag_num(column, i, nAA)
             frag_type, charge = column.split('_z')
+            charge = int(charge)
             charged_frag_type = (
                 frag_type[0] + str(frag_num) +
-                frag_type[1:] + '+'*int(charge)
+                frag_type[1:] + '+'*charge
             )
             charged_frag_types.append(charged_frag_type)
             frag_types.append(frag_type)
