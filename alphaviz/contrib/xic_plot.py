@@ -25,8 +25,8 @@ class XIC_1D_Plot():
     min_frag_mz = 200
     ms1_ppm_tol = 20.0
     ms2_ppm_tol = 20.0
-    rt_sec_tol = 30.0
-    im_tol = 0.05
+    rt_sec_win = 30.0
+    im_win = 0.05
     view_dim = 'rt' # or 'im'
     label_format = '{ion} {mz:.3f}'
     legend_group = '{ion}' # {ion}, {mz} or None
@@ -154,12 +154,12 @@ class XIC_1D_Plot():
             The elution profile plot in retention time dimension for the specified peptide and all his fragments.
         """
         rt_slice = slice(
-            peptide_info['rt_sec'].values[0] - self.rt_sec_tol, 
-            peptide_info['rt_sec'].values[0] + self.rt_sec_tol
+            peptide_info['rt_sec'].values[0] - self.rt_sec_win/2, 
+            peptide_info['rt_sec'].values[0] + self.rt_sec_win/2
         )
         im_slice = slice(
-            peptide_info['im'].values[0] - self.im_tol, 
-            peptide_info['im'].values[0] + self.im_tol
+            peptide_info['im'].values[0] - self.im_win/2, 
+            peptide_info['im'].values[0] + self.im_win/2
         )
         ms1_prec_mz_slice = slice(
             peptide_info['precursor_mz'].values[0]
