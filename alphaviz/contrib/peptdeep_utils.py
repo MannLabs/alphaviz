@@ -257,7 +257,7 @@ def match_tims_ms2_for_tuning(
 def match_ms2(
     spec_df: pd.DataFrame, 
     frag_df: pd.DataFrame, 
-    mz_tol=50, 
+    mz_tol=20, 
     matching_mode="centroid",
 )->Tuple[pd.DataFrame, float, float]:
     """
@@ -305,7 +305,7 @@ def match_ms2(
     matched_df['mz_values'] = matched_mzs
     matched_df['intensity_values'] = matched_intens
     matched_df['mass_dev_ppm'] = mass_errs
-    matched_df = matched_df[matched_idxes!=-1]
+    matched_df = matched_df[matched_intens>0]
 
     if len(matched_df) == 0:
         return matched_df, 0, 0

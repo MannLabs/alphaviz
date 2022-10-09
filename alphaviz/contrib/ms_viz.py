@@ -23,6 +23,11 @@ class MS_Viz:
     _min_frag_mz:float = 200.0
     _labeled_sites = ['K','N-term']
     remove_unlabeled_fragments = False
+    ms2_ppm_tol=20.0
+    ms1_ppm_tol=20.0
+    rt_sec_tol_to_slice_spectrum = 3.0
+    im_tol_to_slice_spectrum = 0.05
+    find_closest_ms2_by_rt_sec = True
     def __init__(self, 
         model_mgr:ModelManager,
         frag_types:list = ['b','y','b-modloss','y-modloss'],
@@ -118,17 +123,11 @@ class MS_Viz:
 
     def plot_elution_profile_heatmap(self,
         peptide_info: pd.DataFrame,
-        mz_tol: float = 50,
-        rt_tol: float = 30,
-        im_tol: float = 0.05,
     ):
         raise NotImplementedError('TODO for timsTOF data')
 
     def plot_elution_profile(self,
         peptide_info: pd.DataFrame,
-        mz_tol: float = 50,
-        rt_tol: float = 30,
-        im_tol: float = 0.05,
         include_precursor:bool=True,
         include_ms1:bool=True,
     )->go.Figure:
@@ -139,9 +138,6 @@ class MS_Viz:
         peptide_info : pd.DataFrame
             alphaviz peptide_info, 
             see `self.predict_one_peptide`.
-
-        mz_tol : float, optional
-            in ppm, by default 50
 
         rt_tol : float, optional
             RT tol in seconds, by default 30
@@ -158,12 +154,11 @@ class MS_Viz:
             plotly Figure object return by 
             `alphaviz.plotting.plot_elution_profile`
         """
+        self.xic_1d_plot.ms1_ppm_tol = self.ms1_ppm_tol
+        self.xic_1d_plot.ms2_ppm_tol = self.ms2_ppm_tol
         return self.xic_1d_plot.plot(
             self.tims_data,
             peptide_info=peptide_info,
-            mz_tol=mz_tol,
-            rt_tol=rt_tol,
-            im_tol=im_tol,
             include_precursor=include_precursor,
             include_ms1=include_ms1,
         )
@@ -178,7 +173,6 @@ class MS_Viz:
         frag_df:pd.DataFrame=None, 
         spec_df:pd.DataFrame=None, 
         title:str="", 
-        mz_tol:float=50,
         matching_mode:str="centroid",
         plot_unmatched_peaks:bool=False,
     )->go.Figure:
@@ -197,9 +191,6 @@ class MS_Viz:
         spec_df : pd.DataFrame, optional
             AlphaTims sliced DataFrame for raw data,
             by default None
-
-        mz_tol : float, optional
-            in ppm, by default 50
 
         matching_mode : str, optional
             peak matching mode, by default "centroid"
@@ -225,7 +216,7 @@ class MS_Viz:
         spec_df['intensity_values'] = spec_df.intensity_values.astype(float)
         plot_df, pcc, spc = match_ms2(
             spec_df=spec_df, frag_df=frag_df,
-            mz_tol=mz_tol, 
+            mz_tol=self.ms2_ppm_tol, 
             matching_mode=matching_mode,
         )
 
@@ -253,20 +244,31 @@ class MS_Viz:
         im_slice = (
             slice(None) if peptide_info['im'].values[0] == 0 else 
             slice(
-                peptide_info['im'].values[0]-0.05,
-                peptide_info['im'].values[0]+0.05
+                peptide_info['im'].values[0]-self.im_tol_to_slice_spectrum,
+                peptide_info['im'].values[0]+self.im_tol_to_slice_spectrum
             )
         )
+        query_rt = peptide_info['rt_sec'].values[0]
         rt_slice = slice(
-            peptide_info['rt_sec'].values[0]-0.5,
-            peptide_info['rt_sec'].values[0]+0.5
+            query_rt-self.rt_sec_tol_to_slice_spectrum,
+            query_rt+self.rt_sec_tol_to_slice_spectrum
         )
 
         spec_df = self.tims_data[
             rt_slice, im_slice
         ]
-        return spec_df[
+        spec_df = spec_df[
             (spec_df.quad_low_mz_values <= peptide_info['precursor_mz'].values[0])
             &(spec_df.quad_high_mz_values >= peptide_info['precursor_mz'].values[0])
         ].reset_index(drop=True)
+
+        _df = spec_df
+
+        if self.find_closest_ms2_by_rt_sec:
+            min_rt_dist = 1000000
+            for _, df in spec_df.groupby('frame_indices'):
+                if abs(df.rt_values.values[0]-query_rt) < min_rt_dist:
+                    _df = df
+                    min_rt_dist = abs(df.rt_values.values[0]-query_rt)
+        return _df
 

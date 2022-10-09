@@ -23,6 +23,10 @@ class XIC_1D_Plot():
     colorscale_sequential="Viridis"
     theme_template='plotly_white'
     min_frag_mz = 200
+    ms1_ppm_tol = 20.0
+    ms2_ppm_tol = 20.0
+    rt_sec_tol = 30.0
+    im_tol = 0.05
     view_dim = 'rt' # or 'im'
     label_format = '{ion} {mz:.3f}'
     legend_group = '{ion}' # {ion}, {mz} or None
@@ -30,9 +34,6 @@ class XIC_1D_Plot():
     def plot(self,
         tims_data:TimsTOF,
         peptide_info: pd.DataFrame,
-        mz_tol: float = 50,
-        rt_tol: float = 30,
-        im_tol: float = 0.05,
         include_precursor:bool=True,
         include_ms1:bool=True,
     )->go.Figure:
@@ -42,15 +43,6 @@ class XIC_1D_Plot():
         ----------
         peptide_info : pd.DataFrame
             alphaviz peptide_info df
-
-        mz_tol : float, optional
-            in ppm, by default 50
-
-        rt_tol : float, optional
-            RT tol in seconds, by default 30
-
-        im_tol : float, optional
-            mobility tol, by default 0.05
 
         height : int, optional
             fig height, by default 400
@@ -63,7 +55,6 @@ class XIC_1D_Plot():
         """
         return self.plot_elution_profiles(
             tims_data, peptide_info_list=peptide_info,
-            mz_tol=mz_tol, rt_tol=rt_tol, im_tol=im_tol,
             include_precursor=include_precursor,
             include_ms1=include_ms1,
         )
@@ -136,9 +127,6 @@ class XIC_1D_Plot():
         row:int, col:int,
         tims_data: TimsTOF,
         peptide_info: pd.DataFrame,
-        mz_tol: float = 50,
-        rt_tol: float = 30,
-        im_tol: float = 0.05,
         include_precursor:bool = True,
         include_ms1:bool = True,
     ):
@@ -154,9 +142,6 @@ class XIC_1D_Plot():
             Peptide information including sequence, fragment patterns, rt,
             and im values.
 
-        mz_tol: float
-            The mz tolerance value. Default: 50 ppm.
-
         rt_tol: float
             The rt tolerance value. Default: 30 ppm.
 
@@ -168,21 +153,25 @@ class XIC_1D_Plot():
         a Plotly line plot
             The elution profile plot in retention time dimension for the specified peptide and all his fragments.
         """
-
-        # slice the data using the rt_tol, im_tol and mz_tol values
         rt_slice = slice(
-            peptide_info['rt_sec'].values[0] - rt_tol, 
-            peptide_info['rt_sec'].values[0] + rt_tol
+            peptide_info['rt_sec'].values[0] - self.rt_sec_tol, 
+            peptide_info['rt_sec'].values[0] + self.rt_sec_tol
         )
         im_slice = slice(
-            peptide_info['im'].values[0] - im_tol, 
-            peptide_info['im'].values[0] + im_tol
+            peptide_info['im'].values[0] - self.im_tol, 
+            peptide_info['im'].values[0] + self.im_tol
         )
-        prec_mz_slice = slice(
+        ms1_prec_mz_slice = slice(
             peptide_info['precursor_mz'].values[0]
-             * (1 - mz_tol / 10**6), 
+             * (1 - self.ms1_ppm_tol / 10**6), 
             peptide_info['precursor_mz'].values[0]
-             * (1 + mz_tol / 10**6)
+             * (1 + self.ms1_ppm_tol / 10**6)
+        )
+        ms2_prec_mz_slice = slice(
+            peptide_info['precursor_mz'].values[0]
+             * (1 - self.ms2_ppm_tol / 10**6), 
+            peptide_info['precursor_mz'].values[0]
+             * (1 + self.ms2_ppm_tol / 10**6)
         )
 
         if len(peptide_info) + 2 <= len(
@@ -208,7 +197,7 @@ class XIC_1D_Plot():
         ms2_raw_indices = tims_data[
             rt_slice,
             im_slice,
-            prec_mz_slice,
+            ms2_prec_mz_slice,
             :,
             'raw'
         ]
@@ -251,7 +240,7 @@ class XIC_1D_Plot():
                 rt_slice,
                 im_slice,
                 0,
-                prec_mz_slice,
+                ms1_prec_mz_slice,
                 'raw'
             ]
             self._add_trace_fast(
@@ -275,8 +264,8 @@ class XIC_1D_Plot():
             ms2_m0_indices = tims_data[
                 rt_slice,
                 im_slice,
-                prec_mz_slice,
-                prec_mz_slice,
+                ms2_prec_mz_slice,
+                ms2_prec_mz_slice,
                 'raw'
             ]
             self._add_trace_fast(
@@ -303,10 +292,10 @@ class XIC_1D_Plot():
             frag_indices = tims_data[
                 rt_slice,
                 im_slice,
-                prec_mz_slice,
+                ms2_prec_mz_slice,
                 slice(
-                    frag_mz * (1 - mz_tol / 10**6), 
-                    frag_mz * (1 + mz_tol / 10**6)
+                    frag_mz * (1 - self.ms2_ppm_tol / 10**6), 
+                    frag_mz * (1 + self.ms2_ppm_tol / 10**6)
                 ),
                 'raw'
             ]
@@ -342,9 +331,6 @@ class XIC_1D_Plot():
     def plot_elution_profiles(self,
         tims_data:TimsTOF,
         peptide_info_list: pd.DataFrame,
-        mz_tol: float = 50,
-        rt_tol: float = 30,
-        im_tol: float = 0.05,
         include_precursor:bool = True,
         include_ms1:bool = True,
     ):
@@ -367,9 +353,7 @@ class XIC_1D_Plot():
             self._add_elution_profile(
                 fig, row=i+1,col=1,
                 tims_data=tims_data, 
-                peptide_info=peptide_info, 
-                mz_tol=mz_tol, rt_tol=rt_tol,
-                im_tol=im_tol,
+                peptide_info=peptide_info,
                 include_precursor=include_precursor,
                 include_ms1=include_ms1,
             )
