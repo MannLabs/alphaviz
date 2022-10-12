@@ -142,9 +142,6 @@ class XIC_1D_Plot():
             Peptide information including sequence, fragment patterns, rt,
             and im values.
 
-        rt_tol: float
-            The rt tolerance value. Default: 30 ppm.
-
         im_tol: float
             The im tolerance value. Default: 0.05 ppm.
 
