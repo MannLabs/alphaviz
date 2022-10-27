@@ -250,6 +250,30 @@ class XIC_1D_Plot():
                 legend_group = 'MS1_M0',
                 marker_color=dict(color=colors_set[0])
             )
+
+            ms1_prec_m1_slice = slice(
+                (peptide_info['precursor_mz'].values[0]+1.0033/peptide_info['charge'].values[0])
+                * (1 - self.ms1_ppm_tol / 10**6), 
+                (peptide_info['precursor_mz'].values[0]+1.0033/peptide_info['charge'].values[0])
+                * (1 + self.ms1_ppm_tol / 10**6)
+            )
+            ms1_m1_indices = tims_data[
+                rt_slice,
+                im_slice,
+                0,
+                ms1_prec_m1_slice,
+                'raw'
+            ]
+            self._add_trace_fast(
+                fig, row, col,
+                tims_data, ms1_m1_indices, ms1_view_indices,
+                label=self.label_format.format(
+                    ion='MS1_M1', 
+                    mz=peptide_info["precursor_mz"].values[0]
+                ),
+                legend_group = 'MS1_M1',
+                marker_color=dict(color=colors_set[0])
+            )
             # self._add_trace_df(
             #     fig, row, col,
             #     tims_data.as_dataframe(ms1_m0_indices), ms1_view_df,

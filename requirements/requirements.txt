@@ -6,3 +6,4 @@ holoviews
 xarray
 dask
 multipledispatch
+plotly

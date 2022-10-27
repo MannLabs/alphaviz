@@ -77,10 +77,9 @@ def load_psms(
     if not get_fragments:
         reader = psm_reader_provider.get_reader(psm_type)
         _add_alphabase_mods(reader)
-        if reader.add_modification_mapping:
-            reader.add_modification_mapping(
-                add_modification_mapping
-            )
+        reader.add_modification_mapping(
+            add_modification_mapping
+        )
         reader.import_file(psm_file)
         return (
             reader.psm_df, pd.DataFrame(), pd.DataFrame()
