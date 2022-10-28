@@ -265,10 +265,24 @@ class MS_Viz:
         _df = spec_df
 
         if self.find_closest_ms2_by_rt_sec:
-            min_rt_dist = 1000000
+            min_rt_left_dist = 1000000
+            min_rt_right_dist = 1000000
             for _, df in spec_df.groupby('frame_indices'):
-                if abs(df.rt_values.values[0]-query_rt) < min_rt_dist:
-                    _df = df
-                    min_rt_dist = abs(df.rt_values.values[0]-query_rt)
+                if (
+                    abs(df.rt_values.values[0]-query_rt) < min_rt_right_dist 
+                    and df.rt_values.values[0]>=query_rt
+                ):
+                    _df_right = df
+                    min_rt_right_dist = abs(df.rt_values.values[0]-query_rt)
+                if (
+                    abs(df.rt_values.values[0]-query_rt) < min_rt_left_dist 
+                    and df.rt_values.values[0]<=query_rt
+                ):
+                    _df_left = df
+                    min_rt_left_dist = abs(df.rt_values.values[0]-query_rt)
+            if _df_left is _df_right:
+                _df = _df_left
+            else:
+                _df = pd.concat([_df_left, _df_right])
         return _df
 
