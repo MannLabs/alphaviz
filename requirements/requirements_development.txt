@@ -11,6 +11,8 @@ tqdm==4.61.1
 psutil==5.8.0
 pytest==6.2.5
 
+pywin32; sys_platform=='win32'
+
 alphatims
 peptdeep
 alphabase

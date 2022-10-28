@@ -5,6 +5,9 @@ import numpy as np
 
 from peptdeep.pretrained_models import ModelManager
 
+from alphabase.constants.modification import MOD_MASS
+from alphabase.peptide.precursor import calc_precursor_mz
+
 from typing import Union, Tuple
 
 from peptdeep.mass_spec.match import (
@@ -17,20 +20,57 @@ from peptdeep.model.ms2 import (
 
 from alphatims.bruker import TimsTOF
 
+def _get_abc_ion_mask(sequence, labeled_sites):
+    mask = np.zeros(len(sequence)-1)
+    for i,aa in enumerate(sequence[:-1]):
+        if aa in labeled_sites: break
+        mask[i] = 0
+    return mask
+
+def _get_xyz_ion_mask(sequence, labeled_sites):
+    mask = np.zeros(len(sequence)-1)
+    for i,aa in enumerate(sequence[:0:-1]):
+        if aa in labeled_sites: break
+        mask[len(sequence)-i-2] = 0
+    return mask
+
+def get_unlabeled_fragment_mask(
+    sequence:str,
+    fragment_df:pd.DataFrame, 
+    labeled_sites:list,
+):
+    masks = np.ones_like(fragment_df.values)
+    if 'N-term' in labeled_sites: pass
+    else:
+        abc_mask = _get_abc_ion_mask(sequence, labeled_sites)
+        for i,ion_type in enumerate(fragment_df.columns):
+            if ion_type[0] in 'abc':
+                masks[:,i] = abc_mask
+    if 'C-term' in labeled_sites: pass
+    else:
+        xyz_mask = _get_xyz_ion_mask(sequence, labeled_sites)
+        for i,ion_type in enumerate(fragment_df.columns):
+            if ion_type[0] in 'xyz':
+                masks[:,i] = xyz_mask
+    return masks
+
+
 def get_peptide_info_from_dfs(
     one_pept_df: Union[pd.DataFrame, pd.Series], 
     fragment_mz_df: pd.DataFrame, 
     fragment_intensity_df:pd.DataFrame, 
     max_rt_in_seconds:float,
-)->dict:
+    use_predicted_values:bool=False,
+)->pd.DataFrame:
     """
 
     Returns
     -------
-    dict
-        peptide_info in alphaviz format
+    pd.DataFrame
+        peptide_info df in alphaviz format
     """
     df = parse_one_pept_df(one_pept_df)
+    df = calc_precursor_mz(df)
     frag_mz_df = fragment_mz_df.iloc[
         df.frag_start_idx.values[0]:df.frag_end_idx.values[0],:
     ].reset_index(drop=True)
@@ -38,40 +78,34 @@ def get_peptide_info_from_dfs(
         df.frag_start_idx.values[0]:df.frag_end_idx.values[0],:
     ].reset_index(drop=True)
 
-    peptide_info = dict(
-        sequence = one_pept_df.sequence.values[0],
-        mods = one_pept_df.mods.values[0],
-        mod_sites = one_pept_df.mod_sites.values[0],
-        charge = one_pept_df.charge.values[0],
-    )
+    df['mod_seq'] = [get_mod_seq(
+        df['sequence'].values[0], 
+        df['mods'].values[0],
+        df['mod_sites'].values[0],
+    )]
+    df['mod_seq_charge'] = df['mod_seq'].str.cat(','+df['charge'].astype('U'))
 
-    peptide_info['mod_seq'] = get_mod_seq(**peptide_info)
-    peptide_info['mod_seq_charge'] = (
-        peptide_info['mod_seq'] + ',' + 
-        str(peptide_info['charge']) + '+'
-    )
-
-    peptide_info["mz"] = df.precursor_mz.values[0]
-    peptide_info["rt_pred"] = df.rt_pred.values[0]*max_rt_in_seconds
-    peptide_info["rt_norm_pred"] = df.rt_norm_pred.values[0]
-    peptide_info["mobility_pred"] = df.mobility_pred.values[0]
-    if 'rt' in df.columns:
-        peptide_info['rt_detected'] = df.rt.values[0]*60
-        peptide_info['rt'] = peptide_info['rt_detected']
+    df["rt_pred"] *= max_rt_in_seconds
+    
+    if use_predicted_values:
+        df['rt_sec'] = df['rt_pred']
+        df['im'] = df['mobility_pred']
     else:
-        peptide_info['rt'] = peptide_info['rt_pred']
-        
-    if 'mobility' in df.columns:
-        peptide_info['mobility_detected'] = df.mobility.values[0]
-        peptide_info['im'] = peptide_info['mobility_detected']
-    else:
-        peptide_info['im'] = peptide_info['mobility_pred']
+        df['rt_sec'] = df.rt*60
+        if 'mobility' in df.columns:
+            df['im'] = df.mobility
+        else:
+            df['im'] = 0
 
-    nAA = len(peptide_info["sequence"])
-    frags = {}
-    intens = {}
-    frag_nums = {}
-    frag_indices = {}
+
+    nAA = df["nAA"].values[0]
+    charged_frag_types = []
+    frag_types = []
+    frag_charges = []
+    frags = []
+    intens = []
+    frag_nums = []
+    frag_indices = []
     for column in frag_mz_df.columns.values:
         for i,(mz,inten) in enumerate(zip(
             frag_mz_df[column].values,frag_inten_df[column].values
@@ -79,26 +113,35 @@ def get_peptide_info_from_dfs(
             if mz < 10: continue
             frag_num = _get_frag_num(column, i, nAA)
             frag_type, charge = column.split('_z')
-            frag_type = (
+            charge = int(charge)
+            charged_frag_type = (
                 frag_type[0] + str(frag_num) +
-                frag_type[1:] + '+'*int(charge)
+                frag_type[1:] + '+'*charge
             )
-            frags[frag_type] = mz
-            intens[frag_type] = inten
-            frag_nums[frag_type] = frag_num
-            frag_indices[frag_type] = i
-    peptide_info['fragment_mzs'] = frags
-    peptide_info['fragment_intensities'] = intens
-    peptide_info['fragment_numbers'] = frag_nums
-    peptide_info['fragment_indices'] = frag_indices
-    peptide_info['fragments'] = peptide_info['fragment_mzs']
-    return peptide_info
+            charged_frag_types.append(charged_frag_type)
+            frag_types.append(frag_type)
+            frag_charges.append(charge)
+            frags.append(mz)
+            intens.append(inten)
+            frag_nums.append(frag_num)
+            frag_indices.append(i)
+    df = pd.concat([df]*len(frag_types),ignore_index=True)
+    df['frag_type'] = frag_types
+    df['frag_charge'] = frag_charges
+    df['ion'] = charged_frag_types
+    df['frag_mz'] = frags
+    df['frag_intensity'] = intens
+    df['frag_number'] = frag_nums
+    df['frag_index'] = frag_indices
+    return df
 
 def predict_one_peptide(
     model_mgr:ModelManager, 
     one_pept_df:Union[pd.DataFrame, pd.Series],
-    max_rt_in_seconds
-)->dict:
+    max_rt_in_seconds,
+    use_predicted_values:bool=False,
+    labeled_sites:list = None,
+)->pd.DataFrame:
     """Predict RT/Mobility/MS2 for one peptide (df)
 
     Parameters
@@ -112,21 +155,34 @@ def predict_one_peptide(
 
     Returns
     -------
-    dict
+    pd.DataFrame
         peptide_info in alphaviz format
     """
     df = parse_one_pept_df(one_pept_df)
-    
     predict_dict = model_mgr.predict_all(
         df, predict_items=['mobility','rt','ms2'],
         multiprocessing=False
     )
 
+    precursor_df = predict_dict["precursor_df"]
+    frag_mz_df = predict_dict['fragment_mz_df']
+    frag_inten_df = predict_dict['fragment_intensity_df']
+
+    if labeled_sites:
+        masks = get_unlabeled_fragment_mask(
+            precursor_df.sequence.values[0],
+            frag_mz_df, labeled_sites
+        )
+
+        frag_mz_df.values[:] = frag_mz_df.values*masks
+        frag_inten_df.values[:] = frag_inten_df.values*masks
+
     return get_peptide_info_from_dfs(
-        predict_dict["precursor_df"], 
-        predict_dict['fragment_mz_df'], 
-        predict_dict['fragment_intensity_df'], 
-        max_rt_in_seconds
+        precursor_df, 
+        frag_mz_df, 
+        frag_inten_df, 
+        max_rt_in_seconds, 
+        use_predicted_values
     )
 
 def parse_one_pept_df(
@@ -151,10 +207,16 @@ def _get_frag_num(frag_type, idx, nAA):
         frag_num = nAA-idx-1
     return frag_num
 
-def get_mod_seq(sequence, mods, mod_sites, **kwargs):
+def get_mod_seq(sequence, mods, mod_sites, mod_as_mass=True, **kwargs):
     seq = '_'+sequence+'_'
     if len(mods) == 0: return seq
     mods = mods.split(';')
+    if mod_as_mass: 
+        mods = [round(MOD_MASS[mod]) for mod in mods]
+        mods = [
+            '+'+str(mod) if mod > 0 else str(mod) 
+            for mod in mods
+        ]
     mod_sites = [int(i) for i in mod_sites.split(';')]
     mod_sites = [i if i>=0 else len(seq)-1 for i in mod_sites]
     mods = list(zip(mod_sites, mods))
@@ -165,26 +227,19 @@ def get_mod_seq(sequence, mods, mod_sites, **kwargs):
     return seq
 
 def get_frag_df_from_peptide_info(
-    peptide_info
+    peptide_info:pd.DataFrame
 )->pd.DataFrame:
-    return pd.concat([
-        pd.DataFrame().from_dict(
-            peptide_info['fragment_intensities'], orient='index', 
-            columns=['intensity_values']
-        ),
-        pd.DataFrame().from_dict(
-            peptide_info['fragment_mzs'], orient='index', 
-            columns=['mz_values']
-        ),
-        pd.DataFrame().from_dict(
-            peptide_info['fragment_numbers'], orient='index', 
-            columns=['fragment_numbers']
-        ),
-        pd.DataFrame().from_dict(
-            peptide_info['fragment_indices'], orient='index', 
-            columns=['fragment_indices']
-        ),
-    ], axis=1).reset_index().rename(columns={'index':'ions'})
+    return peptide_info[
+        ['frag_intensity', 'frag_mz', 
+        'frag_number', 'frag_index',
+        'ion']
+    ].rename(columns={
+        'frag_intensity':'intensity_values',
+        'frag_mz':'mz_values',
+        'frag_number':'fragment_numbers',
+        'frag_index':'fragment_indices',
+        'ion':'ions',
+    })
 
 def match_tims_ms2_for_tuning(
     ms_data: TimsTOF,
@@ -202,7 +257,7 @@ def match_tims_ms2_for_tuning(
 def match_ms2(
     spec_df: pd.DataFrame, 
     frag_df: pd.DataFrame, 
-    mz_tol=50, 
+    mz_tol=20, 
     matching_mode="centroid",
 )->Tuple[pd.DataFrame, float, float]:
     """
@@ -250,7 +305,10 @@ def match_ms2(
     matched_df['mz_values'] = matched_mzs
     matched_df['intensity_values'] = matched_intens
     matched_df['mass_dev_ppm'] = mass_errs
-    matched_df = matched_df[matched_idxes!=-1]
+    matched_df = matched_df[matched_intens>0]
+
+    if len(matched_df) == 0:
+        return matched_df, 0, 0
 
     pcc = pearson_correlation(
         torch.tensor(matched_intens.reshape(1,-1)),

@@ -116,9 +116,8 @@ class MS2_Plot:
     def _init_plot(self, title):
 
         self.fig = plotly.subplots.make_subplots(
-            rows=(
-                self.rows
-            ), cols=3, 
+            rows=self.rows,
+            cols=3, 
             shared_xaxes=True,
             specs=self.specs,
             vertical_spacing=self.vertical_spacing,
@@ -285,6 +284,7 @@ class PeakPlot:
         for mz, inten, ion in df[
             ['mz_values','intensity_values','ions']
         ].values:
+            ion = ion.lower().replace('modloss','modnl')
             self.fig.add_annotation(
                 x=mz, y=inten+yshift,
                 text=ion,
@@ -294,18 +294,18 @@ class PeakPlot:
                 col=self.col,
             )
         
-        neg_ay = max_inten*0.3
         pred_df = plot_df.query('intensity_values<0')
         pred_df = pred_df[~pred_df.ions.isin(set(df.ions))]
         for mz, inten, ion in pred_df[
             ['mz_values','intensity_values','ions']
         ].values:
+            ion = ion.lower().replace('modloss','modnl')
             self.fig.add_annotation(
                 x=mz, y=inten-yshift,
                 text=ion,
                 textangle=-90,
                 font_size=10,
-                ay=inten-yshift-neg_ay,
+                ay=inten-yshift-max_inten*(0.28+len(ion)/60),
                 ayref=f'y{self.row}',
                 yref=f'y{self.row}',
                 row=self.row,
@@ -362,7 +362,7 @@ class FragCoveragePlot:
         d = (
             plot_df.mz_values.max() - 
             plot_df.mz_values.min()
-        ) * 2/8
+        ) * 2/len(sequence)
         aa_x_positions = np.linspace(
             plot_df.mz_values.min()+d, 
             plot_df.mz_values.max()-d, 

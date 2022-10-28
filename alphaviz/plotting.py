@@ -1307,6 +1307,8 @@ def plot_elution_profile(
     hovermode:str = 'x unified',
     theme_template:str = 'plotly_white',
     include_precursor:bool = True,
+    include_ms1:bool = True,
+    row:int=None, col:int=None,
 ):
     """Plot an elution profile plot for the specified precursor and all
     his identified fragments.
@@ -1385,7 +1387,8 @@ def plot_elution_profile(
                 # label=f"precursor ({round(peptide_info['mz'], 3)})",
                 label='precursor',
                 marker_color=dict(color=colors_set[0])
-            )
+            ),
+            row=row, col=col
         )
     # create elution profiles for all fragments
     for ind, (frag, frag_mz) in enumerate(peptide_info['fragments'].items()):
@@ -1404,7 +1407,8 @@ def plot_elution_profile(
                     remove_zeros=True,
                     label=f"{frag} ({round(frag_mz, 3)})",
                     marker_color=dict(color=colors_set[ind+1])
-                )
+                ),
+                row=row, col=col
             )
 
     fig.update_layout(
