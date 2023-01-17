@@ -272,7 +272,7 @@ class XIC_1D_Plot():
                     mz=peptide_info["precursor_mz"].values[0]
                 ),
                 legend_group = 'MS1_M1',
-                marker_color=dict(color=colors_set[0])
+                marker_color=dict(color=colors_set[-1])
             )
             # self._add_trace_df(
             #     fig, row, col,

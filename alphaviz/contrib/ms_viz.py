@@ -255,12 +255,13 @@ class MS_Viz:
         )
 
         spec_df = self.tims_data[
-            rt_slice, im_slice
+            rt_slice, im_slice, 
+            peptide_info['precursor_mz'].values[0]:peptide_info['precursor_mz'].values[0],
         ]
-        spec_df = spec_df[
-            (spec_df.quad_low_mz_values <= peptide_info['precursor_mz'].values[0])
-            &(spec_df.quad_high_mz_values >= peptide_info['precursor_mz'].values[0])
-        ].reset_index(drop=True)
+        # spec_df = spec_df[
+        #     (spec_df.quad_low_mz_values <= peptide_info['precursor_mz'].values[0])
+        #     &(spec_df.quad_high_mz_values >= peptide_info['precursor_mz'].values[0])
+        # ].reset_index(drop=True)
 
         _df = spec_df
 
@@ -280,9 +281,14 @@ class MS_Viz:
                 ):
                     _df_left = df
                     min_rt_left_dist = abs(df.rt_values.values[0]-query_rt)
-            if _df_left is _df_right:
+            if '_df_left' in locals() and '_df_right' in locals():
+                if _df_left is _df_right:
+                    _df = _df_left
+                else:
+                    _df = pd.concat([_df_left, _df_right])
+            elif '_df_left' in locals():
                 _df = _df_left
-            else:
-                _df = pd.concat([_df_left, _df_right])
+            elif '_df_right' in locals():
+                _df = _df_right
         return _df
 
