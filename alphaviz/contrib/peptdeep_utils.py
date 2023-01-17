@@ -84,10 +84,9 @@ def get_peptide_info_from_dfs(
         df['mod_sites'].values[0],
     )]
     df['mod_seq_charge'] = df['mod_seq'].str.cat(','+df['charge'].astype('U'))
-
-    df["rt_pred"] *= max_rt_in_seconds
     
     if use_predicted_values:
+        df["rt_pred"] *= max_rt_in_seconds
         df['rt_sec'] = df['rt_pred']
         df['im'] = df['mobility_pred']
     else:

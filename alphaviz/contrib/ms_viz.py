@@ -28,6 +28,7 @@ class MS_Viz:
     rt_sec_tol_to_slice_spectrum = 3.0
     im_tol_to_slice_spectrum = 0.05
     find_closest_ms2_by_rt_sec = True
+    use_predicted_ms2 = True
     def __init__(self, 
         model_mgr:ModelManager,
         frag_types:list = ['b','y','b-modloss','y-modloss'],
@@ -97,6 +98,22 @@ class MS_Viz:
             self.tims_data.rt_max_value,
             self.prediction_mode,
             self._labeled_sites if self.remove_unlabeled_fragments else None
+        )
+
+    def peptide_info_from_dfs(self,
+        one_pept_df:pd.DataFrame,
+        frag_mz_df: pd.DataFrame,
+        frag_inten_df:pd.DataFrame = None,
+    ):
+        if frag_inten_df is None:
+            frag_inten_df = frag_mz_df.copy()
+            frag_inten_df.values[:] = 1.0
+
+        return get_peptide_info_from_dfs(
+            one_pept_df, frag_mz_df,
+            frag_inten_df,
+            self.tims_data.rt_max_value,
+            use_predicted_values=False,
         )
 
     def extract_one_peptide_info(self,

@@ -419,7 +419,7 @@ class FragCoveragePlot:
             plot_df.ions.str.startswith(ion_type)
         ].query("intensity_values>0")
 
-        covs = np.zeros(nAA, dtype=np.int64)
+        covs = np.zeros(len(plot_df), dtype=np.int64)
         if ion_type in 'abc':
             covs[plot_df.fragment_indices] = 1
         else:
@@ -462,7 +462,7 @@ class FragCoveragePlot:
                     ty=-1.0,
                     s=nAA-i
                 )
-        for i, cov in enumerate(covs):
+        for i, cov in enumerate(covs[:nAA]):
             if cov:
                 pos = get_positions(ion_type, i)
                 self.fig.add_trace(
