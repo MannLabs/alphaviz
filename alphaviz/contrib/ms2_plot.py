@@ -13,8 +13,9 @@ color_map:dict = {
     '-': 'lightgrey', # '-' means umnatched
     'b': 'blue', 
     'y': 'red',
-    'c': 'blue', 
-    'z': 'red',
+    'c': 'purple', 
+    'z': 'darkred',
+    'M': 'orange',
 }
 
 class MS2_Plot:
@@ -442,7 +443,7 @@ class FragCoveragePlot:
         covs = np.zeros(max(plot_df.fragment_indices.max()+2,nAA), dtype=np.int64)
         if ion_type in 'abc':
             covs[plot_df.fragment_indices] = 1
-        else:
+        elif ion_type in 'xyz':
             covs[plot_df.fragment_indices+1] = 1
 
         def get_positions(ion_type, i):
@@ -464,7 +465,7 @@ class FragCoveragePlot:
                     ty=1.0,
                     s=i+1
                 )
-            else:
+            elif ion_type in 'xyz':
                 return dict(
                     x=[
                         aa_x_positions[i], 

@@ -33,7 +33,7 @@ class XIC_1D_Plot():
 
     def plot(self,
         tims_data:TimsTOF,
-        peptide_info: pd.DataFrame,
+        pep_frag_df: pd.DataFrame,
         include_precursor:bool=True,
         include_ms1:bool=True,
     )->go.Figure:
@@ -41,8 +41,8 @@ class XIC_1D_Plot():
 
         Parameters
         ----------
-        peptide_info : pd.DataFrame
-            alphaviz peptide_info df
+        pep_frag_df : pd.DataFrame
+            alphaviz pep_frag_df df
 
         height : int, optional
             fig height, by default 400
@@ -54,7 +54,7 @@ class XIC_1D_Plot():
             `alphaviz.plotting.plot_elution_profile`
         """
         return self.plot_elution_profiles(
-            tims_data, peptide_info_list=peptide_info,
+            tims_data, pep_frag_df_list=pep_frag_df,
             include_precursor=include_precursor,
             include_ms1=include_ms1,
         )
@@ -126,7 +126,7 @@ class XIC_1D_Plot():
         fig:go.Figure,
         row:int, col:int,
         tims_data: TimsTOF,
-        peptide_info: pd.DataFrame,
+        pep_frag_df: pd.DataFrame,
         include_precursor:bool = True,
         include_ms1:bool = True,
     ):
@@ -138,7 +138,7 @@ class XIC_1D_Plot():
         raw_data : alphatims.bruker.TimsTOF
             An alphatims.bruker.TimsTOF data object.
 
-        peptide_info : pd.DataFrame
+        pep_frag_df : pd.DataFrame
             Peptide information including sequence, fragment patterns, rt,
             and im values.
 
@@ -151,27 +151,27 @@ class XIC_1D_Plot():
             The elution profile plot in retention time dimension for the specified peptide and all his fragments.
         """
         rt_slice = slice(
-            peptide_info['rt_sec'].values[0] - self.rt_sec_win/2, 
-            peptide_info['rt_sec'].values[0] + self.rt_sec_win/2
+            pep_frag_df['rt_sec'].values[0] - self.rt_sec_win/2, 
+            pep_frag_df['rt_sec'].values[0] + self.rt_sec_win/2
         )
         im_slice = slice(
-            peptide_info['im'].values[0] - self.im_win/2, 
-            peptide_info['im'].values[0] + self.im_win/2
+            pep_frag_df['im'].values[0] - self.im_win/2, 
+            pep_frag_df['im'].values[0] + self.im_win/2
         )
         ms1_prec_mz_slice = slice(
-            peptide_info['precursor_mz'].values[0]
+            pep_frag_df['precursor_mz'].values[0]
              * (1 - self.ms1_ppm_tol / 10**6), 
-            peptide_info['precursor_mz'].values[0]
+            pep_frag_df['precursor_mz'].values[0]
              * (1 + self.ms1_ppm_tol / 10**6)
         )
         ms2_prec_mz_slice = slice(
-            peptide_info['precursor_mz'].values[0]
+            pep_frag_df['precursor_mz'].values[0]
              * (1 - self.ms2_ppm_tol / 10**6), 
-            peptide_info['precursor_mz'].values[0]
+            pep_frag_df['precursor_mz'].values[0]
              * (1 + self.ms2_ppm_tol / 10**6)
         )
 
-        if len(peptide_info) + 2 <= len(
+        if len(pep_frag_df) + 2 <= len(
             getattr(px.colors.qualitative, self.colorscale_qualitative)
         ):
             colors_set = getattr(
@@ -180,7 +180,7 @@ class XIC_1D_Plot():
         else:
             colors_set = px.colors.sample_colorscale(
                 self.colorscale_sequential, 
-                samplepoints=len(peptide_info) + 2
+                samplepoints=len(pep_frag_df) + 2
             )
 
         ms1_raw_indices = tims_data[
@@ -245,16 +245,16 @@ class XIC_1D_Plot():
                 tims_data, ms1_m0_indices, ms1_view_indices,
                 label=self.label_format.format(
                     ion='MS1_M0', 
-                    mz=peptide_info["precursor_mz"].values[0]
+                    mz=pep_frag_df["precursor_mz"].values[0]
                 ),
                 legend_group = 'MS1_M0',
                 marker_color=dict(color=colors_set[0])
             )
 
             ms1_prec_m1_slice = slice(
-                (peptide_info['precursor_mz'].values[0]+1.0033/peptide_info['charge'].values[0])
+                (pep_frag_df['precursor_mz'].values[0]+1.0033/pep_frag_df['charge'].values[0])
                 * (1 - self.ms1_ppm_tol / 10**6), 
-                (peptide_info['precursor_mz'].values[0]+1.0033/peptide_info['charge'].values[0])
+                (pep_frag_df['precursor_mz'].values[0]+1.0033/pep_frag_df['charge'].values[0])
                 * (1 + self.ms1_ppm_tol / 10**6)
             )
             ms1_m1_indices = tims_data[
@@ -269,7 +269,7 @@ class XIC_1D_Plot():
                 tims_data, ms1_m1_indices, ms1_view_indices,
                 label=self.label_format.format(
                     ion='MS1_M1', 
-                    mz=peptide_info["precursor_mz"].values[0]
+                    mz=pep_frag_df["precursor_mz"].values[0]
                 ),
                 legend_group = 'MS1_M1',
                 marker_color=dict(color=colors_set[-1])
@@ -277,7 +277,7 @@ class XIC_1D_Plot():
             # self._add_trace_df(
             #     fig, row, col,
             #     tims_data.as_dataframe(ms1_m0_indices), ms1_view_df,
-            #     label=f'MS1 M0 ({peptide_info["precursor_mz"].values[0]:.3f})',
+            #     label=f'MS1 M0 ({pep_frag_df["precursor_mz"].values[0]:.3f})',
             #     marker_color=dict(color=colors_set[0])
             # )
         # create elution profiles for all fragments
@@ -294,7 +294,7 @@ class XIC_1D_Plot():
                 tims_data, ms2_m0_indices, ms2_view_indices,
                 label=self.label_format.format(
                     ion='MS2_M0', 
-                    mz=peptide_info["precursor_mz"].values[0]
+                    mz=pep_frag_df["precursor_mz"].values[0]
                 ),
                 legend_group = 'MS2_M0',
                 marker_color=dict(color=colors_set[1])
@@ -302,11 +302,11 @@ class XIC_1D_Plot():
             # self._add_trace_df(
             #     fig, row, col,
             #     tims_data.as_dataframe(ms2_m0_indices), ms2_view_df,
-            #     label=f'MS2 M0 ({peptide_info["precursor_mz"].values[0]:.3f})',
+            #     label=f'MS2 M0 ({pep_frag_df["precursor_mz"].values[0]:.3f})',
             #     marker_color=dict(color=colors_set[1])
             # )
         for ind, (frag, frag_mz) in enumerate(
-            peptide_info[['ion','frag_mz']].values
+            pep_frag_df[['ion','frag_mz']].values
         ):
             frag_mz = float(frag_mz)
             if frag_mz < self.min_frag_mz: continue
@@ -341,9 +341,9 @@ class XIC_1D_Plot():
             # )
         
         fig.add_vline(
-            peptide_info['rt_sec'].values[0]/60 if 
+            pep_frag_df['rt_sec'].values[0]/60 if 
             self.view_dim == 'rt' else 
-            peptide_info['im'].values[0], 
+            pep_frag_df['im'].values[0], 
             line_dash="dash", 
             line_color="grey", row=row, col=col,
         )
@@ -351,30 +351,30 @@ class XIC_1D_Plot():
 
     def plot_elution_profiles(self,
         tims_data:TimsTOF,
-        peptide_info_list: pd.DataFrame,
+        pep_frag_df_list: pd.DataFrame,
         include_precursor:bool = True,
         include_ms1:bool = True,
     ):
-        if isinstance(peptide_info_list, pd.DataFrame):
-            peptide_info_list = [peptide_info_list]
+        if isinstance(pep_frag_df_list, pd.DataFrame):
+            pep_frag_df_list = [pep_frag_df_list]
 
         fig = make_subplots(
-            rows=len(peptide_info_list), 
+            rows=len(pep_frag_df_list), 
             cols=1, 
             shared_xaxes=True,
             x_title='RT (min)' if self.view_dim == 'rt' else 'Mobility',
             y_title='Intensity',
-            vertical_spacing=0.2/len(peptide_info_list),
+            vertical_spacing=0.2/len(pep_frag_df_list),
             subplot_titles=[
-                _['mod_seq_charge'].values[0] for _ in peptide_info_list
+                _['mod_seq_charge'].values[0] for _ in pep_frag_df_list
             ]
         )
 
-        for i,peptide_info in enumerate(peptide_info_list):
+        for i,pep_frag_df in enumerate(pep_frag_df_list):
             self._add_elution_profile(
                 fig, row=i+1,col=1,
                 tims_data=tims_data, 
-                peptide_info=peptide_info,
+                pep_frag_df=pep_frag_df,
                 include_precursor=include_precursor,
                 include_ms1=include_ms1,
             )

@@ -55,7 +55,7 @@ def get_unlabeled_fragment_mask(
     return masks
 
 
-def get_peptide_info_from_dfs(
+def get_pep_frag_df_from_dfs(
     one_pept_df: Union[pd.DataFrame, pd.Series], 
     fragment_mz_df: pd.DataFrame, 
     fragment_intensity_df:pd.DataFrame, 
@@ -67,7 +67,7 @@ def get_peptide_info_from_dfs(
     Returns
     -------
     pd.DataFrame
-        peptide_info df in alphaviz format
+        pep_frag_df in alphaviz format
     """
     df = parse_one_pept_df(one_pept_df)
     df = calc_precursor_mz(df)
@@ -155,7 +155,7 @@ def predict_one_peptide(
     Returns
     -------
     pd.DataFrame
-        peptide_info in alphaviz format
+        pep_frag_df in alphaviz format
     """
     df = parse_one_pept_df(one_pept_df)
     predict_dict = model_mgr.predict_all(
@@ -176,7 +176,7 @@ def predict_one_peptide(
         frag_mz_df.values[:] = frag_mz_df.values*masks
         frag_inten_df.values[:] = frag_inten_df.values*masks
 
-    return get_peptide_info_from_dfs(
+    return get_pep_frag_df_from_dfs(
         precursor_df, 
         frag_mz_df, 
         frag_inten_df, 
@@ -200,7 +200,7 @@ def parse_one_pept_df(
     return df 
 
 def _get_frag_num(frag_type, idx, nAA):
-    if frag_type[0] in "abc":
+    if frag_type[0] not in "xyz":
         frag_num = idx+1
     else:
         frag_num = nAA-idx-1
@@ -225,10 +225,10 @@ def get_mod_seq(sequence, mods, mod_sites, mod_as_mass=True, **kwargs):
         seq = seq[:i+1]+'('+mod+')'+seq[i+1:]
     return seq
 
-def get_frag_df_from_peptide_info(
-    peptide_info:pd.DataFrame
+def get_frag_df_from_pep_frag_df(
+    pep_frag_df:pd.DataFrame
 )->pd.DataFrame:
-    return peptide_info[
+    return pep_frag_df[
         ['frag_intensity', 'frag_mz', 
         'frag_number', 'frag_index',
         'ion']

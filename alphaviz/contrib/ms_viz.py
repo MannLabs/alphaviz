@@ -15,8 +15,8 @@ from .xic_plot import XIC_1D_Plot
 from .reader_utils import load_psms
 
 from .peptdeep_utils import (
-    match_ms2, get_frag_df_from_peptide_info,
-    predict_one_peptide, get_peptide_info_from_dfs,
+    match_ms2, get_frag_df_from_pep_frag_df,
+    predict_one_peptide, get_pep_frag_df_from_dfs,
 )
 
 class MS_Viz:
@@ -90,7 +90,7 @@ class MS_Viz:
             add_modification_mapping=add_modification_mapping,
         )
 
-    def predict_one_peptide_info(self,
+    def predict_one_pep_frag_df(self,
         one_pept_df:pd.DataFrame
     )->pd.DataFrame:
         return predict_one_peptide(
@@ -100,7 +100,7 @@ class MS_Viz:
             self._labeled_sites if self.remove_unlabeled_fragments else None
         )
 
-    def peptide_info_from_dfs(self,
+    def pep_frag_df_from_dfs(self,
         one_pept_df:pd.DataFrame,
         frag_mz_df: pd.DataFrame,
         frag_inten_df:pd.DataFrame = None,
@@ -109,17 +109,17 @@ class MS_Viz:
             frag_inten_df = frag_mz_df.copy()
             frag_inten_df.values[:] = 1.0
 
-        return get_peptide_info_from_dfs(
+        return get_pep_frag_df_from_dfs(
             one_pept_df, frag_mz_df,
             frag_inten_df,
             self.tims_data.rt_max_value,
             use_predicted_values=False,
         )
 
-    def extract_one_peptide_info(self,
+    def extract_one_pep_frag_df(self,
         one_pept_df:pd.DataFrame,
     )->pd.DataFrame:
-        return get_peptide_info_from_dfs(
+        return get_pep_frag_df_from_dfs(
             one_pept_df,
             self.fragment_mz_df, 
             self.fragment_intensity_df,
@@ -139,12 +139,12 @@ class MS_Viz:
             )
 
     def plot_elution_profile_heatmap(self,
-        peptide_info: pd.DataFrame,
+        pep_frag_df: pd.DataFrame,
     ):
         raise NotImplementedError('TODO for timsTOF data')
 
     def plot_elution_profile(self,
-        peptide_info: pd.DataFrame,
+        pep_frag_df: pd.DataFrame,
         include_precursor:bool=True,
         include_ms1:bool=True,
     )->go.Figure:
@@ -152,8 +152,8 @@ class MS_Viz:
 
         Parameters
         ----------
-        peptide_info : pd.DataFrame
-            alphaviz peptide_info, 
+        pep_frag_df : pd.DataFrame
+            alphaviz pep_frag_df, 
             see `self.predict_one_peptide`.
 
         rt_tol : float, optional
@@ -175,7 +175,7 @@ class MS_Viz:
         self.xic_1d_plot.ms2_ppm_tol = self.ms2_ppm_tol
         return self.xic_1d_plot.plot(
             self.tims_data,
-            peptide_info=peptide_info,
+            pep_frag_df=pep_frag_df,
             include_precursor=include_precursor,
             include_ms1=include_ms1,
         )
@@ -186,7 +186,7 @@ class MS_Viz:
         return pd.concat([spec_df, plot_df], ignore_index=True)
 
     def plot_mirror_ms2(self, 
-        peptide_info:pd.DataFrame,
+        pep_frag_df:pd.DataFrame,
         frag_df:pd.DataFrame=None, 
         spec_df:pd.DataFrame=None, 
         title:str="", 
@@ -199,8 +199,8 @@ class MS_Viz:
         Parameters
         ----------
 
-        peptide_info : pd.DataFrame
-            peptide_info in alphaviz format
+        pep_frag_df : pd.DataFrame
+            pep_frag_df in alphaviz format
 
         frag_df : pd.DataFrame, optional
             Fragment DF
@@ -221,9 +221,9 @@ class MS_Viz:
             plotly Figure object
         """
         if frag_df is None:
-            frag_df = get_frag_df_from_peptide_info(peptide_info)
+            frag_df = get_frag_df_from_pep_frag_df(pep_frag_df)
         if spec_df is None:
-            spec_df = self.get_ms2_spec_df(peptide_info)
+            spec_df = self.get_ms2_spec_df(pep_frag_df)
 
         frag_df = frag_df[
             frag_df.mz_values>=max(
@@ -237,8 +237,8 @@ class MS_Viz:
             matching_mode=matching_mode,
         )
 
-        peptide_info['pcc'] = pcc
-        peptide_info['spc'] = spc
+        pep_frag_df['pcc'] = pcc
+        pep_frag_df['spc'] = spc
 
         if plot_unmatched_peaks:
             plot_df = self._add_unmatched_df(
@@ -246,26 +246,26 @@ class MS_Viz:
             )
 
         if not title:
-            title = f"{peptide_info['mod_seq_charge'].values[0]} PCC={pcc:.3f}"
+            title = f"{pep_frag_df['mod_seq_charge'].values[0]} PCC={pcc:.3f}"
 
         plot_df = plot_df.query('intensity_values!=0')
 
         return self.ms2_plot.plot(
             plot_df, 
             title=title,
-            sequence=peptide_info['sequence'].values[0],
+            sequence=pep_frag_df['sequence'].values[0],
             plot_unmatched_peaks=plot_unmatched_peaks,
         )
 
-    def get_ms2_spec_df(self, peptide_info)->pd.DataFrame:
+    def get_ms2_spec_df(self, pep_frag_df)->pd.DataFrame:
         im_slice = (
-            slice(None) if peptide_info['im'].values[0] == 0 else 
+            slice(None) if pep_frag_df['im'].values[0] == 0 else 
             slice(
-                peptide_info['im'].values[0]-self.im_tol_to_slice_spectrum,
-                peptide_info['im'].values[0]+self.im_tol_to_slice_spectrum
+                pep_frag_df['im'].values[0]-self.im_tol_to_slice_spectrum,
+                pep_frag_df['im'].values[0]+self.im_tol_to_slice_spectrum
             )
         )
-        query_rt = peptide_info['rt_sec'].values[0]
+        query_rt = pep_frag_df['rt_sec'].values[0]
         rt_slice = slice(
             query_rt-self.rt_sec_tol_to_slice_spectrum,
             query_rt+self.rt_sec_tol_to_slice_spectrum
@@ -273,11 +273,11 @@ class MS_Viz:
 
         spec_df = self.tims_data[
             rt_slice, im_slice, 
-            peptide_info['precursor_mz'].values[0]:peptide_info['precursor_mz'].values[0],
+            pep_frag_df['precursor_mz'].values[0]:pep_frag_df['precursor_mz'].values[0],
         ]
         # spec_df = spec_df[
-        #     (spec_df.quad_low_mz_values <= peptide_info['precursor_mz'].values[0])
-        #     &(spec_df.quad_high_mz_values >= peptide_info['precursor_mz'].values[0])
+        #     (spec_df.quad_low_mz_values <= pep_frag_df['precursor_mz'].values[0])
+        #     &(spec_df.quad_high_mz_values >= pep_frag_df['precursor_mz'].values[0])
         # ].reset_index(drop=True)
 
         _df = spec_df
