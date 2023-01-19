@@ -11,7 +11,10 @@ from .msplot_utils import _plot_scatter
 
 color_map:dict = {
     '-': 'lightgrey', # '-' means umnatched
-    'b': 'blue', 'y': 'red',
+    'b': 'blue', 
+    'y': 'red',
+    'c': 'blue', 
+    'z': 'red',
 }
 
 class MS2_Plot:
@@ -228,12 +231,24 @@ class PeakPlot:
                 col=self.col,
             )
         
-        self._plot_one_ion_type_scatter(
-            plot_df, 'b'
-        )
-        self._plot_one_ion_type_scatter(
-            plot_df, 'y'
-        )
+        for ion_type in np.unique(plot_df.ions.str[0].values):
+            self._plot_one_ion_type_scatter(
+                plot_df, ion_type
+            )
+
+        # self._plot_one_ion_type_scatter(
+        #     plot_df, 'b'
+        # )
+        # self._plot_one_ion_type_scatter(
+        #     plot_df, 'y'
+        # )
+        
+        # self._plot_one_ion_type_scatter(
+        #     plot_df, 'c'
+        # )
+        # self._plot_one_ion_type_scatter(
+        #     plot_df, 'z'
+        # )
 
         self._plot_peak_vlines(
             plot_df,
@@ -370,14 +385,19 @@ class FragCoveragePlot:
         )
 
         self._plot_sequence(sequence, aa_x_positions)
-        self._plot_coverage_one_frag_type(
-            plot_df, sequence, aa_x_positions, 
-            'b', color_map['b'],
-        )
-        self._plot_coverage_one_frag_type(
-            plot_df, sequence, aa_x_positions, 
-            'y', color_map['y'],
-        )
+        for ion_type in np.unique(plot_df.ions.str[0]):
+            self._plot_coverage_one_frag_type(
+                plot_df, sequence, aa_x_positions, 
+                ion_type, color_map[ion_type],
+            )
+        # self._plot_coverage_one_frag_type(
+        #     plot_df, sequence, aa_x_positions, 
+        #     'b', color_map['b'],
+        # )
+        # self._plot_coverage_one_frag_type(
+        #     plot_df, sequence, aa_x_positions, 
+        #     'y', color_map['y'],
+        # )
         self.fig.update_yaxes(
             visible=False,
             range=(-1.1, 1.1),
@@ -419,7 +439,7 @@ class FragCoveragePlot:
             plot_df.ions.str.startswith(ion_type)
         ].query("intensity_values>0")
 
-        covs = np.zeros(len(plot_df), dtype=np.int64)
+        covs = np.zeros(max(plot_df.fragment_indices.max()+2,nAA), dtype=np.int64)
         if ion_type in 'abc':
             covs[plot_df.fragment_indices] = 1
         else:

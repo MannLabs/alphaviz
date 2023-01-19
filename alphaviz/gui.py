@@ -2035,7 +2035,7 @@ class TargetModeTab(object):
             value=pd.DataFrame(
                 columns=['sequence', 'mods', 'mod_sites', 'charge']
             ),
-            hidden_columns=['frag_end_idx', 'frag_start_idx'],
+            hidden_columns=['frag_stop_idx', 'frag_start_idx'],
             widths={'index': 70},
             sizing_mode='stretch_width',
             layout='fit_data_table',
@@ -2407,11 +2407,11 @@ class TargetModeTab(object):
                         self.targeted_peptides_table_pred.value.loc[
                             self.targeted_peptides_table_pred.selection[0],
                             ['sequence', 'charge', 'precursor_mz',
-                                'rt_pred', 'mobility_pred', 'frag_start_idx', 'frag_end_idx']
+                                'rt_pred', 'mobility_pred', 'frag_start_idx', 'frag_stop_idx']
                         ].to_dict()
                     index_range = range(
                         self.peptide_prediction['frag_start_idx'],
-                        self.peptide_prediction['frag_end_idx']
+                        self.peptide_prediction['frag_stop_idx']
                     )
                     self.peptide_prediction['mz'] = \
                         self.peptide_prediction.pop('precursor_mz')

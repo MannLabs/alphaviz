@@ -1,6 +1,7 @@
 alphatims
 peptdeep
 alphabase
+alpharaw
 
 holoviews
 xarray

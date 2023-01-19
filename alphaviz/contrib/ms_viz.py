@@ -63,7 +63,7 @@ class MS_Viz:
 
     def load_ms_data(self, ms_file, ms_file_type, dda:bool):
         self.tims_match = PepSpecMatch_AlphaTims(
-            self.charged_frag_types, centroid_mode=True,
+            self.charged_frag_types, match_closest=True,
         )
         self.tims_match.load_ms_data(ms_file, ms_file_type, dda)
         self.tims_data = self.tims_match.tims_data

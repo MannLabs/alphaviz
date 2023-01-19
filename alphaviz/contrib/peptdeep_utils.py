@@ -72,10 +72,10 @@ def get_peptide_info_from_dfs(
     df = parse_one_pept_df(one_pept_df)
     df = calc_precursor_mz(df)
     frag_mz_df = fragment_mz_df.iloc[
-        df.frag_start_idx.values[0]:df.frag_end_idx.values[0],:
+        df.frag_start_idx.values[0]:df.frag_stop_idx.values[0],:
     ].reset_index(drop=True)
     frag_inten_df = fragment_intensity_df.iloc[
-        df.frag_start_idx.values[0]:df.frag_end_idx.values[0],:
+        df.frag_start_idx.values[0]:df.frag_stop_idx.values[0],:
     ].reset_index(drop=True)
 
     df['mod_seq'] = [get_mod_seq(
@@ -97,7 +97,7 @@ def get_peptide_info_from_dfs(
             df['im'] = 0
 
 
-    nAA = df["nAA"].values[0]
+    nAA = len(frag_mz_df)+1
     charged_frag_types = []
     frag_types = []
     frag_charges = []
@@ -283,7 +283,8 @@ def match_ms2(
         matched_idxes = match_profile_mz(
             spec_df.mz_values.values,
             frag_df.mz_values.values, 
-            tols
+            tols,
+            spec_df.intensity_values.values,
         )
     else:
         matched_idxes = match_centroid_mz(
