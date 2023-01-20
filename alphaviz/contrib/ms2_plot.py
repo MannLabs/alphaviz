@@ -14,8 +14,8 @@ color_map:dict = {
     'b': 'blue', 
     'y': 'red',
     'c': 'purple', 
-    'z': 'darkred',
-    'M': 'orange',
+    'z': 'orange',
+    'M': 'black',
 }
 
 class MS2_Plot:
@@ -440,7 +440,11 @@ class FragCoveragePlot:
             plot_df.ions.str.startswith(ion_type)
         ].query("intensity_values>0")
 
-        covs = np.zeros(max(plot_df.fragment_indices.max()+2,nAA), dtype=np.int64)
+        covs = np.zeros(max(
+            plot_df.fragment_indices.max()+2 
+            if len(plot_df)>0 else 0,
+            nAA
+        ), dtype=np.int64)
         if ion_type in 'abc':
             covs[plot_df.fragment_indices] = 1
         elif ion_type in 'xyz':

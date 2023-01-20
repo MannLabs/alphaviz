@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 import plotly.graph_objects as go
 
@@ -190,7 +191,7 @@ class MS_Viz:
         frag_df:pd.DataFrame=None, 
         spec_df:pd.DataFrame=None, 
         title:str="", 
-        matching_mode:str="centroid",
+        matching_mode:str="closest",
         plot_unmatched_peaks:bool=False,
     )->go.Figure:
         """Plot mirrored MS2 for PSMs. 
@@ -209,8 +210,8 @@ class MS_Viz:
             AlphaTims sliced DataFrame for raw data,
             by default None
 
-        matching_mode : str, optional
-            peak matching mode, by default "centroid"
+        matching_mode : {'closest', 'highest'}, optional
+            peak matching mode, by default "closest"
         
         plot_unmatched_peaks : bool, optional
             by default True
@@ -225,12 +226,8 @@ class MS_Viz:
         if spec_df is None:
             spec_df = self.get_ms2_spec_df(pep_frag_df)
 
-        frag_df = frag_df[
-            frag_df.mz_values>=max(
-                spec_df.mz_values.min()-0.1, self._min_frag_mz
-            )
-        ]
-        spec_df['intensity_values'] = spec_df.intensity_values.astype(float)
+        frag_df = frag_df.query(f'mz_values>={max(spec_df.mz_values.min()-0.1, self._min_frag_mz)}')
+        spec_df['intensity_values'] = spec_df.intensity_values.astype(np.float64)
         plot_df, pcc, spc = match_ms2(
             spec_df=spec_df, frag_df=frag_df,
             mz_tol=self.ms2_ppm_tol, 

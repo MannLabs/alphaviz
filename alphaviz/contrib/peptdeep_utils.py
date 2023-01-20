@@ -10,8 +10,8 @@ from alphabase.peptide.precursor import calc_precursor_mz
 
 from typing import Union, Tuple
 
-from peptdeep.mass_spec.match import (
-    match_centroid_mz, match_profile_mz
+from alpharaw.match.match_utils import (
+    match_closest_peaks, match_highest_peaks
 )
 
 from peptdeep.model.ms2 import (
@@ -257,7 +257,7 @@ def match_ms2(
     spec_df: pd.DataFrame, 
     frag_df: pd.DataFrame, 
     mz_tol=20, 
-    matching_mode="centroid",
+    matching_mode="closest",
 )->Tuple[pd.DataFrame, float, float]:
     """
 
@@ -277,20 +277,21 @@ def match_ms2(
         float: Spearman correlation
     """
     frag_df = frag_df.copy()
-    spec_df.sort_values('mz_values', inplace=True)
-    tols = spec_df.mz_values.values*mz_tol*1e-6
-    if matching_mode == 'profile':
-        matched_idxes = match_profile_mz(
+    spec_df = spec_df.sort_values('mz_values')
+    tols = frag_df.mz_values.values*mz_tol*1e-6
+    if matching_mode == 'highest':
+        matched_idxes = match_highest_peaks(
             spec_df.mz_values.values,
+            spec_df.intensity_values.values,
             frag_df.mz_values.values, 
             tols,
-            spec_df.intensity_values.values,
         )
     else:
-        matched_idxes = match_centroid_mz(
+        matched_idxes = match_closest_peaks(
             spec_df.mz_values.values,
+            spec_df.intensity_values.values,
             frag_df.mz_values.values, 
-            tols
+            tols,
         )
     matched_intens = spec_df.intensity_values.values[matched_idxes]
     matched_intens[matched_idxes==-1] = 0
