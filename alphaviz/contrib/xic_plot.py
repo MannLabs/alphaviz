@@ -23,8 +23,10 @@ class XIC_1D_Plot():
     colorscale_sequential="Viridis"
     theme_template='plotly_white'
     min_frag_mz = 200
-    ms1_ppm_tol = 20.0
-    ms2_ppm_tol = 20.0
+    ms1_use_ppm = True
+    ms1_tol = 20.0
+    ms2_use_ppm = True
+    ms2_tol = 20.0
     rt_sec_win = 30.0
     im_win = 0.05
     view_dim = 'rt' # or 'im'
@@ -160,15 +162,19 @@ class XIC_1D_Plot():
         )
         ms1_prec_mz_slice = slice(
             pep_frag_df['precursor_mz'].values[0]
-             * (1 - self.ms1_ppm_tol / 10**6), 
+             * (1 - self.ms1_tol / 10**6) if self.ms1_use_ppm 
+             else pep_frag_df['precursor_mz'].values[0] - self.ms1_tol, 
             pep_frag_df['precursor_mz'].values[0]
-             * (1 + self.ms1_ppm_tol / 10**6)
+             * (1 + self.ms1_tol / 10**6) if self.ms1_use_ppm 
+             else pep_frag_df['precursor_mz'].values[0] + self.ms1_tol
         )
         ms2_prec_mz_slice = slice(
             pep_frag_df['precursor_mz'].values[0]
-             * (1 - self.ms2_ppm_tol / 10**6), 
+             * (1 - self.ms2_tol / 10**6) if self.ms2_use_ppm 
+             else pep_frag_df['precursor_mz'].values[0] - self.ms2_tol, 
             pep_frag_df['precursor_mz'].values[0]
-             * (1 + self.ms2_ppm_tol / 10**6)
+             * (1 + self.ms2_tol / 10**6) if self.ms2_use_ppm 
+             else pep_frag_df['precursor_mz'].values[0] - self.ms2_tol
         )
 
         if len(pep_frag_df) + 2 <= len(
@@ -251,11 +257,12 @@ class XIC_1D_Plot():
                 marker_color=dict(color=colors_set[0])
             )
 
+            m1_mz = pep_frag_df['precursor_mz'].values[0]+1.0033/pep_frag_df['charge'].values[0]
             ms1_prec_m1_slice = slice(
-                (pep_frag_df['precursor_mz'].values[0]+1.0033/pep_frag_df['charge'].values[0])
-                * (1 - self.ms1_ppm_tol / 10**6), 
-                (pep_frag_df['precursor_mz'].values[0]+1.0033/pep_frag_df['charge'].values[0])
-                * (1 + self.ms1_ppm_tol / 10**6)
+                m1_mz * (1 - self.ms1_tol / 10**6) if self.ms1_use_ppm 
+                else m1_mz - self.ms1_tol, 
+                m1_mz * (1 + self.ms1_tol / 10**6) if self.ms1_use_ppm
+                else m1_mz + self.ms1_tol
             )
             ms1_m1_indices = tims_data[
                 rt_slice,
@@ -315,8 +322,10 @@ class XIC_1D_Plot():
                 im_slice,
                 ms2_prec_mz_slice,
                 slice(
-                    frag_mz * (1 - self.ms2_ppm_tol / 10**6), 
-                    frag_mz * (1 + self.ms2_ppm_tol / 10**6)
+                    frag_mz * (1 - self.ms2_tol / 10**6) if self.ms2_use_ppm
+                    else frag_mz - self.ms2_tol, 
+                    frag_mz * (1 + self.ms2_tol / 10**6) if self.ms2_use_ppm
+                    else frag_mz + self.ms2_tol
                 ),
                 'raw'
             ]

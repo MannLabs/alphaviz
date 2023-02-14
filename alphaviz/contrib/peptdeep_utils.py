@@ -255,8 +255,9 @@ def match_tims_ms2_for_tuning(
 
 def match_ms2(
     spec_df: pd.DataFrame, 
-    frag_df: pd.DataFrame, 
+    frag_df: pd.DataFrame,
     mz_tol=20, 
+    use_ppm=True,
     matching_mode="closest",
 )->Tuple[pd.DataFrame, float, float]:
     """
@@ -278,7 +279,10 @@ def match_ms2(
     """
     frag_df = frag_df.copy()
     spec_df = spec_df.sort_values('mz_values')
-    tols = frag_df.mz_values.values*mz_tol*1e-6
+    if use_ppm:
+        tols = frag_df.mz_values.values*mz_tol*1e-6
+    else:
+        tols = np.full_like(frag_df.mz_values, mz_tol)
     if matching_mode == 'highest':
         matched_idxes = match_highest_peaks(
             spec_df.mz_values.values,
@@ -298,14 +302,14 @@ def match_ms2(
     matched_mzs = spec_df.mz_values.values[matched_idxes]
     mass_errs = (
         matched_mzs-frag_df.mz_values.values
-    )/frag_df.mz_values.values*1e6
+    )/(frag_df.mz_values.values*1e6 if use_ppm else 1.0)
     mass_errs[matched_idxes==-1] = 0
     matched_mzs[matched_idxes==-1] = 0
 
     matched_df = frag_df.copy()
     matched_df['mz_values'] = matched_mzs
     matched_df['intensity_values'] = matched_intens
-    matched_df['mass_dev_ppm'] = mass_errs
+    matched_df['mass_dev'] = mass_errs
     matched_df = matched_df[matched_intens>0]
 
     if len(matched_df) == 0:

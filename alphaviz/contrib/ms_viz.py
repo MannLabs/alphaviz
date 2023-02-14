@@ -24,8 +24,10 @@ class MS_Viz:
     _min_frag_mz:float = 200.0
     _labeled_sites = ['K','N-term']
     remove_unlabeled_fragments = False
-    ms2_ppm_tol=20.0
-    ms1_ppm_tol=20.0
+    ms1_use_ppm = True
+    ms2_use_ppm = True
+    ms2_tol=20.0
+    ms1_tol=20.0
     rt_sec_tol_to_slice_spectrum = 3.0
     im_tol_to_slice_spectrum = 0.05
     find_closest_ms2_by_rt_sec = True
@@ -172,8 +174,10 @@ class MS_Viz:
             plotly Figure object return by 
             `alphaviz.plotting.plot_elution_profile`
         """
-        self.xic_1d_plot.ms1_ppm_tol = self.ms1_ppm_tol
-        self.xic_1d_plot.ms2_ppm_tol = self.ms2_ppm_tol
+        self.xic_1d_plot.ms1_tol = self.ms1_tol
+        self.xic_1d_plot.ms1_use_ppm = self.ms1_use_ppm
+        self.xic_1d_plot.ms2_tol = self.ms2_tol
+        self.xic_1d_plot.ms2_use_ppm = self.ms2_use_ppm
         return self.xic_1d_plot.plot(
             self.tims_data,
             pep_frag_df=pep_frag_df,
@@ -230,7 +234,8 @@ class MS_Viz:
         spec_df['intensity_values'] = spec_df.intensity_values.astype(np.float64)
         plot_df, pcc, spc = match_ms2(
             spec_df=spec_df, frag_df=frag_df,
-            mz_tol=self.ms2_ppm_tol, 
+            use_ppm=self.ms2_use_ppm,
+            mz_tol=self.ms2_tol, 
             matching_mode=matching_mode,
         )
 

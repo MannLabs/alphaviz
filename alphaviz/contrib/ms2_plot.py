@@ -163,7 +163,7 @@ class MassErrPlot:
         self.hovertemplate = (
             '%{hovertext}<br>'
             '<b>m/z:</b> %{x}<br>'
-            '<b>Mass err (ppm):</b> %{y}'
+            '<b>Mass err:</b> %{y}'
         )
 
     def plot(self, plot_df):
@@ -174,7 +174,7 @@ class MassErrPlot:
             plot_df, 'y', color_map['y']
         )
         self.fig.update_yaxes(
-            title_text='ppm',
+            title_text='m/z err',
             row=self.row,col=self.col
         )
         return self.fig
@@ -188,7 +188,7 @@ class MassErrPlot:
         _plot_scatter(
             self.fig,
             df.mz_values, 
-            df.mass_dev_ppm.round(4),
+            df.mass_dev.round(4),
             color=color,
             marker_size=5,
             hovertext=df.ions,
