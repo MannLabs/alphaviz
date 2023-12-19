@@ -300,10 +300,17 @@ def match_ms2(
     matched_intens = spec_df.intensity_values.values[matched_idxes]
     matched_intens[matched_idxes==-1] = 0
     matched_mzs = spec_df.mz_values.values[matched_idxes]
-    mass_errs = (
+
+    mass_err_Da = (
         matched_mzs-frag_df.mz_values.values
-    )/(frag_df.mz_values.values*1e6 if use_ppm else 1.0)
-    mass_errs[matched_idxes==-1] = 0
+    )
+    mass_err_Da[matched_idxes==-1] = 0
+    mass_err_ppm = mass_err_Da/frag_df.mz_values.values*1e6
+    if use_ppm:
+        mass_errs = mass_err_ppm
+    else:
+        mass_errs = mass_err_Da
+        
     matched_mzs[matched_idxes==-1] = 0
 
     matched_df = frag_df.copy()

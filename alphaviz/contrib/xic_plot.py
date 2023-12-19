@@ -12,10 +12,8 @@ from alphatims.bruker import (
 )
 
 from alphaviz.contrib.msplot_utils import (
-    _plot_line
+    _plot_line, _plot_line_fast
 )
-
-from alpharaw.viz.plot_utils import plot_line_fast
 
 class XIC_1D_Plot():
     # hovermode = "x" | "y" | "closest" | False | "x unified" | "y unified"
@@ -84,7 +82,7 @@ class XIC_1D_Plot():
     ):
         if len(selected_indices) == 0: return
         fig.add_trace(
-            plot_line_fast(
+            _plot_line_fast(
                 tims_data, selected_indices,
                 view_indices,
                 name=label,
