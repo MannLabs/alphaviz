@@ -541,10 +541,9 @@ class DataImportWidget(BaseWidget):
                 self.psm_df['instrument'] = 'timsTOF'
                 # trained on more Lumos files therefore should work better
                 # than 'timsTOF'
-                self.psm_df['spec_idx'] += 1
-                self.model_mgr.psm_num_to_tune_rt_ccs = 500
-                self.model_mgr.fine_tune_rt_model(self.psm_df)
-                # self.model_mgr.fine_tune_ccs_model(self.psm_df)
+                self.model_mgr.psm_num_to_train_rt_ccs = 500
+                self.model_mgr.train_rt_model(self.psm_df)
+                # self.model_mgr.train_ccs_model(self.psm_df)
 
         self.trigger_dependancy()
         self.upload_progress.active = False
@@ -2036,7 +2035,7 @@ class TargetModeTab(object):
             value=pd.DataFrame(
                 columns=['sequence', 'mods', 'mod_sites', 'charge']
             ),
-            hidden_columns=['frag_end_idx', 'frag_start_idx'],
+            hidden_columns=['frag_stop_idx', 'frag_start_idx'],
             widths={'index': 70},
             sizing_mode='stretch_width',
             layout='fit_data_table',
@@ -2382,7 +2381,7 @@ class TargetModeTab(object):
                     print(f'cannot convert the column {col}')
             df.mod_sites = df.mod_sites.astype('str')
             df.mod_sites.replace('0', '', inplace=True)
-            df['nce'] = 30
+            df['nce'] = 30.0
             df['instrument'] = 'Lumos'
             self.predicted_dict = self.data.model_mgr.predict_all(
                 df,
@@ -2408,11 +2407,11 @@ class TargetModeTab(object):
                         self.targeted_peptides_table_pred.value.loc[
                             self.targeted_peptides_table_pred.selection[0],
                             ['sequence', 'charge', 'precursor_mz',
-                                'rt_pred', 'mobility_pred', 'frag_start_idx', 'frag_end_idx']
+                                'rt_pred', 'mobility_pred', 'frag_start_idx', 'frag_stop_idx']
                         ].to_dict()
                     index_range = range(
                         self.peptide_prediction['frag_start_idx'],
-                        self.peptide_prediction['frag_end_idx']
+                        self.peptide_prediction['frag_stop_idx']
                     )
                     self.peptide_prediction['mz'] = \
                         self.peptide_prediction.pop('precursor_mz')
@@ -2476,7 +2475,7 @@ class TargetModeTab(object):
                             align='center',
                             margin=(0, 10, 10, 10)
                         )
-                    except AttibuteError:
+                    except AttributeError:
                         self.layout_target_mode_predicted[2] = None
                     self.layout_target_mode_predicted[3] = self.export_svg_prediction_button
                     self.targeted_peptides_table_pred.loading = False

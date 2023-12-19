@@ -1220,7 +1220,7 @@ def plot_elution_profile_heatmap(
             )
     try:
         return common_plot.cols(n_cols)
-    except AttibuteError:
+    except AttributeError:
         return common_plot
 
 
@@ -1304,6 +1304,11 @@ def plot_elution_profile(
     title: str = "",
     # width: int = 900,
     height: int = 400,
+    hovermode:str = 'x unified',
+    theme_template:str = 'plotly_white',
+    include_precursor:bool = True,
+    include_ms1:bool = True,
+    row:int=None, col:int=None,
 ):
     """Plot an elution profile plot for the specified precursor and all
     his identified fragments.
@@ -1373,16 +1378,18 @@ def plot_elution_profile(
         'raw'
     ]
     fig = go.Figure()
-    fig.add_trace(
-        plot_elution_line(
-            raw_data,
-            precursor_indices,
-            remove_zeros=True,
-            # label=f"precursor ({round(peptide_info['mz'], 3)})",
-            label='precursor',
-            marker_color=dict(color=colors_set[0])
+    if include_precursor:
+        fig.add_trace(
+            plot_elution_line(
+                raw_data,
+                precursor_indices,
+                remove_zeros=True,
+                # label=f"precursor ({round(peptide_info['mz'], 3)})",
+                label='precursor',
+                marker_color=dict(color=colors_set[0])
+            ),
+            row=row, col=col
         )
-    )
     # create elution profiles for all fragments
     for ind, (frag, frag_mz) in enumerate(peptide_info['fragments'].items()):
         fragment_data_indices = raw_data[
@@ -1400,7 +1407,8 @@ def plot_elution_profile(
                     remove_zeros=True,
                     label=f"{frag} ({round(frag_mz, 3)})",
                     marker_color=dict(color=colors_set[ind+1])
-                )
+                ),
+                row=row, col=col
             )
 
     fig.update_layout(
@@ -1434,10 +1442,10 @@ def plot_elution_profile(
                 color='black'
             ),
         ),
-        template='plotly_white',
+        template=theme_template,
         # width=width,
         height=height,
-        hovermode='x unified',
+        hovermode=hovermode,
         showlegend=True
     )
     return fig
