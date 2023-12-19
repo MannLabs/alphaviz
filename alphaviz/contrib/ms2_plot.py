@@ -7,7 +7,7 @@ import numpy as np
 
 import plotly.graph_objects as go
 
-from .msplot_utils import _plot_scatter
+from alpharaw.viz.plot_utils import plot_scatter
 
 color_map:dict = {
     '-': 'lightgrey', # '-' means umnatched
@@ -185,15 +185,16 @@ class MassErrPlot:
         df = plot_df[
             plot_df.ions.str.startswith(ion_type)
         ].query("intensity_values > 0")
-        _plot_scatter(
-            self.fig,
-            df.mz_values, 
-            df.mass_dev.round(4),
-            color=color,
-            marker_size=5,
-            hovertext=df.ions,
-            hovertemplate=self.hovertemplate,
-            name=f"{ion_type} ions",
+        self.fig.add_trace(
+            plot_scatter(
+                df.mz_values, 
+                df.mass_dev.round(4),
+                color=color,
+                marker_size=5,
+                hovertext=df.ions,
+                hovertemplate=self.hovertemplate,
+                name=f"{ion_type} ions",
+            ),
             row=self.row,
             col=self.col
         )
@@ -219,15 +220,16 @@ class PeakPlot:
     )->go.Figure:
         if plot_unmatched_peaks:
             _df = plot_df[plot_df.ions=="-"]
-            _plot_scatter(
-                self.fig,
-                _df.mz_values,
-                _df.intensity_values,
-                color=color_map['-'],
-                marker_size=1,
-                hovertext=None,
-                hovertemplate=None,
-                name='',
+            self.fig.add_trace(
+                plot_scatter(
+                    _df.mz_values,
+                    _df.intensity_values,
+                    color=color_map['-'],
+                    marker_size=1,
+                    hovertext=None,
+                    hovertemplate=None,
+                    name='',
+                ),
                 row=self.row,
                 col=self.col,
             )
@@ -267,28 +269,30 @@ class PeakPlot:
             plot_df.ions.str.startswith(ion_type)
         ]
         _df = df_all.query('intensity_values>0')
-        _plot_scatter(
-            self.fig,
-            _df.mz_values,
-            _df.intensity_values,
-            color=color_map[ion_type], 
-            marker_size=1,
-            hovertext=_df.ions,
-            hovertemplate=self.hovertemplate,
-            name='',
+        self.fig.add_trace(
+            plot_scatter(
+                _df.mz_values,
+                _df.intensity_values,
+                color=color_map[ion_type], 
+                marker_size=1,
+                hovertext=_df.ions,
+                hovertemplate=self.hovertemplate,
+                name='',
+            ),
             row=self.row,
             col=self.col,
         )
         _df = df_all.query('intensity_values<0')
-        _plot_scatter(
-            self.fig,
-            _df.mz_values,
-            _df.intensity_values,
-            color=color_map[ion_type], 
-            marker_size=1,
-            hovertext=_df.ions,
-            hovertemplate=self.hovertemplate,
-            name='',
+        self.fig.add_trace(
+            plot_scatter(
+                _df.mz_values,
+                _df.intensity_values,
+                color=color_map[ion_type], 
+                marker_size=1,
+                hovertext=_df.ions,
+                hovertemplate=self.hovertemplate,
+                name='',
+            ),
             row=self.row,
             col=self.col,
         )
