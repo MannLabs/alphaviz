@@ -85,7 +85,7 @@ class XIC_1D_Plot():
             _plot_line_fast(
                 tims_data, selected_indices,
                 view_indices,
-                name=label,
+                label=label,
                 legend_group=legend_group,
                 marker_color=marker_color, 
                 view_dim=self.view_dim,
