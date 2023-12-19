@@ -18,8 +18,8 @@ import alpharaw.legacy_msdata.mgf
 
 from alpharaw.ms_data_base import ms_reader_provider
 
-from peptdeep.psm_frag_reader.library_frag_reader import (
-    SpectronautMSMSReader
+from alphabase.spectral_library.reader import (
+    LibraryReaderBase
 )
 from peptdeep.psm_frag_reader.maxquant_frag_reader import (
     MaxQuantMSMSReader
@@ -140,9 +140,8 @@ def _get_psm_reader(
                 max_frag_charge=max_frag_charge
             )
         elif psm_type.lower() in ['swath','spectroanut']:
-            reader = SpectronautMSMSReader(
-                frag_types=frag_types,
-                max_frag_charge=max_frag_charge
+            reader = LibraryReaderBase(
+                charged_frag_types=frag_types,
             )
     else:
         reader = psm_reader_provider.get_reader(psm_type)
