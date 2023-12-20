@@ -11,7 +11,7 @@ from alphatims.bruker import (
     TimsTOF, 
 )
 
-from alphaviz.contrib.msplot_utils import (
+from alphaviz.thermo.msplot_utils import (
     _plot_line, _plot_line_fast
 )
 
