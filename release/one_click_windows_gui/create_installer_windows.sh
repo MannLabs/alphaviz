@@ -8,7 +8,7 @@ rm -rf dist
 rm -rf build
 
 # Creating a conda environment
-conda create -n alphaviz_installer python=3.8 -y
+conda create -n alphaviz_installer python=3.9 -y
 conda activate alphaviz_installer
 
 # Creating the wheel
@@ -20,7 +20,7 @@ cd release/one_click_windows_gui
 pip install "../../dist/alphaviz-1.3.0-py3-none-any.whl[stable,gui-stable]"
 
 # Creating the stand-alone pyinstaller folder
-pip install pyinstaller==4.10
+pip install pyinstaller
 pyinstaller ../pyinstaller/alphaviz.spec -y
 conda deactivate
 
