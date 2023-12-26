@@ -97,6 +97,8 @@ for _pkg in ["python","accelerate"]:
 for _pkg in pkgs_to_check_at_runtime:
 	datas += copy_metadata(_pkg)
 
+datas += copy_metadata('datashader')
+
 a = Analysis(
 	[script_name],
 	pathex=[location],

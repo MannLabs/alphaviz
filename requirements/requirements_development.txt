@@ -1,18 +1,14 @@
 jupyter==1.0.0
 jupyter_contrib_nbextensions==0.5.1
-pyinstaller
 autodocsumm==0.2.6
 sphinx-rtd-theme==0.5.2
 twine==3.4.1
-bumpversion
 pipdeptree==2.1.0
 ipykernel==6.4.0
+pytest==6.2.5
 tqdm
 psutil
-pytest==6.2.5
+bumpversion
+pyinstaller
 
 pywin32; sys_platform=='win32'
-
-alphatims
-peptdeep
-alphabase

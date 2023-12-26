@@ -3,9 +3,6 @@ peptdeep
 alphabase
 alpharaw
 
-holoviews
 xarray
-dask
 multipledispatch
 plotly
-datashader
