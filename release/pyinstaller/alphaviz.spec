@@ -9,6 +9,9 @@ import pkg_resources
 import importlib.metadata
 import alphaviz
 
+from PyInstaller.utils.hooks import copy_metadata
+from transformers.dependency_versions_check import pkgs_to_check_at_runtime
+
 
 ##################### User definitions
 exe_name = 'alphaviz_gui'
@@ -87,6 +90,12 @@ datas = [d for d in datas if ("__pycache__" not in d[0]) and (d[1] not in [".", 
 #		datas.append((libcrypto_lib_path, "."))
 #	if not os.path.exists(libssl_dll_path):
 #		datas.append((libssl_lib_path, "."))
+
+for _pkg in ["python","accelerate"]:
+	if _pkg in pkgs_to_check_at_runtime:
+		pkgs_to_check_at_runtime.remove(_pkg)
+for _pkg in pkgs_to_check_at_runtime:
+	datas += copy_metadata(_pkg)
 
 a = Analysis(
 	[script_name],
