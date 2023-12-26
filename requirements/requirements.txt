@@ -8,3 +8,4 @@ xarray
 dask
 multipledispatch
 plotly
+datashader

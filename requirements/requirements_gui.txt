@@ -1,6 +1,5 @@
 bokeh==2.4.2
 matplotlib==3.4.3
-datashader==0.13.0
 holoviews==1.14.8
 panel==0.12.4
 pyteomics
