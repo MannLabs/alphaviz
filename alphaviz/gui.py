@@ -1066,7 +1066,7 @@ class MainTab(object):
             self.data.raw_data,
             self.colorscale_qualitative.value,
         )
-        chrom_widget = pn.pane.panel(
+        chrom_widget = pn.Pane(
             chromatograms,
             config=update_config('Chromatograms'),
             sizing_mode='stretch_width',
@@ -1230,7 +1230,7 @@ class MainTab(object):
                         self.curr_protein_ids = prot_id
                         break
 
-            self.layout[6] = pn.pane.panel(
+            self.layout[6] = pn.Pane(
                 self.protein_coverage_plot,
                 config=update_config(f"{self.gene_name}_coverage_plot"),
                 align='center',
