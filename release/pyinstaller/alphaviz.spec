@@ -9,6 +9,9 @@ import pkg_resources
 import importlib.metadata
 import alphaviz
 
+from PyInstaller.utils.hooks import copy_metadata
+from transformers.dependency_versions_check import pkgs_to_check_at_runtime
+
 
 ##################### User definitions
 exe_name = 'alphaviz_gui'
@@ -75,18 +78,26 @@ else:
 hidden_imports = [h for h in hidden_imports if "__pycache__" not in h]
 datas = [d for d in datas if ("__pycache__" not in d[0]) and (d[1] not in [".", "Resources", "scripts"])]
 
-if sys.platform[:5] == "win32":
-	base_path = os.path.dirname(sys.executable)
-	library_path = os.path.join(base_path, "Library", "bin")
-	dll_path = os.path.join(base_path, "DLLs")
-	libcrypto_dll_path = os.path.join(dll_path, "libcrypto-1_1-x64.dll")
-	libssl_dll_path = os.path.join(dll_path, "libssl-1_1-x64.dll")
-	libcrypto_lib_path = os.path.join(library_path, "libcrypto-1_1-x64.dll")
-	libssl_lib_path = os.path.join(library_path, "libssl-1_1-x64.dll")
-	if not os.path.exists(libcrypto_dll_path):
-		datas.append((libcrypto_lib_path, "."))
-	if not os.path.exists(libssl_dll_path):
-		datas.append((libssl_lib_path, "."))
+#if sys.platform[:5] == "win32":
+#	base_path = os.path.dirname(sys.executable)
+#	library_path = os.path.join(base_path, "Library", "bin")
+#	dll_path = os.path.join(base_path, "DLLs")
+#	libcrypto_dll_path = os.path.join(dll_path, "libcrypto-1_1-x64.dll")
+#	libssl_dll_path = os.path.join(dll_path, "libssl-1_1-x64.dll")
+#	libcrypto_lib_path = os.path.join(library_path, "libcrypto-1_1-x64.dll")
+#	libssl_lib_path = os.path.join(library_path, "libssl-1_1-x64.dll")
+#	if not os.path.exists(libcrypto_dll_path):
+#		datas.append((libcrypto_lib_path, "."))
+#	if not os.path.exists(libssl_dll_path):
+#		datas.append((libssl_lib_path, "."))
+
+for _pkg in ["python","accelerate"]:
+	if _pkg in pkgs_to_check_at_runtime:
+		pkgs_to_check_at_runtime.remove(_pkg)
+for _pkg in pkgs_to_check_at_runtime:
+	datas += copy_metadata(_pkg)
+
+datas += copy_metadata('datashader')
 
 a = Analysis(
 	[script_name],

@@ -4,7 +4,6 @@ import platform
 import json
 import warnings
 import pandas as pd
-from pandas.core.common import SettingWithCopyWarning
 from io import StringIO
 
 import alphatims.bruker
@@ -22,8 +21,6 @@ import alphaviz.utils
 import alphaviz.io
 import alphaviz.preprocessing
 import alphaviz.plotting
-
-warnings.simplefilter(action="ignore", category=SettingWithCopyWarning)
 
 
 def get_css_style(

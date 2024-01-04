@@ -10,7 +10,3 @@ requests==2.27.1
 #selenium
 #chromedriver-binary
 jinja2==3.0.2
-
-alphatims
-peptdeep
-alphabase

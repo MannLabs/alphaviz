@@ -1,7 +1,7 @@
 #!python
 
 __project__ = "alphaviz"
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 __license__ = "Apache"
 __description__ = "A interactive Dashboard to explore mass spectrometry data."
 __author__ = "Eugenia Voytik"
@@ -16,7 +16,7 @@ __keywords__ = [
     "bioinformatics",
     "visualization"
 ]
-__python_version__ = ">=3.8,<3.9"
+__python_version__ = ">=3.8,<3.12"
 __classifiers__ = [
         # "Development Status :: 1 - Planning",
         # "Development Status :: 2 - Pre-Alpha",
