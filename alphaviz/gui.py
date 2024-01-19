@@ -248,7 +248,7 @@ class MainWidget(object):
                 download_new_version_button,
                 align='center',
             ),
-            background='#eaeaea',
+            styles={'background': '#eaeaea'},
             align='center',
             sizing_mode='stretch_width',
             height=190,
@@ -281,30 +281,30 @@ class DataImportWidget(BaseWidget):
             'analysis_software': str()
         }
         self.path_raw_folder = pn.widgets.TextInput(
-            name='Specify the full path to the folder with unprocessed Bruker files:\u002a',
+            name='Specify the full path to the folder Thermo/Sciex/Bruker files:\u002a',
             placeholder=raw_folder_placeholder,
-            width=900,
+            min_width=900,
             sizing_mode='stretch_width',
             margin=(5, 15, 0, 15)
         )
         self.ms_file_name = pn.widgets.Select(
             name='Select the raw file:\u002a',
             size=10,
-            width=900,
+            min_width=900,
             sizing_mode='stretch_width',
             margin=(5, 15, 0, 15)
         )
         self.path_output_folder = pn.widgets.TextInput(
             name='Specify the full path to the output folder of any supported software analysis tool:',
             placeholder=output_folder_placeholder,
-            width=900,
+            min_width=900,
             sizing_mode='stretch_width',
             margin=(15, 15, 0, 15)
         )
         self.path_fasta_file = pn.widgets.TextInput(
             name='Specify the full path to the fasta file:',
             placeholder=fasta_path_placeholder,
-            width=900,
+            min_width=900,
             sizing_mode='stretch_width',
             margin=(15, 15, 15, 15)
         )
@@ -395,7 +395,7 @@ class DataImportWidget(BaseWidget):
             self.ms_file_name.options = alphaviz.preprocessing.sort_naturally(
                 alphaviz.io.get_filenames_from_directory(
                     self.path_raw_folder.value,
-                    ['d', 'hdf']
+                    ['raw','wiff','d', 'hdf', 'raw.hdf']
                 )
             )
         except OSError:

@@ -123,6 +123,8 @@ def import_mq_evidence(
         subset=['MS/MS scan number', 'Gene names'],
         inplace=True
     )
+    if "1/K0" not in data_raw_file.columns:
+        data_raw_file["1/K0"] = 0.0
     first_column_names = ['Charge', 'm/z', 'Mass', '1/K0', 'Retention time']
     columns = list(data_raw_file.columns.drop(first_column_names))
     columns[1:1] = first_column_names
