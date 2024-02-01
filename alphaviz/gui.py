@@ -15,12 +15,16 @@ import bokeh.server.views.ws
 import plotly.express as px
 import holoviews as hv
 
+import alpharaw.wrappers.alphatims_wrapper
+
 # local
 import alphaviz
 import alphaviz.utils
 import alphaviz.io
 import alphaviz.preprocessing
 import alphaviz.plotting
+
+import alphaviz.alphax_utils
 
 
 def get_css_style(
@@ -428,12 +432,15 @@ class DataImportWidget(BaseWidget):
         self.import_error.object = ''
         self.upload_progress.value = 0
         try:
-            self.raw_data = alphatims.bruker.TimsTOF(
-                os.path.join(
-                    self.path_raw_folder.value,
-                    self.ms_file_name.value
-                ),
+            raw_path = os.path.join(
+                self.path_raw_folder.value,
+                self.ms_file_name.value
             )
+            msdata = alphaviz.alphax_utils.get_msdata(raw_path)
+            if msdata is None:
+                self.raw_data = alphatims.bruker.TimsTOF(raw_path)
+            else:
+                self.raw_data = alpharaw.wrappers.alphatims_wrapper.AlphaTimsWrapper(msdata)
         except:
             self.import_error.object += '\n#### The selected unprocessed Bruker file is corrupted and cannot be loaded. \n#### Please select another file.',
             raise OSError('The selected unprocessed Bruker file is corrupted and cannot be loaded. Please select another file.')
@@ -1066,7 +1073,7 @@ class MainTab(object):
             self.data.raw_data,
             self.colorscale_qualitative.value,
         )
-        chrom_widget = pn.Pane(
+        chrom_widget = pn.panel(
             chromatograms,
             config=update_config('Chromatograms'),
             sizing_mode='stretch_width',
@@ -1230,7 +1237,7 @@ class MainTab(object):
                         self.curr_protein_ids = prot_id
                         break
 
-            self.layout[6] = pn.Pane(
+            self.layout[6] = pn.panel(
                 self.protein_coverage_plot,
                 config=update_config(f"{self.gene_name}_coverage_plot"),
                 align='center',
@@ -1275,7 +1282,7 @@ class MainTab(object):
                     r"\[(.*?)\]|\((.*?)\)\)?",
                     self.curr_protein_ids
                 )
-                self.layout[6] = pn.Pane(
+                self.layout[6] = pn.panel(
                     one_peptide_coverage_plot,
                     config=update_config(f"{self.gene_name}_coverage_plot"),
                     align='center',
@@ -1333,7 +1340,7 @@ class MainTab(object):
                     self.display_heatmap_spectrum()
             else:
                 self.peptides_table.selection = []
-                self.layout[6] = pn.Pane(
+                self.layout[6] = pn.panel(
                     self.protein_coverage_plot,
                     config=update_config(f"{self.gene_name}_coverage_plot"),
                     align='center',
@@ -1624,7 +1631,7 @@ class MainTab(object):
                 margin=(-20, 10, 30, 10)
             )
 
-        self.layout[14] = pn.Pane(
+        self.layout[14] = pn.panel(
             self.ms_spectra_plot,
             config=update_config('Combined MS2 spectrum'),
             margin=(30, 0, 0, 0),
@@ -1892,7 +1899,7 @@ class QCTab(object):
 
             mass_dens_plot_title = 'Uncalibrated mass density plot' if 'Uncalibrated' in self.mass_density_axis.value else 'Calibrated mass density plot'
             if self.mass_density_axis.value == 'Uncalibrated mass error [ppm]':
-                mass_dens_plot = pn.Pane(
+                mass_dens_plot = pn.panel(
                     alphaviz.plotting.plot_mass_error(
                         self.data.mq_evidence,
                         'm/z',
@@ -1905,7 +1912,7 @@ class QCTab(object):
                     margin=(0, 0, 0, 30),
                 )
             else:
-                mass_dens_plot = pn.Pane(
+                mass_dens_plot = pn.panel(
                     alphaviz.plotting.plot_mass_error(
                         self.data.mq_evidence,
                         'm/z',
@@ -1943,6 +1950,7 @@ class QCTab(object):
         elif self.distribution_axis.value in ['Global.PG.Q.Value', 'PG.Q.Value', 'PG.Quantity', 'Protein.Q.Value']:
             title = f'{self.distribution_axis.value} distribution'
         else:
+            print(self.distribution_axis.value)
             title = f'Peptide {self.distribution_axis.value.lower()} distribution'
 
         if self.distribution_axis.value == '(EXP) # peptides':
@@ -2430,7 +2438,7 @@ class TargetModeTab(object):
                     self.targeted_peptides_table_pred.loading = True
                     self.peptide_prediction['rt'] *= 60  # to convert to sec
                     try:
-                        self.layout_target_mode_predicted[1] = pn.Pane(
+                        self.layout_target_mode_predicted[1] = pn.panel(
                             alphaviz.plotting.plot_elution_profile(
                                 self.data.raw_data,
                                 self.peptide_prediction,

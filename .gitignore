@@ -1,3 +1,9 @@
+# User defined:
+alphaviz/logs
+*.DS_Store
+*sandbox*
+*mono_crash*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -127,8 +133,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
-# User defined:
-alphaviz/logs
-*.DS_Store
-*sandbox*
