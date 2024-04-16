@@ -30,9 +30,4 @@ def gui():
     import alphaviz.gui
     alphaviz.gui.run()
 
-@run.command("streamlit", help="Start graphical user interface.")
-def streamlit():
-    import alphaviz.streamlit
-    alphaviz.streamlit.run()
-
 

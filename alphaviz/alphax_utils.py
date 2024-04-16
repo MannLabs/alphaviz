@@ -10,6 +10,7 @@ _raw_exts={
     ".wiff.hdf": "hdf",
     ".ms_data.hdf": "alphapept_hdf",
 }
+_tims_exts=[".hdf", ".d"]
 
 def get_msdata(raw_path):
     for _ext, _type in _raw_exts.items():
@@ -18,5 +19,3 @@ def get_msdata(raw_path):
             msdata.import_raw(raw_path)
             return msdata
     return None
-
-
