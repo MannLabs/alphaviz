@@ -6,20 +6,24 @@ This module provides pytest tests for the functions from io.py file
 import alphaviz.io
 
 # test dataset
-mq_evidence_file = "../test_data/evidence.txt" # update this file
+mq_evidence_file = "../test_data/evidence.txt"  # update this file
 
 
 def test_read_file():
-    mq_columns = ['Protein names', 'Raw file']
+    mq_columns = ["Protein names", "Raw file"]
 
     data = alphaviz.io.read_file(mq_evidence_file, mq_columns)
 
-    assert data.shape == (16242, 2), \
-        "The number of columns/rows in the read dataset is wrong."
-    assert data.columns.tolist() == mq_columns, \
-        "The wrong column names were extracted from the dataset."
-    assert data['Protein names'].nunique() == 6, \
-        "The data of the extracted column are wrong."
+    assert data.shape == (
+        16242,
+        2,
+    ), "The number of columns/rows in the read dataset is wrong."
+    assert (
+        data.columns.tolist() == mq_columns
+    ), "The wrong column names were extracted from the dataset."
+    assert (
+        data["Protein names"].nunique() == 6
+    ), "The data of the extracted column are wrong."
 
 
 # def test_import_mq_evidence():

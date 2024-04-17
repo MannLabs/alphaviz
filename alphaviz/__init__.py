@@ -14,24 +14,24 @@ __keywords__ = [
     "timsTOF",
     "proteomics",
     "bioinformatics",
-    "visualization"
+    "visualization",
 ]
 __python_version__ = ">=3.8,<3.12"
 __classifiers__ = [
-        # "Development Status :: 1 - Planning",
-        # "Development Status :: 2 - Pre-Alpha",
-        # "Development Status :: 3 - Alpha",
-        "Development Status :: 4 - Beta",
-        # "Development Status :: 5 - Production/Stable",
-        # "Development Status :: 6 - Mature",
-        # "Development Status :: 7 - Inactive"
-        "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: Apache Software License",
-        "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3 :: Only",
-        "Topic :: Scientific/Engineering :: Bio-Informatics",
+    # "Development Status :: 1 - Planning",
+    # "Development Status :: 2 - Pre-Alpha",
+    # "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
+    # "Development Status :: 5 - Production/Stable",
+    # "Development Status :: 6 - Mature",
+    # "Development Status :: 7 - Inactive"
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 __console_scripts__ = [
     "alphaviz=alphaviz.cli:run",
@@ -45,6 +45,6 @@ __urls__ = {
 }
 __extra_requirements__ = {
     "development": "requirements_development.txt",
-    "gui": "requirements_gui.txt"
+    "gui": "requirements_gui.txt",
 }
 __requirements_style__ = None

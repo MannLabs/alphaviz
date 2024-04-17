@@ -10,9 +10,9 @@ import alphaviz
 
 @click.group(
     context_settings=dict(
-        help_option_names=['-h', '--help'],
+        help_option_names=["-h", "--help"],
     ),
-    invoke_without_command=True
+    invoke_without_command=True,
 )
 @click.pass_context
 @click.version_option(alphaviz.__version__, "-v", "--version")
@@ -28,6 +28,5 @@ def run(ctx, **kwargs):
 @run.command("gui", help="Start graphical user interface.")
 def gui():
     import alphaviz.gui
+
     alphaviz.gui.run()
-
-

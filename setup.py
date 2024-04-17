@@ -4,6 +4,7 @@
 import setuptools
 import re
 import os
+
 # local
 import alphaviz as package2install
 
@@ -33,7 +34,7 @@ def get_requirements():
             for line in requirements_file:
                 extra_requirements[extra_stable].append(line)
                 # conditional req like: "pywin32==xxx; sys_platform=='win32'"
-                line, *conditions = line.split(';')
+                line, *conditions = line.split(";")
                 requirement, *comparison = re.split("[><=~!]", line)
                 requirement = requirement.strip()
                 requirement = ";".join([requirement] + conditions)
