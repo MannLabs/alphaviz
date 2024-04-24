@@ -68,6 +68,9 @@ def show():
 
     plot_psm = select_psm(psm_df)
 
+    if plot_psm is None or len(plot_psm) == 0:
+        return
+
     if not is_dda or ("spec_idx" not in psm_df.columns and "rt" in psm_df.columns):
         spec_idxes = find_spec_idxes(
             spectrum_df.rt.values,
@@ -78,7 +81,10 @@ def show():
             plot_psm.precursor_mz.values[0],
             plot_psm.precursor_mz.values[0],
         )
-        plot_psm["spec_idx"] = int(np.median(spec_idxes))
+
+        plot_psm["spec_idx"] = spec_idxes[
+            np.abs(spectrum_df.rt.values[spec_idxes] - plot_psm.rt.values[0]).argmin()
+        ]
 
     st.write("# Selected PSM to plot")
     st.dataframe(plot_psm)
@@ -88,6 +94,8 @@ def show():
         pred_inten_df = model_mgr.predict_ms2(plot_psm)
     else:
         pred_inten_df = None
+
+    plot_unmatched = st.checkbox("Plot unmatched peaks")
 
     if st.checkbox("Plot MS2") and len(plot_psm) > 0:
         spec_idx = plot_psm.spec_idx.values[0]
@@ -107,23 +115,37 @@ def show():
             plot_df,
             plot_psm.sequence.values[0],
             plot_df.modified_sequence.values[0],
-            plot_unmatched_peaks=True,
+            plot_unmatched_peaks=plot_unmatched,
         )
 
         st.plotly_chart(fig)
 
     if st.checkbox("Plot XIC") and len(plot_psm) > 0:
+
+        if st.button("Reset Retention Time Window (60 seconds):"):
+            xic_plotter.rt_sec_win = 60
+
+        rt_sec = plot_psm.rt.values[0] * 60
+        rt_range = st.slider(
+            "Retention Time Range (in seconds)",
+            min_value=rt_sec - 200,
+            max_value=rt_sec + 200,
+            value=(
+                rt_sec - xic_plotter.rt_sec_win / 2,
+                rt_sec + xic_plotter.rt_sec_win / 2,
+            ),
+        )
         plot_df = make_query_plot_df_for_peptide(
             sequence=plot_psm.sequence.values[0],
             mods=plot_psm.mods.values[0],
             mod_sites=plot_psm.mod_sites.values[0],
             charge=plot_psm.charge.values[0],
-            rt_sec=plot_psm.rt.values[0] * 60,
+            rt_sec=np.mean(rt_range),
             ms_level=1 if is_dda else 2,
             include_precursor_isotopes=True if is_dda else False,
             fragment_intensity_df=pred_inten_df,
         )
-
+        xic_plotter.rt_sec_win = rt_range[1] - rt_range[0]
         fig = xic_plotter.plot(
             spectrum_df,
             peak_df,
@@ -240,7 +262,6 @@ def select_psm(psm_df):
     plot_psm = psm_df.loc[psm_id:psm_id]
 
     return plot_psm
-
 
 def get_peaks(spec_df, peak_df, spec_idx):
     start, stop = spec_df[["peak_start_idx", "peak_stop_idx"]].values[spec_idx]
