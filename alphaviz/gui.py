@@ -248,7 +248,7 @@ class MainWidget(object):
                 download_new_version_button,
                 align='center',
             ),
-            background='#eaeaea',
+            #background='#eaeaea',
             align='center',
             sizing_mode='stretch_width',
             height=190,
