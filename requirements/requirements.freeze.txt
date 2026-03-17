@@ -1,0 +1,48 @@
+# Exact package versions shipped in alphaviz_gui_installer_windows.exe, alphaviz 1.3.0
+# Extracted from .dist-info metadata inside the Inno Setup installer
+# Python 3.9
+
+# manually changed:
+pandas<3
+numba==0.56.4
+matplotlib
+
+# extracted:
+alphabase==1.2.0
+alpharaw==0.4.0
+alphatims==1.0.8
+alphaviz==1.3.0
+attrs==23.2.0
+beautifulsoup4==4.10.0
+bokeh==2.4.2
+datashader==0.13.0
+distributed==2023.12.1
+filelock==3.13.1
+holoviews==1.14.8
+huggingface-hub==0.20.1
+importlib-metadata==6.11.0
+Jinja2==3.0.2
+jsonschema==4.20.0
+lz4==4.3.3
+Markdown==3.5.1
+multipledispatch==1.0.0
+numpy #==1.26.3
+packaging==23.2
+panel==0.12.4
+peptdeep==1.1.1
+pillow==10.2.0
+plotly==5.8.0
+protobuf==4.25.1
+psutil==5.9.7
+pyteomics==4.5
+PyYAML==6.0.1
+regex==2023.12.25
+requests==2.27.1
+safetensors==0.4.1
+scikit-learn==1.3.2
+tokenizers==0.15.0
+torch==2.1.2
+tqdm==4.66.1
+urllib3==1.26.18
+wheel==0.41.2
+xarray==2023.12.0
