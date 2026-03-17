@@ -74,7 +74,7 @@ def load_ms_data_tims(
 
 class PepSpecMatch_AlphaTims(PepSpecMatch):
     """
-    Inherited from :class:`alpharaw.match.psm_match.PepSpecMatch`, but
+    Inherited from :class:`peptdeep.match.psm_match.PepSpecMatch`, but
     this can be used for DIA PSM matching by selecting
     MS2 spectra with RT (and IM) values.
     """
