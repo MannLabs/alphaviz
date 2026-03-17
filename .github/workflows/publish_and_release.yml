@@ -17,7 +17,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
-          miniconda-version: "latest"`
+          miniconda-version: "latest"
           python-version: ${{ matrix.python-version }}
       - name: Master version bumped
         id: master_version_bumped
@@ -51,7 +51,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
-          miniconda-version: "latest"`
+          miniconda-version: "latest"
           python-version: ${{ matrix.python-version }}
       - name: Conda info
         shell: bash -l {0}
@@ -84,7 +84,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
-          miniconda-version: "latest"`
+          miniconda-version: "latest"
           python-version: ${{ matrix.python-version }}
       - name: Conda info
         shell: bash -l {0}
@@ -117,7 +117,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
-          miniconda-version: "latest"`
+          miniconda-version: "latest"
           python-version: ${{ matrix.python-version }}
       - name: Conda info
         shell: bash -l {0}
@@ -153,7 +153,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
-          miniconda-version: "latest"`
+          miniconda-version: "latest"
           python-version: ${{ matrix.python-version }}
       - name: Conda info
         shell: bash -l {0}
@@ -189,7 +189,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           auto-update-conda: true
-          miniconda-version: "latest"`
+          miniconda-version: "latest"
           python-version: ${{ matrix.python-version }}
       - name: Conda info
         shell: bash -l {0}
