@@ -3,7 +3,7 @@
 # Python 3.9
 
 # manually changed:
-pandas<3
+pandas==1.5.3
 numba==0.56.4
 matplotlib
 
