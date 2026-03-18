@@ -7,8 +7,8 @@ from typing import Tuple, Union
 import numpy as np
 import pandas as pd
 import tqdm
+from alphatims.wrapper.alphatims_wrapper import AlphaTimsWrapper
 
-from peptdeep.alphatims_wrapper import AlphaTimsWrapper
 from peptdeep.match.psm_match import PepSpecMatch
 from alphatims.bruker import TimsTOF
 
