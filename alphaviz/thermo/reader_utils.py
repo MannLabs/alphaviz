@@ -13,7 +13,7 @@ from alphabase.peptide.fragment import (
 
 import alpharaw.thermo
 import alpharaw.sciex
-import alpharaw.wrappers.alphatims_wrapper
+import alphatims.wrapper.alphatims_wrapper
 import alpharaw.legacy_msdata.mgf
 
 from alpharaw.ms_data_base import ms_reader_provider

@@ -9,7 +9,6 @@ from alphabase.peptide.fragment import (
 
 from peptdeep.pretrained_models import ModelManager
 
-from alpharaw.match.psm_match_alphatims import PepSpecMatch_AlphaTims
 
 from .ms2_plot import MS2_Plot
 from .xic_plot import XIC_1D_Plot
@@ -19,6 +18,8 @@ from .peptdeep_utils import (
     match_ms2, get_frag_df_from_pep_frag_df,
     predict_one_peptide, get_pep_frag_df_from_dfs,
 )
+from ..psm_match import PepSpecMatch_AlphaTims
+
 
 class MS_Viz:
     _min_frag_mz:float = 200.0
