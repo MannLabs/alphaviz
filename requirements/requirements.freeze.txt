@@ -7,11 +7,13 @@ pandas==1.5.3
 numba==0.56.4
 matplotlib
 
+
+alphabase==1.9.0
+alpharaw==0.6.0
+alphatims==1.1.0
+peptdeep==1.5.0
+
 # extracted:
-alphabase==1.2.0
-alpharaw==0.4.0
-alphatims==1.0.8
-alphaviz==1.3.0
 attrs==23.2.0
 beautifulsoup4==4.10.0
 bokeh==2.4.2
@@ -29,7 +31,6 @@ multipledispatch==1.0.0
 numpy #==1.26.3
 packaging==23.2
 panel==0.12.4
-peptdeep==1.1.1
 pillow==10.2.0
 plotly==5.8.0
 protobuf==4.25.1
