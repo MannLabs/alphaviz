@@ -7,7 +7,7 @@ Remove-Item -Recurse -Force -ErrorAction SilentlyContinue ./dist_pyinstaller
 
 
 $WHL_NAME = (Get-ChildItem -Path "dist" -Filter "*.whl").Name
-pip install "dist/$WHL_NAME[stable,gui-stable]"
+pip install "dist/$WHL_NAME[legacy]"
 
 # Creating the stand-alone pyinstaller folder
 pyinstaller release/pyinstaller/alphaviz.spec --distpath dist_pyinstaller --workpath build_pyinstaller -y
