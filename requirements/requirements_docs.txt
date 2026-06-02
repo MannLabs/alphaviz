@@ -1,0 +1,5 @@
+# Dependencies required for building documentation
+sphinx
+autodocsumm==0.2.6
+sphinx-rtd-theme==0.5.2
+jinja2

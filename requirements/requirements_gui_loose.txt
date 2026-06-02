@@ -1,0 +1,14 @@
+# Loose (unpinned) variant of the GUI dependencies.
+# All dependencies that are also included in `requirements_gui.txt` must be added also here.
+bokeh
+matplotlib
+datashader
+holoviews
+panel
+pyteomics
+plotly
+beautifulsoup4
+requests
+#selenium
+#chromedriver-binary
+jinja2
