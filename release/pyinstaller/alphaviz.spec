@@ -12,6 +12,10 @@ import alphaviz
 from PyInstaller.utils.hooks import copy_metadata
 from transformers.dependency_versions_check import pkgs_to_check_at_runtime
 
+# The deep transitive import graph (torch, transformers, ...) exceeds Python's
+# default recursion limit during PyInstaller analysis on Windows.
+sys.setrecursionlimit(sys.getrecursionlimit() * 5)
+
 
 ##################### User definitions
 exe_name = 'alphaviz_gui'
