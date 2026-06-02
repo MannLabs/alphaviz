@@ -1,0 +1,10 @@
+# Dependencies required for running the "loose" version of alphaviz.
+# All dependencies that are also included in `requirements.txt` must be added also here (enforced by a test).
+alphatims # test: tolerate_version
+peptdeep # test: tolerate_version
+alphabase # test: tolerate_version
+alpharaw # test: tolerate_version
+
+xarray
+multipledispatch
+plotly
