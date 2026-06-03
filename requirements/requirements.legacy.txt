@@ -31,6 +31,7 @@ multipledispatch==1.0.0
 numpy #==1.26.3
 packaging==23.2
 panel==0.12.4
+param==1.13.0
 pillow==10.2.0
 plotly==5.8.0
 protobuf==4.25.1

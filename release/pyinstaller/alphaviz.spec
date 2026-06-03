@@ -103,6 +103,18 @@ for _pkg in pkgs_to_check_at_runtime:
 
 datas += copy_metadata('datashader')
 
+# HoloViz packages read their own version from the installed .dist-info metadata
+# at import time. param is a transitive dependency (not a direct requirement nor a
+# submodule), so it is missed by the requirement walk above and its metadata never
+# gets bundled; param.__version__ then resolves to the string 'None', which newer
+# holoviews feeds to packaging.version.Version() -> InvalidVersion at import.
+for _pkg in ["param", "holoviews", "panel", "bokeh", "pyviz_comms", "colorcet", "pyct"]:
+	try:
+		importlib.metadata.distribution(_pkg)
+	except importlib.metadata.PackageNotFoundError:
+		continue
+	datas += copy_metadata(_pkg)
+
 a = Analysis(
 	[script_name],
 	pathex=[location],
